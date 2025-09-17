@@ -2,7 +2,7 @@
 // Инициализация Telegram Web App
 let tg = window.Telegram.WebApp;
 tg.expand(); // Раскрываем на весь экран
-// tg.enableClosingConfirmation(); // Подтверждение закрытия
+tg.enableClosingConfirmation(); // Подтверждение закрытия
 
 // Тестовая база героев (замени на свою)
 const testHeroes = [
