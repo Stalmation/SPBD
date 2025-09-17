@@ -1,0 +1,129 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+}
+
+body {
+    font-family: 'Arial', sans-serif;
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    color: white;
+    min-height: 100vh;
+    padding: 20px;
+}
+
+.container {
+    max-width: 100%;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+}
+
+header {
+    text-align: center;
+    margin-bottom: 30px;
+    padding-top: 20px;
+}
+
+header h1 {
+    font-size: 24px;
+    margin-bottom: 10px;
+    color: #ffd700;
+    text-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
+}
+
+header p {
+    font-size: 16px;
+    opacity: 0.8;
+}
+
+.battle-area {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 25px;
+    align-items: center;
+    flex-grow: 1;
+    justify-content: center;
+}
+
+.hero-card {
+    width: 90%;
+    max-width: 300px;
+    height: 150px;
+    background: linear-gradient(145deg, #2a2a4a, #1c1c34);
+    border: 3px solid #4cc9f0;
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 8px 25px rgba(76, 201, 240, 0.15);
+}
+
+.hero-card:active {
+    transform: scale(0.95);
+    box-shadow: 0 4px 15px rgba(76, 201, 240, 0.3);
+}
+
+.hero-name {
+    font-size: 22px;
+    font-weight: bold;
+    text-align: center;
+    padding: 20px;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.vs {
+    font-size: 28px;
+    font-weight: bold;
+    color: #ffd700;
+    text-shadow: 0 0 15px rgba(255, 215, 0, 0.5);
+    padding: 10px 25px;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 50px;
+}
+
+.result {
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    font-weight: bold;
+    color: #4cc9f0;
+    text-align: center;
+    margin: 20px 0;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.result.show {
+    opacity: 1;
+}
+
+footer {
+    text-align: center;
+    padding: 20px;
+    opacity: 0.7;
+    font-size: 14px;
+}
+
+/* Адаптация для очень маленьких экранов */
+@media (max-height: 700px) {
+    .hero-card {
+        height: 130px;
+    }
+    
+    .hero-name {
+        font-size: 20px;
+    }
+    
+    header {
+        margin-bottom: 20px;
+    }
+}
