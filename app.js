@@ -3,6 +3,9 @@
 let tg = window.Telegram.WebApp;
 tg.expand(); // Раскрываем на весь экран
 tg.enableClosingConfirmation(); // Подтверждение закрытия
+tg.MainButton.hide(); // Скрываем кнопки
+// Полностью скрываем интерфейс (пользователь сможет закрыть жестом)
+// tg.disableVerticalSwipes = false;
 
 // Тестовая база героев (замени на свою)
 const testHeroes = [
