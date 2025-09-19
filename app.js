@@ -12,6 +12,24 @@ let allHeroes = [];
 let currentHeroes = [];
 let nextHeroes = [];
 let votedHeroes = new Set();
+let tg = null;
+
+// Инициализация Telegram Web App
+function initTelegram() {
+    if (typeof Telegram !== 'undefined' && Telegram.WebApp) {
+        tg = Telegram.WebApp;
+        
+        // Меняем цвет фона Telegram
+        tg.setBackgroundColor('#1a1a2e');
+        
+        // Скрываем кнопку назад если нужно
+        tg.BackButton.hide();
+        
+        console.log("Telegram Web App инициализирован");
+    } else {
+        console.log("Запуск в браузере (не в Telegram)");
+    }
+}
 
 // Загрузка всех героев из базы данных
 async function loadAllHeroes() {
@@ -25,6 +43,15 @@ async function loadAllHeroes() {
 
         if (error) {
             console.error("Ошибка запроса:", error.message);
+            
+            // Показываем ошибку пользователю
+            if (tg) {
+                tg.showPopup({
+                    title: "Error",
+                    message: "Failed to load heroes. Check your connection.",
+                    buttons: [{ type: "ok" }]
+                });
+            }
             return;
         }
 
@@ -44,6 +71,14 @@ async function loadAllHeroes() {
         
     } catch (error) {
         console.error("Ошибка при загрузке героев:", error);
+        
+        if (tg) {
+            tg.showPopup({
+                title: "Error",
+                message: "An error occurred while loading data.",
+                buttons: [{ type: "ok" }]
+            });
+        }
     }
 }
 
@@ -114,6 +149,12 @@ function getRandomHeroes() {
         // Если осталось меньше 2 героев, начинаем заново
         votedHeroes.clear();
         saveProgress();
+        
+        // Вибрация в Telegram при завершении
+        if (tg) {
+            tg.HapticFeedback.notificationOccurred('success');
+        }
+        
         return getRandomHeroes();
     }
     
@@ -128,8 +169,19 @@ function getRandomHeroes() {
     return [availableHeroes[randomIndex1], availableHeroes[randomIndex2]];
 }
 
+// Скрыть все оверлеи WIN/LOSE
+function hideAllOverlays() {
+    const overlays = document.querySelectorAll('.hero-win-overlay, .hero-lose-overlay');
+    overlays.forEach(overlay => {
+        overlay.classList.remove('show');
+    });
+}
+
 // Отображение героев
 function displayHeroes() {
+    // Скрываем все оверлеи
+    hideAllOverlays();
+    
     // Используем предзагруженную пару если есть, иначе создаем новую
     if (nextHeroes.length === 2) {
         currentHeroes = nextHeroes;
@@ -142,17 +194,14 @@ function displayHeroes() {
     preloadNextPair();
     
     if (!currentHeroes) {
-        document.getElementById('result').textContent = "Not enough heroes!";
         return;
     }
     
-    // Сбрасываем результат
-    document.getElementById('result').textContent = '';
-    document.getElementById('result').className = '';
-    
-    // Скрываем рейтинги
-    document.getElementById('hero1-rating').textContent = '';
-    document.getElementById('hero2-rating').textContent = '';
+    // Сбрасываем проценты в оверлеях
+    document.getElementById('hero1-win-percent').textContent = '';
+    document.getElementById('hero1-lose-percent').textContent = '';
+    document.getElementById('hero2-win-percent').textContent = '';
+    document.getElementById('hero2-lose-percent').textContent = '';
     
     // Отображаем первого героя
     document.getElementById('hero1-img').src = currentHeroes[0].image_url;
@@ -204,19 +253,34 @@ async function vote(heroNumber) {
     votedHeroes.add(otherHero.id);
     saveProgress();
     
-    // Показываем результат
-    const resultElement = document.getElementById('result');
-    if (userSelectedWinner) {
-        resultElement.textContent = `WIN! ${selectedHero.name} wins!`;
-        resultElement.className = 'result win';
-    } else {
-        resultElement.textContent = `LOST! ${actualWinner.name} was stronger!`;
-        resultElement.className = 'result lose';
+    // Вибрация в Telegram
+    if (tg) {
+        if (userSelectedWinner) {
+            tg.HapticFeedback.impactOccurred('heavy');
+        } else {
+            tg.HapticFeedback.impactOccurred('medium');
+        }
     }
     
-    // Показываем реальные рейтинги после выбора
-    document.getElementById('hero1-rating').textContent = formatRating(calculateRating(currentHeroes[0]));
-    document.getElementById('hero2-rating').textContent = formatRating(calculateRating(currentHeroes[1]));
+    // Показываем WIN/LOSE на картинках с процентами
+    const winnerPercent = formatRating(calculateRating(actualWinner));
+    const loserPercent = formatRating(calculateRating(userSelectedWinner ? otherHero : selectedHero));
+    
+    if (userSelectedWinner) {
+        // Пользователь выбрал победителя
+        document.getElementById(`hero${heroNumber}-win`).classList.add('show');
+        document.getElementById(`hero${heroNumber}-win-percent`).textContent = winnerPercent;
+        
+        document.getElementById(`hero${heroNumber === 1 ? 2 : 1}-lose`).classList.add('show');
+        document.getElementById(`hero${heroNumber === 1 ? 2 : 1}-lose-percent`).textContent = loserPercent;
+    } else {
+        // Пользователь выбрал проигравшего
+        document.getElementById(`hero${heroNumber}-lose`).classList.add('show');
+        document.getElementById(`hero${heroNumber}-lose-percent`).textContent = loserPercent;
+        
+        document.getElementById(`hero${heroNumber === 1 ? 2 : 1}-win`).classList.add('show');
+        document.getElementById(`hero${heroNumber === 1 ? 2 : 1}-win-percent`).textContent = winnerPercent;
+    }
     
     // Обновляем статистику в базе данных
     try {
@@ -253,7 +317,10 @@ function startGame() {
 }
 
 // Запуск при загрузке DOM
-document.addEventListener("DOMContentLoaded", loadAllHeroes);
+document.addEventListener("DOMContentLoaded", function() {
+    initTelegram();
+    loadAllHeroes();
+});
 
 // Делаем функции глобальными для использования в HTML
 window.vote = vote;

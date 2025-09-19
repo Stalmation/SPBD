@@ -1,19 +1,35 @@
 <!-- index.html -->
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Super Hero Vote</title>
-    <link rel="stylesheet" href="styles.css?v=2">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <link rel="stylesheet" href="styles.css?v=6">
     <link rel="preconnect" href="https://xwtcasfvetisjaiijtsj.supabase.co">
     <link rel="dns-prefetch" href="https://xwtcasfvetisjaiijtsj.supabase.co">
+    <!-- Подключаем комиксные шрифты -->
+    <style>
+        @font-face {
+            font-family: 'Comic';
+            src: url('fonts/comic.TTF') format('truetype');
+            font-weight: normal;
+            font-style: normal;
+        }
+        @font-face {
+            font-family: 'ComicBold';
+            src: url('fonts/comicbd.TTF') format('truetype');
+            font-weight: bold;
+            font-style: normal;
+        }
+    </style>
 </head>
 <body>
     <div class="container">
         <header>
             <h1>SUPER HERO BEAT DOWN</h1>
-            <p>Кто победит в бою?</p>
+            <p>Who would win in a fight?</p>
             <div class="progress-container">
                 <div class="progress-bar">
                     <div class="progress-fill" id="progress-fill"></div>
@@ -22,12 +38,23 @@
             </div>
         </header>
 
+        <div class="rating-notice">
+            <p>Your vote shapes the hero ratings!</p>
+        </div>
+
         <div class="battle-area">
             <div class="hero-card" id="hero1" onclick="vote(1)">
                 <img src="" alt="Hero 1" class="hero-image" id="hero1-img" loading="eager">
+                <div class="hero-win-overlay" id="hero1-win">
+                    <div class="win-lose-text">WIN</div>
+                    <div class="rating-percent" id="hero1-win-percent"></div>
+                </div>
+                <div class="hero-lose-overlay" id="hero1-lose">
+                    <div class="win-lose-text">LOSE</div>
+                    <div class="rating-percent" id="hero1-lose-percent"></div>
+                </div>
                 <div class="hero-info">
                     <div class="hero-name" id="hero1-name"></div>
-                    <div class="hero-rating" id="hero1-rating"></div>
                 </div>
                 <div class="hero-publisher" id="hero1-publisher"></div>
             </div>
@@ -36,22 +63,26 @@
             
             <div class="hero-card" id="hero2" onclick="vote(2)">
                 <img src="" alt="Hero 2" class="hero-image" id="hero2-img" loading="eager">
+                <div class="hero-win-overlay" id="hero2-win">
+                    <div class="win-lose-text">WIN</div>
+                    <div class="rating-percent" id="hero2-win-percent"></div>
+                </div>
+                <div class="hero-lose-overlay" id="hero2-lose">
+                    <div class="win-lose-text">LOSE</div>
+                    <div class="rating-percent" id="hero2-lose-percent"></div>
+                </div>
                 <div class="hero-info">
                     <div class="hero-name" id="hero2-name"></div>
-                    <div class="hero-rating" id="hero2-rating"></div>
                 </div>
                 <div class="hero-publisher" id="hero2-publisher"></div>
             </div>
         </div>
 
-        <div class="result" id="result"></div>
-        <div class="rating-info" id="rating-info"></div>
-        
         <footer>
-            <p>Твой голос формирует рейтинг! Пройди всех героев!</p>
+            <p>Complete all heroes to see the full ranking!</p>
         </footer>
     </div>
 
-    <script type="module" src="app.js?v=2"></script>
+    <script type="module" src="app.js?v=6"></script>
 </body>
 </html>
