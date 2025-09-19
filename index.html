@@ -52,9 +52,10 @@
         </footer>
     </div>
 
-    <script src="app.js"></script>
+    <script type="module" src="app.js"></script>
     <!-- Добавьте этот код перед закрывающим тегом </body> -->
     <div style="position: fixed; bottom: 10px; left: 10px; z-index: 1000;">
+        <div id="heroes"></div>
         <button onclick="console.log('All heroes:', allHeroes)" style="font-size: 10px; padding: 5px;">Debug: Show Heroes</button>
         <button onclick="localStorage.clear(); location.reload();" style="font-size: 10px; padding: 5px;">Reset Progress</button>
     </div>
