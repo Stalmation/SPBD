@@ -215,3 +215,31 @@ footer {
 .hero-card:nth-child(2) {
     animation-delay: 0.2s;
 }
+
+.rating-info {
+    margin-top: 20px;
+    padding: 15px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    text-align: center;
+    display: none;
+}
+
+.rating-comparison {
+    display: flex;
+    justify-content: space-around;
+    font-size: 16px;
+    font-weight: bold;
+}
+
+.rating-comparison div {
+    padding: 5px 10px;
+}
+
+#image-preload {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    opacity: 0.001;
+}

@@ -1,7 +1,6 @@
 // app.js
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-// ⚡ сюда вставь свои данные
 const SUPABASE_URL = "https://xwtcasfvetisjaiijtsj.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh3dGNhc2Z2ZXRpc2phaWlqdHNqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgyMTA5OTMsImV4cCI6MjA3Mzc4Njk5M30.b8ScpPxBx6K0HmWynqppBLSxxuENNmOJR7Kcl6hIo2s";
 
@@ -11,16 +10,16 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 let allHeroes = [];
 let currentHeroes = [];
 let votedHeroes = new Set();
+let imageCache = new Map();
 
 // Загрузка всех героев из базы данных
 async function loadAllHeroes() {
     console.log("Подключаемся к Supabase...");
 
     try {
-        // запрос к таблице Heroes_Table
         let { data, error } = await supabase
             .from("Heroes_Table")
-            .select("id, name, image_url, rating, publisher")
+            .select("id, name, image_url, wins, shows, publisher")
             .order('id');
 
         if (error) {
@@ -36,6 +35,9 @@ async function loadAllHeroes() {
         console.log("Загружено героев:", data.length);
         allHeroes = data;
         
+        // Предзагрузка изображений
+        preloadImages();
+        
         // Загружаем прогресс из localStorage
         loadProgress();
         
@@ -45,6 +47,32 @@ async function loadAllHeroes() {
     } catch (error) {
         console.error("Ошибка при загрузке героев:", error);
     }
+}
+
+// Предзагрузка изображений
+function preloadImages() {
+    const preloadContainer = document.getElementById('image-preload');
+    allHeroes.forEach(hero => {
+        if (hero.image_url) {
+            const img = new Image();
+            img.src = hero.image_url;
+            img.onload = () => {
+                imageCache.set(hero.id, hero.image_url);
+            };
+            preloadContainer.appendChild(img);
+        }
+    });
+}
+
+// Расчет рейтинга в процентах
+function calculateRating(hero) {
+    if (!hero.shows || hero.shows === 0) return 0;
+    return (hero.wins / hero.shows) * 100;
+}
+
+// Форматирование рейтинга
+function formatRating(percent) {
+    return percent.toFixed(1) + '%';
 }
 
 // Загрузка прогресса
@@ -107,16 +135,21 @@ function displayHeroes() {
     }
     
     // Отображаем первого героя
+    const hero1Rating = calculateRating(currentHeroes[0]);
     document.getElementById('hero1-img').src = currentHeroes[0].image_url;
     document.getElementById('hero1-name').textContent = currentHeroes[0].name;
-    document.getElementById('hero1-rating').textContent = `Рейтинг: ${currentHeroes[0].rating || 0}`;
+    document.getElementById('hero1-rating').textContent = `Рейтинг: ${formatRating(hero1Rating)}`;
     document.getElementById('hero1-publisher').textContent = currentHeroes[0].publisher || '';
     
     // Отображаем второго героя
+    const hero2Rating = calculateRating(currentHeroes[1]);
     document.getElementById('hero2-img').src = currentHeroes[1].image_url;
     document.getElementById('hero2-name').textContent = currentHeroes[1].name;
-    document.getElementById('hero2-rating').textContent = `Рейтинг: ${currentHeroes[1].rating || 0}`;
+    document.getElementById('hero2-rating').textContent = `Рейтинг: ${formatRating(hero2Rating)}`;
     document.getElementById('hero2-publisher').textContent = currentHeroes[1].publisher || '';
+    
+    // Скрываем информацию о рейтингах
+    document.getElementById('rating-info').style.display = 'none';
 }
 
 // Голосование
@@ -126,38 +159,61 @@ async function vote(heroNumber) {
     const winner = currentHeroes[heroNumber - 1];
     const loser = currentHeroes[heroNumber === 1 ? 1 : 0];
     
+    const winnerRating = calculateRating(winner);
+    const loserRating = calculateRating(loser);
+    
+    // Определяем, угадал ли пользователь
+    const userGuessedCorrectly = heroNumber === (winnerRating > loserRating ? 1 : 2);
+    
     // Добавляем в проголосованные
     votedHeroes.add(winner.id);
     votedHeroes.add(loser.id);
     saveProgress();
     
     // Показываем результат
-    document.getElementById('result').textContent = `Вы выбрали: ${winner.name}!`;
+    let resultMessage = `Вы выбрали: ${winner.name}! `;
+    resultMessage += userGuessedCorrectly ? "✅ Вы угадали!" : "❌ Вы не угадали!";
     
-    // Обновляем рейтинги в базе данных
+    document.getElementById('result').textContent = resultMessage;
+    
+    // Показываем реальные рейтинги
+    const ratingInfo = document.getElementById('rating-info');
+    ratingInfo.innerHTML = `
+        <div class="rating-comparison">
+            <div>${winner.name}: ${formatRating(winnerRating)}</div>
+            <div>${loser.name}: ${formatRating(loserRating)}</div>
+        </div>
+    `;
+    ratingInfo.style.display = 'block';
+    
+    // Обновляем статистику в базе данных
     try {
-        // Увеличиваем рейтинг победителя
+        // Увеличиваем wins победителю и shows обоим
         await supabase
             .from('Heroes_Table')
-            .update({ rating: (winner.rating || 0) + 1 })
+            .update({ 
+                wins: (winner.wins || 0) + 1,
+                shows: (winner.shows || 0) + 1
+            })
             .eq('id', winner.id);
         
-        // Уменьшаем рейтинг проигравшего (но не ниже 0)
-        const newLoserRating = Math.max(0, (loser.rating || 0) - 1);
         await supabase
             .from('Heroes_Table')
-            .update({ rating: newLoserRating })
+            .update({ 
+                shows: (loser.shows || 0) + 1
+            })
             .eq('id', loser.id);
             
     } catch (error) {
-        console.error("Ошибка при обновлении рейтинга:", error);
+        console.error("Ошибка при обновлении статистики:", error);
     }
     
     // Ждем немного и показываем новых героев
     setTimeout(() => {
         document.getElementById('result').textContent = '';
+        document.getElementById('rating-info').style.display = 'none';
         displayHeroes();
-    }, 1500);
+    }, 2500);
 }
 
 // Начало игры
