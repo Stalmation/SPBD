@@ -6,23 +6,34 @@
     <title>Super Hero Vote</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <link rel="stylesheet" href="styles.css">
+    <!-- Preload ключевых ресурсов -->
+    <link rel="preconnect" href="https://xwtcasfvetisjaiijtsj.supabase.co">
+    <link rel="dns-prefetch" href="https://xwtcasfvetisjaiijtsj.supabase.co">
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>SUPER POWER BEAT DOWN</h1>
+            <h1>SUPER HERO BEAT DOWN</h1>
             <p>Кто победит в бою?</p>
         </header>
 
         <div class="battle-area">
             <div class="hero-card" id="hero1" onclick="vote(1)">
-                <div class="hero-name">Загрузка...</div>
+                <img src="" alt="Hero 1" class="hero-image" id="hero1-img" loading="eager">
+                <div class="hero-info">
+                    <div class="hero-name" id="hero1-name"></div>
+                    <div class="hero-rating" id="hero1-rating"></div>
+                </div>
             </div>
             
             <div class="vs">VS</div>
             
             <div class="hero-card" id="hero2" onclick="vote(2)">
-                <div class="hero-name">Загрузка...</div>
+                <img src="" alt="Hero 2" class="hero-image" id="hero2-img" loading="eager">
+                <div class="hero-info">
+                    <div class="hero-name" id="hero2-name"></div>
+                    <div class="hero-rating" id="hero2-rating"></div>
+                </div>
             </div>
         </div>
 

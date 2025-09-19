@@ -51,15 +51,14 @@ header p {
 }
 
 .hero-card {
+    position: relative;
     width: 90%;
     max-width: 300px;
-    height: 150px;
+    height: 200px;
     background: linear-gradient(145deg, #2a2a4a, #1c1c34);
     border: 3px solid #4cc9f0;
     border-radius: 20px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    overflow: hidden;
     cursor: pointer;
     transition: all 0.3s ease;
     box-shadow: 0 8px 25px rgba(76, 201, 240, 0.15);
@@ -70,12 +69,34 @@ header p {
     box-shadow: 0 4px 15px rgba(76, 201, 240, 0.3);
 }
 
-.hero-name {
-    font-size: 22px;
-    font-weight: bold;
+.hero-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
+
+.hero-info {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(transparent, rgba(0, 0, 0, 0.9));
+    padding: 15px 10px 10px;
     text-align: center;
-    padding: 20px;
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.hero-name {
+    font-size: 18px;
+    font-weight: bold;
+    margin-bottom: 5px;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+}
+
+.hero-rating {
+    font-size: 14px;
+    color: #4cc9f0;
+    font-weight: bold;
 }
 
 .vs {
@@ -113,17 +134,17 @@ footer {
     font-size: 14px;
 }
 
-/* Адаптация для очень маленьких экранов */
+/* Адаптация для маленьких экранов */
 @media (max-height: 700px) {
     .hero-card {
-        height: 130px;
+        height: 180px;
     }
     
     .hero-name {
-        font-size: 20px;
+        font-size: 16px;
     }
     
-    header {
-        margin-bottom: 20px;
+    .hero-rating {
+        font-size: 12px;
     }
 }
