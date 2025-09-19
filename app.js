@@ -66,7 +66,7 @@ function preloadNextPair() {
     });
 }
 
-// Расчет рейтинга в процентах (используем viewers вместо shows)
+// Расчет рейтинга в процентах
 function calculateRating(hero) {
     if (!hero.viewers || hero.viewers === 0) return 50;
     return (hero.wins / hero.viewers) * 100;
@@ -145,13 +145,17 @@ function displayHeroes() {
         return;
     }
     
-    // Отображаем первого героя
-    const hero1Rating = calculateRating(currentHeroes[0]);
+    // Сбрасываем результат
+    document.getElementById('result').textContent = '';
+    document.getElementById('result').className = '';
+    document.getElementById('rating-info').style.display = 'none';
+    
+    // Отображаем первого героя (ПОЛНОСТЬЮ СКРЫВАЕМ РЕЙТИНГ)
     document.getElementById('hero1-img').src = currentHeroes[0].image_url;
     document.getElementById('hero1-name').textContent = currentHeroes[0].name;
-    document.getElementById('hero1-rating').textContent = `Рейтинг: ${formatRating(hero1Rating)}`;
+    document.getElementById('hero1-rating').textContent = ''; // Полностью пусто
     
-    // Отображаем логотип издателя вместо текста
+    // Отображаем логотип издателя
     const hero1Publisher = document.getElementById('hero1-publisher');
     hero1Publisher.innerHTML = '';
     if (currentHeroes[0].owner) {
@@ -160,17 +164,14 @@ function displayHeroes() {
         logoImg.alt = currentHeroes[0].publisher;
         logoImg.className = 'publisher-logo';
         hero1Publisher.appendChild(logoImg);
-    } else {
-        hero1Publisher.textContent = currentHeroes[0].publisher || '';
     }
     
-    // Отображаем второго героя
-    const hero2Rating = calculateRating(currentHeroes[1]);
+    // Отображаем второго героя (ПОЛНОСТЬЮ СКРЫВАЕМ РЕЙТИНГ)
     document.getElementById('hero2-img').src = currentHeroes[1].image_url;
     document.getElementById('hero2-name').textContent = currentHeroes[1].name;
-    document.getElementById('hero2-rating').textContent = `Рейтинг: ${formatRating(hero2Rating)}`;
+    document.getElementById('hero2-rating').textContent = ''; // Полностью пусто
     
-    // Отображаем логотип издателя вместо текста
+    // Отображаем логотип издателя
     const hero2Publisher = document.getElementById('hero2-publisher');
     hero2Publisher.innerHTML = '';
     if (currentHeroes[1].owner) {
@@ -179,12 +180,7 @@ function displayHeroes() {
         logoImg.alt = currentHeroes[1].publisher;
         logoImg.className = 'publisher-logo';
         hero2Publisher.appendChild(logoImg);
-    } else {
-        hero2Publisher.textContent = currentHeroes[1].publisher || '';
     }
-    
-    // Скрываем информацию о рейтингах
-    document.getElementById('rating-info').style.display = 'none';
 }
 
 // Голосование
@@ -206,20 +202,18 @@ async function vote(heroNumber) {
     saveProgress();
     
     // Показываем результат
-    let resultMessage = `Вы выбрали: ${winner.name}! `;
-    resultMessage += userGuessedCorrectly ? "✅ Вы угадали!" : "❌ Вы не угадали!";
+    const resultElement = document.getElementById('result');
+    if (userGuessedCorrectly) {
+        resultElement.textContent = `🎉 ПОБЕДА! ${winner.name} побеждает!`;
+        resultElement.className = 'result win';
+    } else {
+        resultElement.textContent = `💥 ПРОИГРЫШ! ${winner.name} был сильнее!`;
+        resultElement.className = 'result lose';
+    }
     
-    document.getElementById('result').textContent = resultMessage;
-    
-    // Показываем реальные рейтинги
-    const ratingInfo = document.getElementById('rating-info');
-    ratingInfo.innerHTML = `
-        <div class="rating-comparison">
-            <div>${winner.name}: ${formatRating(winnerRating)}</div>
-            <div>${loser.name}: ${formatRating(loserRating)}</div>
-        </div>
-    `;
-    ratingInfo.style.display = 'block';
+    // Показываем реальные рейтинги после выбора
+    document.getElementById('hero1-rating').textContent = formatRating(calculateRating(currentHeroes[0]));
+    document.getElementById('hero2-rating').textContent = formatRating(calculateRating(currentHeroes[1]));
     
     // Обновляем статистику в базе данных
     try {
@@ -245,8 +239,6 @@ async function vote(heroNumber) {
     
     // Ждем немного и показываем новых героев
     setTimeout(() => {
-        document.getElementById('result').textContent = '';
-        document.getElementById('rating-info').style.display = 'none';
         displayHeroes();
     }, 2500);
 }
