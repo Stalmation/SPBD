@@ -243,3 +243,39 @@ footer {
     overflow: hidden;
     opacity: 0.001;
 }
+
+.publisher-logo {
+    width: 30px;
+    height: 30px;
+    object-fit: contain;
+    border-radius: 50%;
+    background: white;
+    padding: 2px;
+}
+
+.hero-publisher {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 5px;
+}
+
+.rating-info {
+    margin-top: 20px;
+    padding: 15px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    text-align: center;
+    display: none;
+}
+
+.rating-comparison {
+    display: flex;
+    justify-content: space-around;
+    font-size: 16px;
+    font-weight: bold;
+}
+
+.rating-comparison div {
+    padding: 5px 10px;
+}

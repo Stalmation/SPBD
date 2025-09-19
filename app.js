@@ -9,9 +9,8 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 // Глобальные переменные
 let allHeroes = [];
 let currentHeroes = [];
-let nextHeroes = []; // Следующая пара для предзагрузки
+let nextHeroes = [];
 let votedHeroes = new Set();
-let imageCache = new Map();
 
 // Загрузка всех героев из базы данных
 async function loadAllHeroes() {
@@ -20,7 +19,7 @@ async function loadAllHeroes() {
     try {
         let { data, error } = await supabase
             .from("Heroes_Table")
-            .select("id, name, image_url, wins, shows, publisher")
+            .select("id, name, image_url, wins, viewers, publisher, owner")
             .order('id');
 
         if (error) {
@@ -56,20 +55,21 @@ function preloadNextPair() {
     
     // Предзагружаем изображения для следующей пары
     nextPair.forEach(hero => {
-        if (hero.image_url && !imageCache.has(hero.id)) {
+        if (hero.image_url) {
             const img = new Image();
             img.src = hero.image_url;
-            img.onload = () => {
-                imageCache.set(hero.id, hero.image_url);
-            };
+        }
+        if (hero.owner) {
+            const logoImg = new Image();
+            logoImg.src = hero.owner;
         }
     });
 }
 
-// Расчет рейтинга в процентах
+// Расчет рейтинга в процентах (используем viewers вместо shows)
 function calculateRating(hero) {
-    if (!hero.shows || hero.shows === 0) return 50; // 50% по умолчанию если нет данных
-    return (hero.wins / hero.shows) * 100;
+    if (!hero.viewers || hero.viewers === 0) return 50;
+    return (hero.wins / hero.viewers) * 100;
 }
 
 // Форматирование рейтинга
@@ -150,19 +150,41 @@ function displayHeroes() {
     document.getElementById('hero1-img').src = currentHeroes[0].image_url;
     document.getElementById('hero1-name').textContent = currentHeroes[0].name;
     document.getElementById('hero1-rating').textContent = `Рейтинг: ${formatRating(hero1Rating)}`;
-    document.getElementById('hero1-publisher').textContent = currentHeroes[0].publisher || '';
+    
+    // Отображаем логотип издателя вместо текста
+    const hero1Publisher = document.getElementById('hero1-publisher');
+    hero1Publisher.innerHTML = '';
+    if (currentHeroes[0].owner) {
+        const logoImg = document.createElement('img');
+        logoImg.src = currentHeroes[0].owner;
+        logoImg.alt = currentHeroes[0].publisher;
+        logoImg.className = 'publisher-logo';
+        hero1Publisher.appendChild(logoImg);
+    } else {
+        hero1Publisher.textContent = currentHeroes[0].publisher || '';
+    }
     
     // Отображаем второго героя
     const hero2Rating = calculateRating(currentHeroes[1]);
     document.getElementById('hero2-img').src = currentHeroes[1].image_url;
     document.getElementById('hero2-name').textContent = currentHeroes[1].name;
     document.getElementById('hero2-rating').textContent = `Рейтинг: ${formatRating(hero2Rating)}`;
-    document.getElementById('hero2-publisher').textContent = currentHeroes[1].publisher || '';
+    
+    // Отображаем логотип издателя вместо текста
+    const hero2Publisher = document.getElementById('hero2-publisher');
+    hero2Publisher.innerHTML = '';
+    if (currentHeroes[1].owner) {
+        const logoImg = document.createElement('img');
+        logoImg.src = currentHeroes[1].owner;
+        logoImg.alt = currentHeroes[1].publisher;
+        logoImg.className = 'publisher-logo';
+        hero2Publisher.appendChild(logoImg);
+    } else {
+        hero2Publisher.textContent = currentHeroes[1].publisher || '';
+    }
     
     // Скрываем информацию о рейтингах
     document.getElementById('rating-info').style.display = 'none';
-    
-    console.log('Текущая пара:', currentHeroes[0].name, 'vs', currentHeroes[1].name);
 }
 
 // Голосование
@@ -201,19 +223,19 @@ async function vote(heroNumber) {
     
     // Обновляем статистику в базе данных
     try {
-        // Увеличиваем wins победителю и shows обоим
+        // Увеличиваем wins победителю и viewers обоим
         await supabase
             .from('Heroes_Table')
             .update({ 
                 wins: (winner.wins || 0) + 1,
-                shows: (winner.shows || 0) + 1
+                viewers: (winner.viewers || 0) + 1
             })
             .eq('id', winner.id);
         
         await supabase
             .from('Heroes_Table')
             .update({ 
-                shows: (loser.shows || 0) + 1
+                viewers: (loser.viewers || 0) + 1
             })
             .eq('id', loser.id);
             
