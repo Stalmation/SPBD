@@ -1,9 +1,9 @@
 // app.js
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-// app.js (замените старые строки с константами)
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+// Публичные данные для подключения (безопасно для браузера)
+const SUPABASE_URL = "https://xwtcasfvetisjaiijtsj.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh3dGNhc2Z2ZXRpc2phaWlqdHNqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgyMTA5OTMsImV4cCI6MjA3Mzc4Njk5M30.b8ScpPxBx6K0HmWynqppBLSxxuENNmOJR7Kcl6hIo2s";
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
