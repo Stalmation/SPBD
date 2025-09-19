@@ -24,37 +24,69 @@ body {
 
 header {
     text-align: center;
-    margin-bottom: 30px;
-    padding-top: 20px;
+    margin-bottom: 20px;
+    padding-top: 15px;
+    width: 100%;
 }
 
 header h1 {
     font-size: 24px;
-    margin-bottom: 10px;
+    margin-bottom: 8px;
     color: #ffd700;
     text-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
 }
 
 header p {
-    font-size: 16px;
+    font-size: 14px;
     opacity: 0.8;
+    margin-bottom: 15px;
+}
+
+.progress-container {
+    width: 90%;
+    max-width: 300px;
+    margin: 0 auto;
+}
+
+.progress-bar {
+    width: 100%;
+    height: 8px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 5px;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #4cc9f0, #ffd700);
+    border-radius: 10px;
+    transition: width 0.3s ease;
+    width: 0%;
+}
+
+.progress-text {
+    font-size: 12px;
+    opacity: 0.7;
+    text-align: center;
 }
 
 .battle-area {
     width: 100%;
     display: flex;
     flex-direction: column;
-    gap: 25px;
+    gap: 20px;
     align-items: center;
     flex-grow: 1;
     justify-content: center;
+    padding: 10px 0;
 }
 
 .hero-card {
     position: relative;
     width: 90%;
-    max-width: 300px;
-    height: 200px;
+    max-width: 320px;
+    height: 220px;
     background: linear-gradient(145deg, #2a2a4a, #1c1c34);
     border: 3px solid #4cc9f0;
     border-radius: 20px;
@@ -82,43 +114,55 @@ header p {
     left: 0;
     right: 0;
     background: linear-gradient(transparent, rgba(0, 0, 0, 0.9));
-    padding: 15px 10px 10px;
+    padding: 12px 10px 8px;
     text-align: center;
 }
 
 .hero-name {
-    font-size: 18px;
+    font-size: 16px;
     font-weight: bold;
-    margin-bottom: 5px;
+    margin-bottom: 4px;
     text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
 }
 
 .hero-rating {
-    font-size: 14px;
+    font-size: 12px;
     color: #4cc9f0;
     font-weight: bold;
 }
 
+.hero-publisher {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: rgba(0, 0, 0, 0.7);
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 10px;
+    font-weight: bold;
+    color: #ffd700;
+}
+
 .vs {
-    font-size: 28px;
+    font-size: 24px;
     font-weight: bold;
     color: #ffd700;
     text-shadow: 0 0 15px rgba(255, 215, 0, 0.5);
-    padding: 10px 25px;
+    padding: 8px 20px;
     background: rgba(0, 0, 0, 0.3);
     border-radius: 50px;
 }
 
 .result {
-    height: 60px;
+    height: 50px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 18px;
+    font-size: 16px;
     font-weight: bold;
     color: #4cc9f0;
     text-align: center;
-    margin: 20px 0;
+    margin: 15px 0;
     opacity: 0;
     transition: opacity 0.3s ease;
 }
@@ -129,9 +173,9 @@ header p {
 
 footer {
     text-align: center;
-    padding: 20px;
+    padding: 15px;
     opacity: 0.7;
-    font-size: 14px;
+    font-size: 12px;
 }
 
 /* Адаптация для маленьких экранов */
@@ -141,10 +185,33 @@ footer {
     }
     
     .hero-name {
-        font-size: 16px;
+        font-size: 14px;
     }
     
     .hero-rating {
-        font-size: 12px;
+        font-size: 11px;
     }
+    
+    .hero-publisher {
+        font-size: 9px;
+        padding: 3px 6px;
+    }
+}
+
+/* Анимации */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.hero-card {
+    animation: fadeIn 0.5s ease-out;
+}
+
+.hero-card:nth-child(1) {
+    animation-delay: 0.1s;
+}
+
+.hero-card:nth-child(2) {
+    animation-delay: 0.2s;
 }
