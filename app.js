@@ -9,6 +9,7 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 // Глобальные переменные
 let allHeroes = [];
 let currentHeroes = [];
+let nextHeroes = []; // Следующая пара для предзагрузки
 let votedHeroes = new Set();
 let imageCache = new Map();
 
@@ -35,9 +36,6 @@ async function loadAllHeroes() {
         console.log("Загружено героев:", data.length);
         allHeroes = data;
         
-        // Предзагрузка изображений
-        preloadImages();
-        
         // Загружаем прогресс из localStorage
         loadProgress();
         
@@ -49,24 +47,28 @@ async function loadAllHeroes() {
     }
 }
 
-// Предзагрузка изображений
-function preloadImages() {
-    const preloadContainer = document.getElementById('image-preload');
-    allHeroes.forEach(hero => {
-        if (hero.image_url) {
+// Предзагрузка изображений для следующей пары
+function preloadNextPair() {
+    const nextPair = getRandomHeroes();
+    if (!nextPair) return;
+    
+    nextHeroes = nextPair;
+    
+    // Предзагружаем изображения для следующей пары
+    nextPair.forEach(hero => {
+        if (hero.image_url && !imageCache.has(hero.id)) {
             const img = new Image();
             img.src = hero.image_url;
             img.onload = () => {
                 imageCache.set(hero.id, hero.image_url);
             };
-            preloadContainer.appendChild(img);
         }
     });
 }
 
 // Расчет рейтинга в процентах
 function calculateRating(hero) {
-    if (!hero.shows || hero.shows === 0) return 0;
+    if (!hero.shows || hero.shows === 0) return 50; // 50% по умолчанию если нет данных
     return (hero.wins / hero.shows) * 100;
 }
 
@@ -127,7 +129,16 @@ function getRandomHeroes() {
 
 // Отображение героев
 function displayHeroes() {
-    currentHeroes = getRandomHeroes();
+    // Используем предзагруженную пару если есть, иначе создаем новую
+    if (nextHeroes.length === 2) {
+        currentHeroes = nextHeroes;
+        nextHeroes = [];
+    } else {
+        currentHeroes = getRandomHeroes();
+    }
+    
+    // Предзагружаем следующую пару
+    preloadNextPair();
     
     if (!currentHeroes) {
         document.getElementById('result').textContent = "Недостаточно героев для голосования!";
@@ -150,6 +161,8 @@ function displayHeroes() {
     
     // Скрываем информацию о рейтингах
     document.getElementById('rating-info').style.display = 'none';
+    
+    console.log('Текущая пара:', currentHeroes[0].name, 'vs', currentHeroes[1].name);
 }
 
 // Голосование
