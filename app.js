@@ -141,19 +141,21 @@ function displayHeroes() {
     preloadNextPair();
     
     if (!currentHeroes) {
-        document.getElementById('result').textContent = "Недостаточно героев для голосования!";
+        document.getElementById('result').textContent = "Not enough heroes!";
         return;
     }
     
     // Сбрасываем результат
     document.getElementById('result').textContent = '';
     document.getElementById('result').className = '';
-    document.getElementById('rating-info').style.display = 'none';
     
-    // Отображаем первого героя (ПОЛНОСТЬЮ СКРЫВАЕМ РЕЙТИНГ)
+    // Скрываем рейтинги
+    document.getElementById('hero1-rating').textContent = '';
+    document.getElementById('hero2-rating').textContent = '';
+    
+    // Отображаем первого героя
     document.getElementById('hero1-img').src = currentHeroes[0].image_url;
     document.getElementById('hero1-name').textContent = currentHeroes[0].name;
-    document.getElementById('hero1-rating').textContent = ''; // Полностью пусто
     
     // Отображаем логотип издателя
     const hero1Publisher = document.getElementById('hero1-publisher');
@@ -166,10 +168,9 @@ function displayHeroes() {
         hero1Publisher.appendChild(logoImg);
     }
     
-    // Отображаем второго героя (ПОЛНОСТЬЮ СКРЫВАЕМ РЕЙТИНГ)
+    // Отображаем второго героя
     document.getElementById('hero2-img').src = currentHeroes[1].image_url;
     document.getElementById('hero2-name').textContent = currentHeroes[1].name;
-    document.getElementById('hero2-rating').textContent = ''; // Полностью пусто
     
     // Отображаем логотип издателя
     const hero2Publisher = document.getElementById('hero2-publisher');
@@ -187,27 +188,28 @@ function displayHeroes() {
 async function vote(heroNumber) {
     if (!currentHeroes || currentHeroes.length < 2) return;
     
-    const winner = currentHeroes[heroNumber - 1];
-    const loser = currentHeroes[heroNumber === 1 ? 1 : 0];
+    const selectedHero = currentHeroes[heroNumber - 1];
+    const otherHero = currentHeroes[heroNumber === 1 ? 1 : 0];
     
-    const winnerRating = calculateRating(winner);
-    const loserRating = calculateRating(loser);
+    const selectedRating = calculateRating(selectedHero);
+    const otherRating = calculateRating(otherHero);
     
-    // Определяем, угадал ли пользователь
-    const userGuessedCorrectly = heroNumber === (winnerRating > loserRating ? 1 : 2);
+    // Определяем, кто на самом деле сильнее
+    const actualWinner = selectedRating > otherRating ? selectedHero : otherHero;
+    const userSelectedWinner = selectedHero === actualWinner;
     
     // Добавляем в проголосованные
-    votedHeroes.add(winner.id);
-    votedHeroes.add(loser.id);
+    votedHeroes.add(selectedHero.id);
+    votedHeroes.add(otherHero.id);
     saveProgress();
     
     // Показываем результат
     const resultElement = document.getElementById('result');
-    if (userGuessedCorrectly) {
-        resultElement.textContent = `🎉 ПОБЕДА! ${winner.name} побеждает!`;
+    if (userSelectedWinner) {
+        resultElement.textContent = `WIN! ${selectedHero.name} wins!`;
         resultElement.className = 'result win';
     } else {
-        resultElement.textContent = `💥 ПРОИГРЫШ! ${winner.name} был сильнее!`;
+        resultElement.textContent = `LOST! ${actualWinner.name} was stronger!`;
         resultElement.className = 'result lose';
     }
     
@@ -221,17 +223,17 @@ async function vote(heroNumber) {
         await supabase
             .from('Heroes_Table')
             .update({ 
-                wins: (winner.wins || 0) + 1,
-                viewers: (winner.viewers || 0) + 1
+                wins: (actualWinner.wins || 0) + 1,
+                viewers: (actualWinner.viewers || 0) + 1
             })
-            .eq('id', winner.id);
+            .eq('id', actualWinner.id);
         
         await supabase
             .from('Heroes_Table')
             .update({ 
-                viewers: (loser.viewers || 0) + 1
+                viewers: (otherHero.viewers || 0) + 1
             })
-            .eq('id', loser.id);
+            .eq('id', otherHero.id);
             
     } catch (error) {
         console.error("Ошибка при обновлении статистики:", error);
