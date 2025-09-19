@@ -21,13 +21,17 @@ async function initializeGame() {
         const response = await fetch(`${SUPABASE_URL}/rest/v1/heroes?select=*`, {
             headers: {
                 'apikey': SUPABASE_KEY,
-                'Authorization': `Bearer ${SUPABASE_KEY}`
+                'Authorization': `Bearer ${SUPABASE_KEY}`,
+                'Content-Type': 'application/json'
             }
         });
         
-        if (!response.ok) throw new Error('Ошибка загрузки героев');
+        if (!response.ok) {
+            throw new Error(`Ошибка загрузки героев: ${response.status} ${response.statusText}`);
+        }
         
         allHeroes = await response.json();
+        console.log('Загружено героев:', allHeroes.length);
         
         // Загружаем прогресс из localStorage
         const savedProgress = localStorage.getItem('heroVoteProgress');
@@ -40,6 +44,15 @@ async function initializeGame() {
     } catch (error) {
         console.error('Ошибка инициализации:', error);
         showResult('Ошибка загрузки данных', 'error');
+        
+        // Заглушка для тестирования
+        allHeroes = [
+            {id: 1, name: 'Batman', image_url: 'https://via.placeholder.com/320x220/2a2a4a/ffffff?text=Batman', publisher: 'DC', rating: 95},
+            {id: 2, name: 'Superman', image_url: 'https://via.placeholder.com/320x220/2a2a4a/ffffff?text=Superman', publisher: 'DC', rating: 98},
+            {id: 3, name: 'Spider-Man', image_url: 'https://via.placeholder.com/320x220/2a2a4a/ffffff?text=Spider-Man', publisher: 'Marvel', rating: 92},
+            {id: 4, name: 'Iron Man', image_url: 'https://via.placeholder.com/320x220/2a2a4a/ffffff?text=Iron+Man', publisher: 'Marvel', rating: 90}
+        ];
+        updateProgressBar();
     }
 }
 
@@ -67,13 +80,19 @@ async function loadNewBattle() {
             availableHeroes[randomIndices[1]]
         ];
         
+        console.log('Текущие герои:', currentHeroes);
+        
         // Отображаем героев
         displayHero(1, currentHeroes[0]);
         displayHero(2, currentHeroes[1]);
         
         // Отмечаем показ и обновляем статистику
-        await trackHeroShow(currentHeroes[0].id);
-        await trackHeroShow(currentHeroes[1].id);
+        try {
+            await trackHeroShow(currentHeroes[0].id);
+            await trackHeroShow(currentHeroes[1].id);
+        } catch (error) {
+            console.warn('Не удалось обновить статистику показа:', error);
+        }
         
         // Добавляем в показанные
         shownHeroes.add(currentHeroes[0].id);
@@ -85,6 +104,7 @@ async function loadNewBattle() {
         
     } catch (error) {
         console.error('Ошибка загрузки битвы:', error);
+        showResult('Ошибка загрузки битвы', 'error');
     }
 }
 
@@ -99,12 +119,13 @@ function displayHero(cardNumber, hero) {
     // Устанавливаем изображение (с обработкой ошибок)
     img.onerror = function() {
         this.src = 'https://via.placeholder.com/320x220/2a2a4a/ffffff?text=Image+Not+Found';
+        console.warn(`Не удалось загрузить изображение для: ${hero.name}`);
     };
-    img.src = hero.image_url;
+    img.src = hero.image_url || 'https://via.placeholder.com/320x220/2a2a4a/ffffff?text=No+Image';
     
-    name.textContent = hero.name;
+    name.textContent = hero.name || 'Неизвестный герой';
     rating.textContent = `Рейтинг: ${hero.rating || 0}`;
-    publisher.textContent = hero.publisher;
+    publisher.textContent = hero.publisher || 'Неизвестно';
     
     // Цвет рамки в зависимости от издателя
     const borderColor = getPublisherColor(hero.publisher);
@@ -136,36 +157,85 @@ async function vote(winnerNumber) {
     } catch (error) {
         console.error('Ошибка голосования:', error);
         showResult('Ошибка сохранения голоса', 'error');
+        
+        // Все равно продолжаем игру
+        setTimeout(() => {
+            loadNewBattle();
+        }, 1500);
     }
 }
 
 // Отправка голоса
 async function sendVote(winnerId, loserId) {
-    await Promise.all([
-        updateHeroStats(winnerId, { wins: { increment: 1 }, viewers: { increment: 1 } }),
-        updateHeroStats(loserId, { loses: { increment: 1 }, viewers: { increment: 1 } })
-    ]);
+    try {
+        await Promise.all([
+            updateHeroStats(winnerId, { wins: 1, viewers: 1 }),
+            updateHeroStats(loserId, { loses: 1, viewers: 1 })
+        ]);
+    } catch (error) {
+        console.warn('Не удалось сохранить голос:', error);
+        throw error;
+    }
 }
 
 // Отслеживание показа героя
 async function trackHeroShow(heroId) {
-    await updateHeroStats(heroId, { shows: { increment: 1 } });
+    try {
+        await updateHeroStats(heroId, { shows: 1 });
+    } catch (error) {
+        console.warn('Не удалось обновить статистику показа:', error);
+        throw error;
+    }
 }
 
 // Обновление статистики героя
 async function updateHeroStats(heroId, updates) {
     try {
-        await fetch(`${SUPABASE_URL}/rest/v1/heroes?id=eq.${heroId}`, {
+        // Получаем текущие значения
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/heroes?id=eq.${heroId}`, {
+            headers: {
+                'apikey': SUPABASE_KEY,
+                'Authorization': `Bearer ${SUPABASE_KEY}`,
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error(`Ошибка получения данных: ${response.status}`);
+        }
+        
+        const currentData = await response.json();
+        if (currentData.length === 0) {
+            throw new Error(`Герой с ID ${heroId} не найден`);
+        }
+        
+        const currentStats = currentData[0];
+        const newStats = {};
+        
+        // Обновляем значения
+        for (const [key, value] of Object.entries(updates)) {
+            newStats[key] = (currentStats[key] || 0) + value;
+        }
+        
+        // Отправляем обновление
+        const updateResponse = await fetch(`${SUPABASE_URL}/rest/v1/heroes?id=eq.${heroId}`, {
             method: 'PATCH',
             headers: {
-                'Content-Type': 'application/json',
                 'apikey': SUPABASE_KEY,
-                'Authorization': `Bearer ${SUPABASE_KEY}`
+                'Authorization': `Bearer ${SUPABASE_KEY}`,
+                'Content-Type': 'application/json',
+                'Prefer': 'return=minimal'
             },
-            body: JSON.stringify(updates)
+            body: JSON.stringify(newStats)
         });
+        
+        if (!updateResponse.ok) {
+            throw new Error(`Ошибка обновления: ${updateResponse.status}`);
+        }
+        
     } catch (error) {
         console.error('Ошибка обновления статистики:', error);
+        throw error;
     }
 }
 
@@ -222,4 +292,3 @@ function updateProgressBar() {
     progressFill.style.width = `${progress}%`;
     progressText.textContent = `${shownHeroes.size}/${allHeroes.length}`;
 }
-
