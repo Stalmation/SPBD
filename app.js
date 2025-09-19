@@ -10,6 +10,7 @@ let gameCompleted = false;
 
 // Инициализация при загрузке
 document.addEventListener('DOMContentLoaded', async function() {
+    console.log('Инициализация игры...');
     await initializeGame();
     await loadNewBattle();
 });
@@ -17,8 +18,11 @@ document.addEventListener('DOMContentLoaded', async function() {
 // Инициализация игры
 async function initializeGame() {
     try {
+        console.log('Загрузка героев из Supabase...');
+        
         // Загружаем всех героев из базы
         const response = await fetch(`${SUPABASE_URL}/rest/v1/heroes?select=*`, {
+            method: 'GET',
             headers: {
                 'apikey': SUPABASE_KEY,
                 'Authorization': `Bearer ${SUPABASE_KEY}`,
@@ -26,33 +30,41 @@ async function initializeGame() {
             }
         });
         
+        console.log('Статус ответа:', response.status, response.statusText);
+        
         if (!response.ok) {
+            const errorText = await response.text();
+            console.error('Ошибка ответа:', errorText);
             throw new Error(`Ошибка загрузки героев: ${response.status} ${response.statusText}`);
         }
         
         allHeroes = await response.json();
-        console.log('Загружено героев:', allHeroes.length);
+        console.log('Успешно загружено героев:', allHeroes.length);
+        console.log('Первые 3 героя:', allHeroes.slice(0, 3));
         
         // Загружаем прогресс из localStorage
         const savedProgress = localStorage.getItem('heroVoteProgress');
         if (savedProgress) {
-            const progress = JSON.parse(savedProgress);
-            shownHeroes = new Set(progress.shownHeroes || []);
-            updateProgressBar();
+            try {
+                const progress = JSON.parse(savedProgress);
+                shownHeroes = new Set(progress.shownHeroes || []);
+                console.log('Загружен прогресс:', shownHeroes.size, 'показанных героев');
+            } catch (e) {
+                console.warn('Ошибка парсинга прогресса:', e);
+                shownHeroes = new Set();
+            }
         }
+        
+        updateProgressBar();
         
     } catch (error) {
         console.error('Ошибка инициализации:', error);
-        showResult('Ошибка загрузки данных', 'error');
+        showResult('Ошибка подключения к базе данных', 'error');
         
-        // Заглушка для тестирования
-        allHeroes = [
-            {id: 1, name: 'Batman', image_url: 'https://via.placeholder.com/320x220/2a2a4a/ffffff?text=Batman', publisher: 'DC', rating: 95},
-            {id: 2, name: 'Superman', image_url: 'https://via.placeholder.com/320x220/2a2a4a/ffffff?text=Superman', publisher: 'DC', rating: 98},
-            {id: 3, name: 'Spider-Man', image_url: 'https://via.placeholder.com/320x220/2a2a4a/ffffff?text=Spider-Man', publisher: 'Marvel', rating: 92},
-            {id: 4, name: 'Iron Man', image_url: 'https://via.placeholder.com/320x220/2a2a4a/ffffff?text=Iron+Man', publisher: 'Marvel', rating: 90}
-        ];
-        updateProgressBar();
+        // Показываем сообщение об ошибке на 3 секунды, затем перезагружаем
+        setTimeout(() => {
+            location.reload();
+        }, 3000);
     }
 }
 
@@ -67,6 +79,8 @@ async function loadNewBattle() {
         // Выбираем двух случайных непоказанных героев
         const availableHeroes = allHeroes.filter(hero => !shownHeroes.has(hero.id));
         
+        console.log('Доступно героев:', availableHeroes.length);
+        
         if (availableHeroes.length < 2) {
             gameCompleted = true;
             showCompletionMessage();
@@ -80,19 +94,11 @@ async function loadNewBattle() {
             availableHeroes[randomIndices[1]]
         ];
         
-        console.log('Текущие герои:', currentHeroes);
+        console.log('Текущая битва:', currentHeroes[0].name, 'vs', currentHeroes[1].name);
         
         // Отображаем героев
         displayHero(1, currentHeroes[0]);
         displayHero(2, currentHeroes[1]);
-        
-        // Отмечаем показ и обновляем статистику
-        try {
-            await trackHeroShow(currentHeroes[0].id);
-            await trackHeroShow(currentHeroes[1].id);
-        } catch (error) {
-            console.warn('Не удалось обновить статистику показа:', error);
-        }
         
         // Добавляем в показанные
         shownHeroes.add(currentHeroes[0].id);
@@ -116,16 +122,24 @@ function displayHero(cardNumber, hero) {
     const rating = document.getElementById(`hero${cardNumber}-rating`);
     const publisher = document.getElementById(`hero${cardNumber}-publisher`);
     
+    console.log(`Отображение героя ${cardNumber}:`, hero);
+    
     // Устанавливаем изображение (с обработкой ошибок)
     img.onerror = function() {
-        this.src = 'https://via.placeholder.com/320x220/2a2a4a/ffffff?text=Image+Not+Found';
-        console.warn(`Не удалось загрузить изображение для: ${hero.name}`);
+        console.warn(`Не удалось загрузить изображение: ${hero.image_url}`);
+        this.src = 'https://via.placeholder.com/320x220/2a2a4a/ffffff?text=Image+Error';
     };
-    img.src = hero.image_url || 'https://via.placeholder.com/320x220/2a2a4a/ffffff?text=No+Image';
     
-    name.textContent = hero.name || 'Неизвестный герой';
+    img.onload = function() {
+        console.log(`Изображение загружено: ${hero.image_url}`);
+    };
+    
+    img.src = hero.image_url;
+    img.alt = hero.name;
+    
+    name.textContent = hero.name;
     rating.textContent = `Рейтинг: ${hero.rating || 0}`;
-    publisher.textContent = hero.publisher || 'Неизвестно';
+    publisher.textContent = hero.publisher;
     
     // Цвет рамки в зависимости от издателя
     const borderColor = getPublisherColor(hero.publisher);
@@ -143,11 +157,12 @@ async function vote(winnerNumber) {
     const loser = currentHeroes[loserIndex];
     
     try {
-        // Обновляем статистику
-        await sendVote(winner.id, loser.id);
-        
-        // Показываем результат
+        // Показываем результат сразу
         showResult(`${winner.name} побеждает!`, 'success');
+        
+        // Обновляем статистику (асинхронно, не ждем завершения)
+        updateHeroStats(winner.id, { wins: 1, viewers: 1 }).catch(console.error);
+        updateHeroStats(loser.id, { loses: 1, viewers: 1 }).catch(console.error);
         
         // Задержка перед следующей битвой
         setTimeout(() => {
@@ -165,60 +180,11 @@ async function vote(winnerNumber) {
     }
 }
 
-// Отправка голоса
-async function sendVote(winnerId, loserId) {
-    try {
-        await Promise.all([
-            updateHeroStats(winnerId, { wins: 1, viewers: 1 }),
-            updateHeroStats(loserId, { loses: 1, viewers: 1 })
-        ]);
-    } catch (error) {
-        console.warn('Не удалось сохранить голос:', error);
-        throw error;
-    }
-}
-
-// Отслеживание показа героя
-async function trackHeroShow(heroId) {
-    try {
-        await updateHeroStats(heroId, { shows: 1 });
-    } catch (error) {
-        console.warn('Не удалось обновить статистику показа:', error);
-        throw error;
-    }
-}
-
 // Обновление статистики героя
 async function updateHeroStats(heroId, updates) {
     try {
-        // Получаем текущие значения
+        // Используем более простой подход для обновления
         const response = await fetch(`${SUPABASE_URL}/rest/v1/heroes?id=eq.${heroId}`, {
-            headers: {
-                'apikey': SUPABASE_KEY,
-                'Authorization': `Bearer ${SUPABASE_KEY}`,
-                'Content-Type': 'application/json'
-            }
-        });
-        
-        if (!response.ok) {
-            throw new Error(`Ошибка получения данных: ${response.status}`);
-        }
-        
-        const currentData = await response.json();
-        if (currentData.length === 0) {
-            throw new Error(`Герой с ID ${heroId} не найден`);
-        }
-        
-        const currentStats = currentData[0];
-        const newStats = {};
-        
-        // Обновляем значения
-        for (const [key, value] of Object.entries(updates)) {
-            newStats[key] = (currentStats[key] || 0) + value;
-        }
-        
-        // Отправляем обновление
-        const updateResponse = await fetch(`${SUPABASE_URL}/rest/v1/heroes?id=eq.${heroId}`, {
             method: 'PATCH',
             headers: {
                 'apikey': SUPABASE_KEY,
@@ -226,12 +192,14 @@ async function updateHeroStats(heroId, updates) {
                 'Content-Type': 'application/json',
                 'Prefer': 'return=minimal'
             },
-            body: JSON.stringify(newStats)
+            body: JSON.stringify(updates)
         });
         
-        if (!updateResponse.ok) {
-            throw new Error(`Ошибка обновления: ${updateResponse.status}`);
+        if (!response.ok) {
+            throw new Error(`Ошибка обновления: ${response.status}`);
         }
+        
+        console.log(`Статистика героя ${heroId} обновлена`);
         
     } catch (error) {
         console.error('Ошибка обновления статистики:', error);
@@ -288,7 +256,39 @@ function updateProgressBar() {
     const progressFill = document.getElementById('progress-fill');
     const progressText = document.getElementById('progress-text');
     
-    const progress = (shownHeroes.size / allHeroes.length) * 100;
-    progressFill.style.width = `${progress}%`;
-    progressText.textContent = `${shownHeroes.size}/${allHeroes.length}`;
+    if (allHeroes.length > 0) {
+        const progress = (shownHeroes.size / allHeroes.length) * 100;
+        progressFill.style.width = `${progress}%`;
+        progressText.textContent = `${shownHeroes.size}/${allHeroes.length}`;
+    } else {
+        progressFill.style.width = '0%';
+        progressText.textContent = '0/0';
+    }
 }
+
+// Добавим функцию для проверки подключения
+async function testConnection() {
+    try {
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/heroes?select=count`, {
+            headers: {
+                'apikey': SUPABASE_KEY,
+                'Authorization': `Bearer ${SUPABASE_KEY}`
+            }
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            console.log('Подключение к Supabase успешно. Количество героев:', data[0].count);
+            return true;
+        } else {
+            console.error('Ошибка подключения:', response.status);
+            return false;
+        }
+    } catch (error) {
+        console.error('Ошибка теста подключения:', error);
+        return false;
+    }
+}
+
+// Запустим проверку подключения при загрузке
+testConnection();
