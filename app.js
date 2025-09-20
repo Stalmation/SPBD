@@ -315,14 +315,7 @@ async function vote(heroNumber) {
         displayHeroes();
     }, 2500);
 }
-// Вибрация в Telegram
-    if (tg) {
-        if (userSelectedWinner) {
-            tg.HapticFeedback.impactOccurred('heavy');
-        } else {
-            tg.HapticFeedback.impactOccurred('medium');
-        }
-    }
+
 
 // Начало игры
 function startGame() {
