@@ -1,5 +1,4 @@
 // app.js
-
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
 
 // Публичные данные для подключения (безопасно для браузера)
@@ -32,6 +31,54 @@ function initTelegram() {
     }
 }
 
+// Загрузка прогресса
+function loadProgress() {
+    try {
+        const savedProgress = localStorage.getItem('heroVoteProgress');
+        if (savedProgress) {
+            const parsedProgress = JSON.parse(savedProgress);
+            
+            // Multiple validation checks
+            if (Array.isArray(parsedProgress) && 
+                parsedProgress.every(item => typeof item === 'number' || typeof item === 'string')) {
+                votedHeroes = new Set(parsedProgress);
+            } else {
+                console.warn("Invalid progress data format, resetting...");
+                votedHeroes = new Set();
+                localStorage.removeItem('heroVoteProgress');
+            }
+        } else {
+            votedHeroes = new Set();
+        }
+        updateProgressBar();
+    } catch (error) {
+        console.error("Error loading progress:", error);
+        votedHeroes = new Set();
+        localStorage.removeItem('heroVoteProgress');
+        updateProgressBar();
+    }
+}
+
+// Сохранение прогресса
+function saveProgress() {
+    try {
+        localStorage.setItem('heroVoteProgress', JSON.stringify(Array.from(votedHeroes)));
+        updateProgressBar();
+    } catch (error) {
+        console.error("Error saving progress:", error);
+    }
+}
+
+// Обновление прогрессбара
+function updateProgressBar() {
+    const progressFill = document.getElementById('progress-fill');
+    const progressText = document.getElementById('progress-text');
+    
+    const progress = (votedHeroes.size / allHeroes.length) * 100;
+    progressFill.style.width = `${progress}%`;
+    progressText.textContent = `${votedHeroes.size}/${allHeroes.length}`;
+}
+
 // Загрузка всех героев из базы данных
 async function loadAllHeroes() {
     console.log("Подключаемся к Supabase...");
@@ -44,17 +91,6 @@ async function loadAllHeroes() {
 
         if (error) {
             console.error("Ошибка запроса:", error.message);
-            
-            // Безопасная проверка поддержки showPopup
-            if (tg && typeof tg.showPopup === 'function') {
-                tg.showPopup({
-                    title: "Error",
-                    message: "Failed to load heroes. Check your connection.",
-                    buttons: [{ type: "ok" }]
-                });
-            } else {
-                console.log("showPopup not supported in this Telegram WebApp version");
-            }
             return;
         }
 
@@ -74,15 +110,6 @@ async function loadAllHeroes() {
         
     } catch (error) {
         console.error("Ошибка при загрузке героев:", error);
-        
-        // Безопасная проверка поддержки showPopup
-        if (tg && typeof tg.showPopup === 'function') {
-            tg.showPopup({
-                title: "Error",
-                message: "An error occurred while loading data.",
-                buttons: [{ type: "ok" }]
-            });
-        }
     }
 }
 
@@ -115,54 +142,6 @@ function calculateRating(hero) {
 // Форматирование рейтинга
 function formatRating(percent) {
     return percent.toFixed(1) + '%';
-}
-
-// Загрузка прогресса
-function loadProgress() {
-    try {
-        const savedProgress = localStorage.getItem('heroVoteProgress');
-        if (savedProgress) {
-            const parsedProgress = JSON.parse(savedProgress);
-            // Проверяем, что это массив и можно создать Set
-            if (Array.isArray(parsedProgress)) {
-                votedHeroes = new Set(parsedProgress);
-            } else {
-                // Если данные повреждены, создаем пустой Set
-                console.warn("Invalid progress data, resetting...");
-                votedHeroes = new Set();
-                localStorage.removeItem('heroVoteProgress');
-            }
-        } else {
-            votedHeroes = new Set();
-        }
-        updateProgressBar();
-    } catch (error) {
-        console.error("Error loading progress:", error);
-        // В случае ошибки создаем пустой Set
-        votedHeroes = new Set();
-        localStorage.removeItem('heroVoteProgress');
-        updateProgressBar();
-    }
-}
-
-// Сохранение прогресса
-function saveProgress() {
-    try {
-        localStorage.setItem('heroVoteProgress', JSON.stringify(Array.from(votedHeroes)));
-        updateProgressBar();
-    } catch (error) {
-        console.error("Error saving progress:", error);
-    }
-}
-
-// Обновление прогрессбара
-function updateProgressBar() {
-    const progressFill = document.getElementById('progress-fill');
-    const progressText = document.getElementById('progress-text');
-    
-    const progress = (votedHeroes.size / allHeroes.length) * 100;
-    progressFill.style.width = `${progress}%`;
-    progressText.textContent = `${votedHeroes.size}/${allHeroes.length}`;
 }
 
 // Выбор случайных героев

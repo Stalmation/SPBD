@@ -7,7 +7,7 @@
 }
 
 body {
-    font-family: 'Comic', 'Arial', sans-serif;
+    font-family: 'Arial', 'Helvetica', sans-serif;
     background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
     color: white;
     min-height: 100vh;
@@ -36,7 +36,7 @@ header h1 {
     margin-bottom: 3px;
     color: #ffd700;
     text-shadow: 0 0 8px rgba(255, 215, 0, 0.3);
-    font-family: 'ComicBold', 'Comic', 'Arial', sans-serif;
+    font-weight: bold;
 }
 
 header p {
@@ -137,7 +137,6 @@ header p {
     font-size: 18px;
     font-weight: bold;
     text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
-    font-family: 'comicBold', 'comic2', 'Arial', sans-serif;
 }
 
 /* Стили для WIN/LOSE оверлеев */
@@ -156,7 +155,6 @@ header p {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-
 }
 
 .win-lose-text {
@@ -168,7 +166,6 @@ header p {
                 -1px 1px 0 #000, 
                 1px 1px 0 #000;
     margin-bottom: 2px;
-    font-family: 'ComicBold', 'Comic', 'Arial', sans-serif;
 }
 
 .rating-percent {
@@ -179,7 +176,6 @@ header p {
                 1px -1px 0 #000, 
                 -1px 1px 0 #000, 
                 1px 1px 0 #000;
-    font-family: 'ComicBold', 'Comic', 'Arial', sans-serif;
 }
 
 .hero-win-overlay {
@@ -220,7 +216,6 @@ header p {
     padding: 8px 18px;
     background: rgba(0, 0, 0, 0.3);
     border-radius: 40px;
-    font-family: 'ComicBold', 'comic', 'Arial', sans-serif;
 }
 
 .publisher-logo {
