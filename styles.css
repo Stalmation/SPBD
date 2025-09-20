@@ -269,14 +269,22 @@ header p {
     position: absolute;
     top: 10px;
     right: 10px;
-    font-size: 12px;
+    font-size: 16px;
     font-weight: bold;
-    background: rgba(0, 0, 0, 0.7);
+   
+    background: transparent;
     padding: 4px 8px;
-    border-radius: 10px;
+    border-radius: 2px;
     z-index: 10;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+    text-shadow:
+         
+        0 0 2px #000,
+        0 0 2px #000,
+        0 0 2px #000,
+        0 0 2px #000,
+        0 0 2px #000;
 }
+
 
 footer {
     text-align: center;
@@ -413,8 +421,26 @@ footer {
     }
 }
 
+.smoke-effect {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.75); /* Уменьшаем на 25% */
+    width: 256px;
+    height: 256px;
+    background-size: 1280px 1280px;
+    background-repeat: no-repeat;
+    image-rendering: pixelated;
+    opacity: 0;
+    z-index: 35;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+    transform-origin: center; /* Чтобы масштабирование было от центра */
+}
+
 .smoke-effect.show {
-    animation: smokeRise 0.7s ease-out forwards;
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(0.65); /* Сохраняем масштаб при показе */
 }
 
 .game-over-popup {

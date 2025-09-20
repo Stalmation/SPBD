@@ -241,9 +241,19 @@ async function vote(heroNumber) {
         if (userMadeRightChoice) {
             playerScore++;
             if (tg) tg.HapticFeedback.impactOccurred('heavy');
+            
+            // Показываем синий дым для победителя
+            playSmokeAnimation(`hero${heroNumber}-blue-smoke`, "https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Sprites/BlueSMoke256.png");
+            // Показываем серый дым для проигравшего
+            playSmokeAnimation(`hero${heroNumber === 1 ? 2 : 1}-gray-smoke`, "https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Sprites/GraySmoke256.png");
         } else {
             playerLives--;
             if (tg) tg.HapticFeedback.impactOccurred('medium');
+            
+            // Показываем серый дым для неправильного выбора
+            playSmokeAnimation(`hero${heroNumber}-gray-smoke`, "https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Sprites/GraySmoke256.png");
+            // Показываем синий дым для правильного героя
+            playSmokeAnimation(`hero${heroNumber === 1 ? 2 : 1}-blue-smoke`, "https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Sprites/BlueSMoke256.png");
         }
         
         // Показываем результат
@@ -302,22 +312,63 @@ function showVoteResult(heroNumber, userWon, selectedRating, otherRating) {
         document.getElementById(`hero${otherHero}-lose`).classList.add('show');
         document.getElementById(`hero${selectedHero}-win-percent`).textContent = `${selectedRating}%`;
         document.getElementById(`hero${otherHero}-lose-percent`).textContent = `${otherRating}%`;
-        
-        // Показываем синий дым для победителя
-        document.getElementById(`hero${selectedHero}-blue-smoke`).classList.add('show');
-        // Показываем серый дым для проигравшего
-        document.getElementById(`hero${otherHero}-gray-smoke`).classList.add('show');
     } else {
         document.getElementById(`hero${selectedHero}-lose`).classList.add('show');
         document.getElementById(`hero${otherHero}-win`).classList.add('show');
         document.getElementById(`hero${selectedHero}-lose-percent`).textContent = `${selectedRating}%`;
         document.getElementById(`hero${otherHero}-win-percent`).textContent = `${otherRating}%`;
-        
-        // Показываем серый дым для неправильного выбора
-        document.getElementById(`hero${selectedHero}-gray-smoke`).classList.add('show');
-        // Показываем синий дым для правильного героя
-        document.getElementById(`hero${otherHero}-blue-smoke`).classList.add('show');
     }
+}
+
+// Анимация дыма
+// Анимация дыма с ускорением второй половины
+function playSmokeAnimation(elementId, spriteUrl) {
+    const el = document.getElementById(elementId);
+    el.style.backgroundImage = `url(${spriteUrl})`;
+    el.style.backgroundSize = '1280px 1280px';
+    el.style.backgroundRepeat = 'no-repeat';
+    el.classList.add("show");
+
+    let frame = 0;
+    const frameSize = 256;
+    const framesPerRow = 5;
+    const totalFrames = 25;
+    const slowFrames = Math.floor(totalFrames / 2); // Первая половина кадров
+    const fastFrames = totalFrames - slowFrames; // Вторая половина кадров
+
+    let intervalSpeed = 60; // Начальная скорость (медленная)
+    
+    function animateFrame() {
+        if (frame >= totalFrames) {
+            // Завершаем анимацию
+            setTimeout(() => {
+                el.classList.remove("show");
+                el.style.backgroundImage = 'none';
+                el.style.backgroundPosition = "0px 0px";
+            }, 100);
+            return;
+        }
+
+        const col = frame % framesPerRow;
+        const row = Math.floor(frame / framesPerRow);
+        
+        const x = -col * frameSize;
+        const y = -row * frameSize;
+        
+        el.style.backgroundPosition = `${x}px ${y}px`;
+
+        frame++;
+        
+        // Меняем скорость на второй половине анимации
+        if (frame === slowFrames) {
+            intervalSpeed = 30; // Ускоряем в 2 раза
+        }
+        
+        setTimeout(animateFrame, intervalSpeed);
+    }
+
+    // Запускаем анимацию
+    setTimeout(animateFrame, intervalSpeed);
 }
 
 // Конец игры
