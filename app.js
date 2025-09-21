@@ -220,73 +220,60 @@ function displayHeroes() {
 }
 
 // Голосование
-// Голосование (исправленная версия)
 async function vote(heroNumber) {
     if (!gameActive || !currentHeroes || currentHeroes.length < 2 || playerLives <= 0) return;
     
     const selectedHero = currentHeroes[heroNumber - 1];
     const otherHero = currentHeroes[heroNumber === 1 ? 1 : 0];
     
-    // Проверяем правильность выбора ДО обновления базы
+    // Используем ТЕКУЩИЕ значения для мгновенного отображения
     const userMadeRightChoice = selectedHero.rating > otherHero.rating;
     
-    // Логируем для отладки
     console.log("Голосование за героя:", selectedHero.id, "против:", otherHero.id);
-    console.log("Рейтинги:", selectedHero.rating, "vs", otherHero.rating);
+    console.log("Текущие рейтинги:", selectedHero.rating, "vs", otherHero.rating);
     console.log("Правильный выбор:", userMadeRightChoice);
     
-    try {
-        // Обновляем статистику в базе
-        const updateSuccess = await updateHeroStats(selectedHero.id, otherHero.id);
-        if (!updateSuccess) {
-            console.log("Не удалось обновить статистику в базе");
-        }
+    // МГНОВЕННО показываем результат с текущими значениями
+    if (userMadeRightChoice) {
+        playerScore++;
+        if (tg) tg.HapticFeedback.impactOccurred('heavy');
         
-        // Обновляем игровую статистику
-        if (userMadeRightChoice) {
-            playerScore++;
-            if (tg) tg.HapticFeedback.impactOccurred('heavy');
-            
-            // Показываем синий дым для победителя
-            playSmokeAnimation(`hero${heroNumber}-blue-smoke`, "https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Sprites/BlueSMoke256.png");
-            // Показываем серый дым для проигравшего
-            playSmokeAnimation(`hero${heroNumber === 1 ? 2 : 1}-gray-smoke`, "https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Sprites/GraySmoke256.png");
-        } else {
-            playerLives--;
-            if (tg) tg.HapticFeedback.impactOccurred('medium');
-            
-            // Показываем серый дым для неправильного выбора
-            playSmokeAnimation(`hero${heroNumber}-gray-smoke`, "https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Sprites/GraySmoke256.png");
-            // Показываем синий дым для правильного героя
-            playSmokeAnimation(`hero${heroNumber === 1 ? 2 : 1}-blue-smoke`, "https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Sprites/BlueSMoke256.png");
-        }
+        playSmokeAnimation(`hero${heroNumber}-blue-smoke`, "https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Sprites/BlueSMoke256.png");
+        playSmokeAnimation(`hero${heroNumber === 1 ? 2 : 1}-gray-smoke`, "https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Sprites/GraySmoke256.png");
+    } else {
+        playerLives--;
+        if (tg) tg.HapticFeedback.impactOccurred('medium');
         
-        // Показываем результат
-        showVoteResult(heroNumber, userMadeRightChoice, selectedHero.rating, otherHero.rating);
-        
-        // Сохраняем прогресс
-        votedHeroes.add(selectedHero.id);
-        votedHeroes.add(otherHero.id);
-        saveProgress();
-        
-        // Переходим к следующей паре или game over
-        setTimeout(() => {
-            if (playerLives <= 0) {
-                gameOver();
-            } else if (gameActive) {
-                displayHeroes();
-            }
-        }, 2500);
-        
-    } catch (error) {
-        console.error("Ошибка при голосовании:", error);
+        playSmokeAnimation(`hero${heroNumber}-gray-smoke`, "https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Sprites/GraySmoke256.png");
+        playSmokeAnimation(`hero${heroNumber === 1 ? 2 : 1}-blue-smoke`, "https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Sprites/BlueSMoke256.png");
     }
+    
+    // МГНОВЕННО показываем результат с текущими рейтингами
+    showVoteResult(heroNumber, userMadeRightChoice, selectedHero.rating, otherHero.rating);
+    
+    // Сохраняем прогресс
+    votedHeroes.add(selectedHero.id);
+    votedHeroes.add(otherHero.id);
+    saveProgress();
+    
+    // ОБНОВЛЯЕМ БАЗУ ДАННЫХ АСИНХРОННО В ФОНЕ (не ждем завершения)
+    updateHeroStatsAsync(selectedHero.id, otherHero.id);
+    
+    // Переходим к следующей паре или game over
+    setTimeout(() => {
+        if (playerLives <= 0) {
+            gameOver();
+        } else if (gameActive) {
+            displayHeroes();
+        }
+    }, 2500);
 }
 
-// Обновление статистики героев (исправленная версия)
-// Исправленная версия - используйте прямое вычисление
-async function updateHeroStats(winnerId, loserId) {
+// Асинхронное обновление статистики (не ждем результата)
+async function updateHeroStatsAsync(winnerId, loserId) {
     try {
+        console.log("Начинаем асинхронное обновление статистики...");
+        
         // Сначала получаем текущие значения
         const { data: winnerData, error: winnerFetchError } = await supabase
             .from('Heroes_Table')
@@ -302,7 +289,7 @@ async function updateHeroStats(winnerId, loserId) {
         
         if (winnerFetchError || loserFetchError) {
             console.error("Ошибка получения данных:", winnerFetchError || loserFetchError);
-            return false;
+            return;
         }
         
         // Обновляем статистику для победителя
@@ -316,7 +303,6 @@ async function updateHeroStats(winnerId, loserId) {
         
         if (winnerError) {
             console.error("Ошибка при обновлении победителя:", winnerError);
-            return false;
         }
         
         // Обновляем статистику для проигравшего
@@ -330,15 +316,12 @@ async function updateHeroStats(winnerId, loserId) {
         
         if (loserError) {
             console.error("Ошибка при обновлении проигравшего:", loserError);
-            return false;
         }
         
-        console.log("Статистика успешно обновлена");
-        return true;
+        console.log("Статистика успешно обновлена в фоне");
             
     } catch (error) {
-        console.error("Критическая ошибка при обновлении статистики:", error);
-        return false;
+        console.error("Ошибка при асинхронном обновлении статистики:", error);
     }
 }
 
