@@ -12,6 +12,8 @@ let currentHeroes = [];
 let nextHeroes = [];
 let votedHeroes = new Set();
 let tg = null;
+let isVotingInProgress = false; // Флаг блокировки голосования
+let currentVotePairId = null; // Идентификатор текущей пары для предотвращения двойных обновлений
 
 // Игровые переменные
 let playerLives = 5;
@@ -128,9 +130,9 @@ function getRandomHeroes() {
     const availableHeroes = allHeroes.filter(hero => !votedHeroes.has(hero.id));
     
     if (availableHeroes.length < 2) {
-        // Все герои пройдены - сбрасываем прогресс
-        resetGameProgress();
-        return getRandomHeroes();
+        // Все герои пройдены - показываем экран завершения
+        showCompletionScreen();
+        return null; // Прекращаем игру
     }
     
     const randomIndex1 = Math.floor(Math.random() * availableHeroes.length);
@@ -140,6 +142,42 @@ function getRandomHeroes() {
     } while (randomIndex1 === randomIndex2);
     
     return [availableHeroes[randomIndex1], availableHeroes[randomIndex2]];
+}
+
+// Добавьте новую функцию для экрана завершения
+function showCompletionScreen() {
+    gameActive = false;
+    
+    // Сохраняем максимальный счет
+    maxScore = Math.max(maxScore, playerScore);
+    saveProgress();
+    
+    // Показываем затемнение
+    document.body.style.opacity = '0.7';
+    
+    // Показываем popup завершения
+    setTimeout(() => {
+        const popup = document.createElement('div');
+        popup.className = 'game-over-popup';
+        popup.innerHTML = `
+            <div class="popup-content">
+                <h2>🎉 CONGRATULATIONS!</h2>
+                <p>You've rated all ${allHeroes.length} heroes!</p>
+                <p>Your final score: <span class="score">${playerScore}</span></p>
+                <p>Best score: <span class="best">${maxScore}</span></p>
+                <button id="complete-restart-button">🔄 Play Again</button>
+            </div>
+        `;
+        
+        document.body.appendChild(popup);
+        
+        // Обработчик кнопки
+        document.getElementById('complete-restart-button').addEventListener('click', function() {
+            popup.remove();
+            resetGameProgress(); // Полный сброс прогресса
+            resetGame();
+        });
+    }, 1000);
 }
 
 // Предзагрузка изображений
@@ -175,6 +213,10 @@ function getHeroAlignment(goodBad) {
 // Отображение героев
 function displayHeroes() {
     if (!gameActive) return;
+    
+    // Сбрасываем флаги блокировки при показе новых героев
+    isVotingInProgress = false;
+    currentVotePairId = null;
     
     hideAllOverlays();
     
@@ -221,16 +263,34 @@ function displayHeroes() {
 
 // Голосование
 async function vote(heroNumber) {
-    if (!gameActive || !currentHeroes || currentHeroes.length < 2 || playerLives <= 0) return;
+    // Защита от спама и двойных кликов
+    if (!gameActive || !currentHeroes || currentHeroes.length < 2 || 
+        playerLives <= 0 || isVotingInProgress) {
+        return;
+    }
+    
+    // Блокируем дальнейшие клики
+    isVotingInProgress = true;
     
     const selectedHero = currentHeroes[heroNumber - 1];
     const otherHero = currentHeroes[heroNumber === 1 ? 1 : 0];
     
-    // Используем ТЕКУЩИЕ значения для мгновенного отображения
-    const userMadeRightChoice = selectedHero.rating > otherHero.rating;
+    // Создаем уникальный идентификатор для этой пары голосования
+    const votePairId = `${selectedHero.id}-${otherHero.id}`;
+    
+    // Проверяем, не голосовали ли уже за эту пару
+    if (currentVotePairId === votePairId) {
+        isVotingInProgress = false;
+        return;
+    }
+    
+    currentVotePairId = votePairId;
     
     console.log("Голосование за героя:", selectedHero.id, "против:", otherHero.id);
     console.log("Текущие рейтинги:", selectedHero.rating, "vs", otherHero.rating);
+    
+    // Используем ТЕКУЩИЕ значения для мгновенного отображения
+    const userMadeRightChoice = selectedHero.rating > otherHero.rating;
     console.log("Правильный выбор:", userMadeRightChoice);
     
     // МГНОВЕННО показываем результат с текущими значениями
@@ -261,6 +321,10 @@ async function vote(heroNumber) {
     
     // Переходим к следующей паре или game over
     setTimeout(() => {
+        // Сбрасываем флаги блокировки
+        isVotingInProgress = false;
+        currentVotePairId = null;
+        
         if (playerLives <= 0) {
             gameOver();
         } else if (gameActive) {
@@ -333,17 +397,16 @@ function showVoteResult(heroNumber, userWon, selectedRating, otherRating) {
     if (userWon) {
         document.getElementById(`hero${selectedHero}-win`).classList.add('show');
         document.getElementById(`hero${otherHero}-lose`).classList.add('show');
-        document.getElementById(`hero${selectedHero}-win-percent`).textContent = `${selectedRating}%`;
-        document.getElementById(`hero${otherHero}-lose-percent`).textContent = `${otherRating}%`;
+        document.getElementById(`hero${selectedHero}-win-percent`).textContent = `${selectedRating.toFixed(1)}%`;
+        document.getElementById(`hero${otherHero}-lose-percent`).textContent = `${otherRating.toFixed(1)}%`;
     } else {
         document.getElementById(`hero${selectedHero}-lose`).classList.add('show');
         document.getElementById(`hero${otherHero}-win`).classList.add('show');
-        document.getElementById(`hero${selectedHero}-lose-percent`).textContent = `${selectedRating}%`;
-        document.getElementById(`hero${otherHero}-win-percent`).textContent = `${otherRating}%`;
+        document.getElementById(`hero${selectedHero}-lose-percent`).textContent = `${selectedRating.toFixed(1)}%`;
+        document.getElementById(`hero${otherHero}-win-percent`).textContent = `${otherRating.toFixed(1)}%`;
     }
 }
 
-// Анимация дыма
 // Анимация дыма с ускорением второй половины
 function playSmokeAnimation(elementId, spriteUrl) {
     const el = document.getElementById(elementId);
@@ -441,7 +504,8 @@ function resetGame() {
     // Сбрасываем только текущую сессию
     playerLives = 5;
     playerScore = 0;
-    // votedHeroes.clear(); // НЕ очищаем прогрес голосований!
+    isVotingInProgress = false;
+    currentVotePairId = null;
     gameActive = true;
     
     // Восстанавливаем прозрачность
@@ -460,6 +524,8 @@ function resetGameProgress() {
     playerScore = 0;
     votedHeroes.clear();
     maxScore = 0;
+    isVotingInProgress = false;
+    currentVotePairId = null;
     localStorage.removeItem('heroVoteProgress');
     localStorage.removeItem('heroGameStats');
     updateUI();
