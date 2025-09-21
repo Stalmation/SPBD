@@ -21,13 +21,35 @@ let playerScore = 0;
 let maxScore = 0;
 let gameActive = true;
 
+
 // Инициализация Telegram Web App
 function initTelegram() {
     if (typeof Telegram !== 'undefined' && Telegram.WebApp) {
         tg = Telegram.WebApp;
+        
+        // Полноэкранный режим (убирает всю шапку)
+        tg.expand();
+        
+        // Убираем фоную панель на iOS
+        tg.enableClosingConfirmation();
+        
+        // Устанавливаем цвета для полного слияния с интерфейсом
+        tg.setHeaderColor('#1a1a2e');
         tg.setBackgroundColor('#1a1a2e');
+        tg.setNavigationBarColor('#1a1a2e');
+        
+        // Скрываем кнопку "Назад" (выход только через свайп)
         tg.BackButton.hide();
-        console.log("Telegram Web App инициализирован");
+        
+        // Обработка события свайпа для закрытия
+        tg.onEvent('viewportChanged', (data) => {
+            if (data.isStateStable && !data.isExpanded) {
+                // Пользователь начал свайп для закрытия
+                tg.close();
+            }
+        });
+        
+        console.log("Telegram Web App инициализирован в полноэкранном режиме");
     } else {
         console.log("Запуск в браузере (не в Telegram)");
     }
@@ -535,6 +557,19 @@ function resetGameProgress() {
 document.addEventListener("DOMContentLoaded", function() {
     initTelegram();
     loadAllHeroes();
+});
+
+// Обработка клавиши Escape для выхода (в браузере)
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        if (confirm('Выйти из игры?')) {
+            if (tg && tg.close) {
+                tg.close();
+            } else {
+                window.history.back();
+            }
+        }
+    }
 });
 
 window.vote = vote;
