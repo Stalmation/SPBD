@@ -220,6 +220,7 @@ function displayHeroes() {
 }
 
 // Голосование
+// Голосование (исправленная версия)
 async function vote(heroNumber) {
     if (!gameActive || !currentHeroes || currentHeroes.length < 2 || playerLives <= 0) return;
     
@@ -229,12 +230,16 @@ async function vote(heroNumber) {
     // Проверяем правильность выбора ДО обновления базы
     const userMadeRightChoice = selectedHero.rating > otherHero.rating;
     
+    // Логируем для отладки
+    console.log("Голосование за героя:", selectedHero.id, "против:", otherHero.id);
+    console.log("Рейтинги:", selectedHero.rating, "vs", otherHero.rating);
+    console.log("Правильный выбор:", userMadeRightChoice);
+    
     try {
-        // Обновляем статистику в базе (только если в Telegram)
-        if (tg) {
-            await updateHeroStats(selectedHero.id, otherHero.id);
-        } else {
-            console.log("Локальный режим: данные не сохраняются в базу");
+        // Обновляем статистику в базе
+        const updateSuccess = await updateHeroStats(selectedHero.id, otherHero.id);
+        if (!updateSuccess) {
+            console.log("Не удалось обновить статистику в базе");
         }
         
         // Обновляем игровую статистику
@@ -271,34 +276,69 @@ async function vote(heroNumber) {
             } else if (gameActive) {
                 displayHeroes();
             }
-        }, 2500); // Увеличили задержку для просмотра процентов
+        }, 2500);
         
     } catch (error) {
         console.error("Ошибка при голосовании:", error);
     }
 }
 
-// Обновление статистики героев
+// Обновление статистики героев (исправленная версия)
+// Исправленная версия - используйте прямое вычисление
 async function updateHeroStats(winnerId, loserId) {
     try {
-        await supabase
+        // Сначала получаем текущие значения
+        const { data: winnerData, error: winnerFetchError } = await supabase
+            .from('Heroes_Table')
+            .select('wins, viewers')
+            .eq('id', winnerId)
+            .single();
+            
+        const { data: loserData, error: loserFetchError } = await supabase
+            .from('Heroes_Table')
+            .select('loses, viewers')
+            .eq('id', loserId)
+            .single();
+        
+        if (winnerFetchError || loserFetchError) {
+            console.error("Ошибка получения данных:", winnerFetchError || loserFetchError);
+            return false;
+        }
+        
+        // Обновляем статистику для победителя
+        const { error: winnerError } = await supabase
             .from('Heroes_Table')
             .update({ 
-                wins: supabase.sql`wins + 1`,
-                viewers: supabase.sql`viewers + 1`
+                wins: (winnerData.wins || 0) + 1,
+                viewers: (winnerData.viewers || 0) + 1
             })
             .eq('id', winnerId);
         
-        await supabase
+        if (winnerError) {
+            console.error("Ошибка при обновлении победителя:", winnerError);
+            return false;
+        }
+        
+        // Обновляем статистику для проигравшего
+        const { error: loserError } = await supabase
             .from('Heroes_Table')
             .update({ 
-                loses: supabase.sql`loses + 1`,
-                viewers: supabase.sql`viewers + 1`
+                loses: (loserData.loses || 0) + 1,
+                viewers: (loserData.viewers || 0) + 1
             })
             .eq('id', loserId);
+        
+        if (loserError) {
+            console.error("Ошибка при обновлении проигравшего:", loserError);
+            return false;
+        }
+        
+        console.log("Статистика успешно обновлена");
+        return true;
             
     } catch (error) {
-        console.error("Ошибка при обновлении статистики:", error);
+        console.error("Критическая ошибка при обновлении статистики:", error);
+        return false;
     }
 }
 
