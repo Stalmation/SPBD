@@ -30,28 +30,30 @@ function initTelegram() {
         // Полноэкранный режим (убирает всю шапку)
         tg.expand();
         
-        // Убираем фоную панель на iOS
+        // Включаем подтверждение закрытия
         tg.enableClosingConfirmation();
         
-        // Устанавливаем цвета для полного слияния с интерфейсом
+        // Устанавливаем цвета (только доступные методы)
         tg.setHeaderColor('#1a1a2e');
         tg.setBackgroundColor('#1a1a2e');
-        tg.setNavigationBarColor('#1a1a2e');
         
         // Скрываем кнопку "Назад" (выход только через свайп)
         tg.BackButton.hide();
         
-        // Обработка события свайпа для закрытия
+        console.log("Telegram Web App инициализирован в полноэкранном режиме");
+        
+        // Слушаем событие закрытия
         tg.onEvent('viewportChanged', (data) => {
-            if (data.isStateStable && !data.isExpanded) {
+            if (data && data.isStateStable && !data.isExpanded) {
                 // Пользователь начал свайп для закрытия
                 tg.close();
             }
         });
         
-        console.log("Telegram Web App инициализирован в полноэкранном режиме");
     } else {
         console.log("Запуск в браузере (не в Telegram)");
+        // Для браузерной версии добавляем обработку Escape
+        setupBrowserExit();
     }
 }
 
