@@ -8,83 +8,73 @@
 
 body {
     font-family: 'Arial', 'Helvetica', sans-serif;
-    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    background: radial-gradient(circle at center, #ff8f00 0%, #ff5f00 100%);
     color: white;
     min-height: 100vh;
-    padding: 15px;
+    padding: 0;
     overflow: hidden;
     transition: opacity 0.5s ease;
+    position: relative;
+}
+
+.comic-dots-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: 
+        url("data:image/svg+xml,%3Csvg width='10' height='10' viewBox='0 0 10 10' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='2' cy='2' r='1' fill='%23ff4500' fill-opacity='0.3'/%3E%3Ccircle cx='2' cy='7' r='1' fill='%23ff4500' fill-opacity='0.3'/%3E%3Ccircle cx='7' cy='2' r='1' fill='%23ff4500' fill-opacity='0.3'/%3E%3Ccircle cx='7' cy='7' r='1' fill='%23ff4500' fill-opacity='0.3'/%3E%3C/svg%3E"),
+        url("data:image/svg+xml,%3Csvg width='8' height='8' viewBox='0 0 8 8' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='1.5' cy='1.5' r='0.8' fill='%23ff4500' fill-opacity='0.2'/%3E%3Ccircle cx='1.5' cy='6.5' r='0.8' fill='%23ff4500' fill-opacity='0.2'/%3E%3Ccircle cx='6.5' cy='1.5' r='0.8' fill='%23ff4500' fill-opacity='0.2'/%3E%3Ccircle cx='6.5' cy='6.5' r='0.8' fill='%23ff4500' fill-opacity='0.2'/%3E%3C/svg%3E");
+    background-size: 12px 12px, 10px 10px;
+    pointer-events: none;
+    z-index: -1;
+    
+    mask: radial-gradient(circle at center, 
+        transparent 40%, 
+        black 70%);
+    -webkit-mask: radial-gradient(circle at center, 
+        transparent 40%, 
+        black 70%);
 }
 
 .container {
-    max-width: 100%;
+    width: 100%;
     height: 100vh;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: space-between;
-    gap: 8px;
+    gap: 0;
+    padding: 10px;
+    position: relative;
+    z-index: 1;
 }
 
-header {
-    text-align: center;
-    padding-top: 5px;
+.player-stats {
+    display: flex;
+    justify-content: space-around;
     width: 100%;
+    max-width: 300px;
+    margin: 5px auto;
+    font-size: 18px;
+    font-weight: bold;
+    padding: 5px;
 }
 
-header h1 {
-    font-size: 22px;
-    margin-bottom: 3px;
+.stat-item {
+    display: flex;
+    align-items: center;
+    background: rgba(0, 0, 0, 0.3);
+    padding: 5px 10px;
+    border-radius: 15px;
+}
+
+#player-lives {
     color: #ffd700;
-    text-shadow: 0 0 8px rgba(255, 215, 0, 0.3);
-    font-weight: bold;
-}
-
-header p {
-    font-size: 14px;
-    opacity: 0.8;
-    margin-bottom: 8px;
-}
-
-.rating-notice {
-    text-align: center;
-    margin: -8px 0 8px 0;
-}
-
-.rating-notice p {
-    font-size: 14px;
-    color: #4cc9f0;
-    font-weight: bold;
-    text-shadow: 0 0 8px rgba(76, 201, 240, 0.3);
-}
-
-.progress-container {
-    width: 90%;
-    max-width: 250px;
-    margin: 0 auto;
-}
-
-.progress-bar {
-    width: 100%;
-    height: 6px;
-    background: rgba(255, 255, 255, 0.2);
-    border-radius: 8px;
-    overflow: hidden;
-    margin-bottom: 4px;
-}
-
-.progress-fill {
-    height: 100%;
-    background: linear-gradient(90deg, #4cc9f0, #ffd700);
-    border-radius: 8px;
-    transition: width 0.3s ease;
-    width: 0%;
-}
-
-.progress-text {
-    font-size: 11px;
-    opacity: 0.7;
-    text-align: center;
+    font-size: 20px;
+    text-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
+    letter-spacing: 2px;
 }
 
 .battle-area {
@@ -95,52 +85,100 @@ header p {
     align-items: center;
     flex-grow: 1;
     justify-content: center;
-    padding: 5px 0;
+    padding: 0;
+    position: relative;
+    z-index: 2;
 }
 
 .hero-card {
     position: relative;
-    width: 90%;
-    max-width: 280px;
-    height: 180px;
-    background: linear-gradient(145deg, #2a2a4a, #1c1c34);
-    border: 2px solid #4cc9f0;
-    border-radius: 15px;
+    width: calc(100% - 20px);
+    max-width: 760px;
+    height: auto;
+    aspect-ratio: 16/9;
+    background: #000;
+    border: 3px solid #000;
+    border-radius: 4px;
     overflow: hidden;
     cursor: pointer;
     transition: all 0.3s ease;
-    box-shadow: 0 6px 20px rgba(76, 201, 240, 0.15);
+    box-shadow: -2px 2px 5px rgba(0, 0, 0, 0.75);
+    box-sizing: border-box;
+    position: relative;
+    z-index: 3;
 }
 
 .hero-card:active {
-    transform: scale(0.95);
-    box-shadow: 0 3px 12px rgba(76, 201, 240, 0.3);
+    transform: scale(1);
 }
 
 .hero-image {
     width: 100%;
     height: 100%;
-    object-fit: cover;
-    transition: transform 0.3s ease;
+    object-fit: contain;
 }
 
-.hero-info {
+.hero-name-container {
     position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    background: linear-gradient(transparent, rgba(0, 0, 0, 0.9));
-    padding: 10px 8px 8px;
+    bottom: 2%; /* Относительно высоты карточки */
+    left: 50%;
+    transform: translateX(-50%);
+    width: 75%; /* Ширина относительно карточки */
+    height: auto; /* Высота будет рассчитываться автоматически */
+    aspect-ratio: 95 / 15; /* Сохраняем соотношение 95:15 */
+    background: linear-gradient(to bottom, #fafafa 0%, #7c92a4 100%);
+    border: 3px solid #000;
+    border-radius: 3px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 15;
+    padding: 0.2vw;
+    
+    /* box-shadow: -2px 2px 3px rgba(0, 0, 0, 0.55);*/
+    min-width: 150px; /* Минимальный размер */
+    max-width: 950px; /* Максимальный размер */
+}
+
+.hero-name-text {
+    font-family: 'Comic Sans MS', sans-serif;
+    color: #000000;
+    font-weight: 500; /* Normal weight */
     text-align: center;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1.1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: min(4vw, 28px); /* Адаптивный размер относительно viewport */
+    padding: 2px 5px;
+    box-sizing: border-box;
 }
 
-.hero-name {
-    font-size: 18px;
-    font-weight: bold;
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+/* Для очень длинных имен - уменьшаем шрифт динамически */
+.hero-name-text.long-name {
+    font-size: clamp(10px, 2vw, 20px);
 }
 
-/* Стили для WIN/LOSE оверлеев */
+.hero-name-text.very-long-name {
+    font-size: clamp(8px, 1.5vw, 16px);
+    white-space: normal; /* Разрешаем перенос строк */
+    line-height: 1.1;
+}
+
+/* Подключаем шрифт Adam */
+@font-face {
+    font-family: 'Adam';
+    src: url('fonts/adam.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+}
+
+/* WIN/LOSE оверлеи */
 .hero-win-overlay,
 .hero-lose-overlay {
     position: absolute;
@@ -159,9 +197,9 @@ header p {
 }
 
 .win-lose-text {
-    font-size: 52px;
+    font-size: 48px;
     font-weight: bold;
-    text-shadow: 3px 3px 0 #000, 
+    text-shadow: 2px 2px 0 #000, 
                 -1px -1px 0 #000, 
                 1px -1px 0 #000, 
                 -1px 1px 0 #000, 
@@ -170,7 +208,7 @@ header p {
 }
 
 .rating-percent {
-    font-size: 36px;
+    font-size: 32px;
     font-weight: bold;
     text-shadow: 2px 2px 0 #000, 
                 -1px -1px 0 #000, 
@@ -179,20 +217,12 @@ header p {
                 1px 1px 0 #000;
 }
 
-.hero-win-overlay {
-    color: #fff;
-}
-
 .hero-win-overlay .win-lose-text {
     color: #4cc9f0;
 }
 
 .hero-win-overlay .rating-percent {
     color: #ffd700;
-}
-
-.hero-lose-overlay {
-    color: #fff;
 }
 
 .hero-lose-overlay .win-lose-text {
@@ -214,33 +244,25 @@ header p {
     position: absolute;
     top: 50%;
     left: 50%;
-    transform: translate(-50%, -50%) scale(0);
-    width: 120px;
-    height: 120px;
-    background-size: contain;
+    transform: translate(-50%, -50%) scale(0.75);
+    width: 256px;
+    height: 256px;
+    background-size: 1280px 1280px;
     background-repeat: no-repeat;
-    background-position: center;
+    image-rendering: pixelated;
     opacity: 0;
-    transition: all 0.5s ease;
-    z-index: 15;
+    z-index: 35;
     pointer-events: none;
-}
-
-.blue-smoke {
-    background-image: url('https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Sprites/BlueSMoke256.png');
-}
-
-.gray-smoke {
-    background-image: url('https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Sprites/GraySmoke256.png');
+    transition: opacity 0.3s ease;
 }
 
 .smoke-effect.show {
-    opacity: 0.9;
-    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(0.65);
 }
 
 .vs {
-    font-size: 24px;
+    font-size: 20px;
     font-weight: bold;
     color: #ffd700;
     text-shadow: 0 0 12px rgba(255, 215, 0, 0.5);
@@ -252,99 +274,80 @@ header p {
 /* Publisher logo (top left) */
 .hero-publisher {
     position: absolute;
-    top: 10px;
-    left: 10px;
+    top: 20px;
+    left: 25px;
     z-index: 10;
 }
 
 .publisher-logo {
-    width: 35px;
-    height: 35px;
+    width: 60%;        /* 8% от ширины viewport */
+    height: 60%;       /* 8% от ширины viewport */
     object-fit: contain;
-    filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.8));
+    
+    
 }
 
-/* Alignment badge (top right) */
+/* Стили для текста выравнивания с clamp */
 .hero-alignment {
     position: absolute;
-    top: 10px;
-    right: 10px;
-    font-size: 16px;
+    top: 2%;
+    right: 2%;
+    font-family: 'Adam', 'Arial', sans-serif;
+    font-size: clamp(16px, 5.5vw, 55px); /* Минимум 16px, идеально 5.5vw, максимум 55px */
     font-weight: bold;
-   
     background: transparent;
-    padding: 4px 8px;
-    border-radius: 2px;
+    padding: clamp(2px, 0.4vw, 8px) clamp(4px, 0.8vw, 8px);
     z-index: 10;
-    text-shadow:
-         
-        0 0 2px #000,
-        0 0 2px #000,
-        0 0 2px #000,
-        0 0 2px #000,
-        0 0 2px #000;
+    text-shadow: 
+        2px 2px 0 #000,
+        -2px -2px 0 #000,
+        2px -2px 0 #000,
+        -2px 2px 0 #000,
+        0px 2px 0 #000,
+        2px 0px 0 #000,
+        0px -2px 0 #000,
+        -2px 0px 0 #000;
+    border-radius: 3px;
+    max-width: 50%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
-
-footer {
-    text-align: center;
-    padding: 8px 10px 5px 10px;
-    opacity: 0.7;
-    font-size: 12px;
-    margin-top: -5px;
-}
-
-/* Адаптация для очень маленьких экранов */
+/* Адаптация для разных экранов */
 @media (max-height: 600px) {
     .hero-card {
-        height: 150px;
-        max-width: 250px;
+        width: calc(100% - 15px);
+        aspect-ratio: 760/427;
     }
     
-    .hero-name {
-        font-size: 16px;
-    }
+    
     
     .win-lose-text {
-        font-size: 42px;
+        font-size: 36px;
     }
     
     .rating-percent {
-        font-size: 28px;
+        font-size: 24px;
     }
     
-    .publisher-logo {
-        width: 30px;
-        height: 30px;
+    .player-stats {
+        font-size: 16px;
     }
     
-    .hero-alignment {
-        font-size: 11px;
-        padding: 3px 6px;
+    #player-lives {
+        font-size: 18px;
     }
     
     .vs {
-        font-size: 20px;
+        font-size: 18px;
         padding: 6px 15px;
     }
     
-    header h1 {
-        font-size: 20px;
-    }
     
-    .rating-notice {
-        margin: -5px 0 5px 0;
-    }
-    
-    .rating-notice p {
-        font-size: 13px;
-    }
-    
-    .smoke-effect {
-        width: 100px;
-        height: 100px;
-    }
 }
+
+
 
 /* Анимации */
 @keyframes fadeIn {
@@ -374,28 +377,6 @@ footer {
     animation: pulse 0.5s ease-in-out;
 }
 
-.player-stats {
-    display: flex;
-    justify-content: space-around;
-    width: 100%;
-    max-width: 300px;
-    margin: 10px auto;
-    font-size: 14px;
-}
-
-.stat-item {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-}
-
-#player-lives {
-    color: #ffd700;
-    font-size: 24px;
-    text-shadow: 0 0 12px rgba(255, 215, 0, 0.7);
-    letter-spacing: 2px;
-}
-
 @keyframes shake {
     0%, 100% { transform: translate(-50%, -50%) scale(1) rotate(0); }
     25% { transform: translate(-50%, -50%) scale(1) rotate(-5deg); }
@@ -404,43 +385,6 @@ footer {
 
 .hero-lose-overlay.show {
     animation: shake 0.3s ease-in-out;
-}
-
-@keyframes smokeRise {
-    0% { 
-        opacity: 0;
-        transform: translate(-50%, -50%) scale(0.5) translateY(20px);
-    }
-    50% { 
-        opacity: 0.9;
-        transform: translate(-50%, -50%) scale(1.1) translateY(-10px);
-    }
-    100% { 
-        opacity: 0.9;
-        transform: translate(-50%, -50%) scale(1) translateY(0);
-    }
-}
-
-.smoke-effect {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%) scale(0.75); /* Уменьшаем на 25% */
-    width: 256px;
-    height: 256px;
-    background-size: 1280px 1280px;
-    background-repeat: no-repeat;
-    image-rendering: pixelated;
-    opacity: 0;
-    z-index: 35;
-    pointer-events: none;
-    transition: opacity 0.3s ease;
-    transform-origin: center; /* Чтобы масштабирование было от центра */
-}
-
-.smoke-effect.show {
-    opacity: 1;
-    transform: translate(-50%, -50%) scale(0.65); /* Сохраняем масштаб при показе */
 }
 
 .game-over-popup {
@@ -458,40 +402,49 @@ footer {
 
 .popup-content {
     background: linear-gradient(145deg, #2a2a4a, #1c1c34);
-    padding: 30px;
-    border-radius: 20px;
-    border: 3px solid #ffd700;
+    padding: 25px;
+    border-radius: 15px;
+    border: 2px solid #ffd700;
     text-align: center;
-    box-shadow: 0 0 30px rgba(255, 215, 0, 0.4);
+    box-shadow: 0 0 20px rgba(255, 215, 0, 0.4);
+    max-width: 90%;
 }
 
 .popup-content h2 {
     color: #ff6b6b;
-    margin-bottom: 20px;
-    font-size: 28px;
+    margin-bottom: 15px;
+    font-size: 24px;
 }
 
 .popup-content p {
-    margin: 10px 0;
-    font-size: 18px;
+    margin: 8px 0;
+    font-size: 16px;
 }
 
 .score { color: #4cc9f0; font-weight: bold; }
 .best { color: #ffd700; font-weight: bold; }
 
-#restart-button {
+#restart-button, #complete-restart-button {
     background: linear-gradient(145deg, #4cc9f0, #3aa8d9);
     color: white;
     border: none;
-    padding: 15px 30px;
-    border-radius: 50px;
-    font-size: 18px;
+    padding: 12px 25px;
+    border-radius: 40px;
+    font-size: 16px;
     font-weight: bold;
-    margin-top: 20px;
+    margin-top: 15px;
     cursor: pointer;
     transition: transform 0.2s;
 }
 
-#restart-button:active {
+#restart-button:active, #complete-restart-button:active {
     transform: scale(0.95);
+}
+
+/* ПЕРЕОПРЕДЕЛЕНИЕ С ВЫСОКИМ ПРИОРИТЕТОМ */
+.hero-card .hero-name-container .hero-name-text {
+    font-size: clamp(20px, 4vw, 56px) !important;
+    font-weight: normal;
+    font-weight: 400 !important;
+    color: #000000 !important;
 }

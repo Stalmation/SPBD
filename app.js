@@ -12,8 +12,8 @@ let currentHeroes = [];
 let nextHeroes = [];
 let votedHeroes = new Set();
 let tg = null;
-let isVotingInProgress = false; // Флаг блокировки голосования
-let currentVotePairId = null; // Идентификатор текущей пары для предотвращения двойных обновлений
+let isVotingInProgress = false;
+let currentVotePairId = null;
 
 // Игровые переменные
 let playerLives = 5;
@@ -21,23 +21,22 @@ let playerScore = 0;
 let maxScore = 0;
 let gameActive = true;
 
-
 // Инициализация Telegram Web App
 function initTelegram() {
     if (typeof Telegram !== 'undefined' && Telegram.WebApp) {
         tg = Telegram.WebApp;
         
-        // Полноэкранный режим (убирает всю шапку)
+        // Полноэкранный режим
         tg.expand();
         
         // Включаем подтверждение закрытия
         tg.enableClosingConfirmation();
         
-        // Устанавливаем цвета (только доступные методы)
+        // Устанавливаем цвета
         tg.setHeaderColor('#1a1a2e');
         tg.setBackgroundColor('#1a1a2e');
         
-        // Скрываем кнопку "Назад" (выход только через свайп)
+        // Скрываем кнопку "Назад"
         tg.BackButton.hide();
         
         console.log("Telegram Web App инициализирован в полноэкранном режиме");
@@ -45,16 +44,25 @@ function initTelegram() {
         // Слушаем событие закрытия
         tg.onEvent('viewportChanged', (data) => {
             if (data && data.isStateStable && !data.isExpanded) {
-                // Пользователь начал свайп для закрытия
                 tg.close();
             }
         });
         
     } else {
         console.log("Запуск в браузере (не в Telegram)");
-        // Для браузерной версии добавляем обработку Escape
         setupBrowserExit();
     }
+}
+
+function setupBrowserExit() {
+    // Функция для браузерной версии
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            if (confirm('Выйти из игры?')) {
+                window.history.back();
+            }
+        }
+    });
 }
 
 // Загрузка прогресса
@@ -103,17 +111,9 @@ function saveProgress() {
 
 // Обновление интерфейса
 function updateUI() {
-    const progressFill = document.getElementById('progress-fill');
-    const progressText = document.getElementById('progress-text');
     const scoreElement = document.getElementById('player-score');
     const livesElement = document.getElementById('player-lives');
     const maxScoreElement = document.getElementById('max-score');
-    
-    if (progressFill && progressText) {
-        const progress = allHeroes.length > 0 ? (votedHeroes.size / allHeroes.length) * 100 : 0;
-        progressFill.style.width = `${progress}%`;
-        progressText.textContent = `${votedHeroes.size}/${allHeroes.length}`;
-    }
     
     if (scoreElement) scoreElement.textContent = playerScore;
     if (livesElement) livesElement.textContent = '★'.repeat(playerLives);
@@ -154,9 +154,8 @@ function getRandomHeroes() {
     const availableHeroes = allHeroes.filter(hero => !votedHeroes.has(hero.id));
     
     if (availableHeroes.length < 2) {
-        // Все герои пройдены - показываем экран завершения
         showCompletionScreen();
-        return null; // Прекращаем игру
+        return null;
     }
     
     const randomIndex1 = Math.floor(Math.random() * availableHeroes.length);
@@ -168,18 +167,14 @@ function getRandomHeroes() {
     return [availableHeroes[randomIndex1], availableHeroes[randomIndex2]];
 }
 
-// Добавьте новую функцию для экрана завершения
+// Экран завершения
 function showCompletionScreen() {
     gameActive = false;
-    
-    // Сохраняем максимальный счет
     maxScore = Math.max(maxScore, playerScore);
     saveProgress();
     
-    // Показываем затемнение
     document.body.style.opacity = '0.7';
     
-    // Показываем popup завершения
     setTimeout(() => {
         const popup = document.createElement('div');
         popup.className = 'game-over-popup';
@@ -195,10 +190,9 @@ function showCompletionScreen() {
         
         document.body.appendChild(popup);
         
-        // Обработчик кнопки
         document.getElementById('complete-restart-button').addEventListener('click', function() {
             popup.remove();
-            resetGameProgress(); // Полный сброс прогресса
+            resetGameProgress();
             resetGame();
         });
     }, 1000);
@@ -227,10 +221,10 @@ function hideAllOverlays() {
 // Получение текста выравнивания героя
 function getHeroAlignment(goodBad) {
     switch(goodBad) {
-        case 1: return { text: 'GOOD', color: '#4cc9f0' };
-        case 2: return { text: 'BAD', color: '#ff6b6b' };
-        case 3: return { text: 'TRICKY', color: '#aaaaaa' };
-        default: return { text: 'UNKNOWN', color: '#cccccc' };
+        case 1: return { text: 'GOOD', color: '#0098d0' };
+        case 2: return { text: 'BAD', color: '#e00f0f' };
+        case 3: return { text: 'TRICKY', color: '#adadad' };
+        default: return { text: 'UNKNOWN', color: '#adadad' };
     }
 }
 
@@ -238,7 +232,6 @@ function getHeroAlignment(goodBad) {
 function displayHeroes() {
     if (!gameActive) return;
     
-    // Сбрасываем флаги блокировки при показе новых героев
     isVotingInProgress = false;
     currentVotePairId = null;
     
@@ -264,15 +257,25 @@ function displayHeroes() {
     currentHeroes.forEach((hero, index) => {
         const heroNum = index + 1;
         document.getElementById(`hero${heroNum}-img`).src = hero.image_url;
-        document.getElementById(`hero${heroNum}-name`).textContent = hero.name;
+        const nameElement = document.getElementById(`hero${heroNum}-name`);
+        nameElement.textContent = hero.name;    
         
-        // Обновляем выравнивание (top right)
+        // Автоподгонка размера шрифта
+        if (hero.name.length > 12) {
+            nameElement.style.fontSize = '6px';
+        } else if (hero.name.length > 8) {
+            nameElement.style.fontSize = '7px';
+        } else {
+            nameElement.style.fontSize = '8px';
+        }    
+        
+        // Обновляем выравнивание
         const alignmentElement = document.getElementById(`hero${heroNum}-alignment`);
         const alignment = getHeroAlignment(hero.good_bad);
         alignmentElement.textContent = alignment.text;
         alignmentElement.style.color = alignment.color;
         
-        // Обновляем издателя (top left)
+        // Обновляем издателя
         const publisherElement = document.getElementById(`hero${heroNum}-publisher`);
         publisherElement.innerHTML = '';
         if (hero.owner) {
@@ -287,22 +290,18 @@ function displayHeroes() {
 
 // Голосование
 async function vote(heroNumber) {
-    // Защита от спама и двойных кликов
     if (!gameActive || !currentHeroes || currentHeroes.length < 2 || 
         playerLives <= 0 || isVotingInProgress) {
         return;
     }
     
-    // Блокируем дальнейшие клики
     isVotingInProgress = true;
     
     const selectedHero = currentHeroes[heroNumber - 1];
     const otherHero = currentHeroes[heroNumber === 1 ? 1 : 0];
     
-    // Создаем уникальный идентификатор для этой пары голосования
     const votePairId = `${selectedHero.id}-${otherHero.id}`;
     
-    // Проверяем, не голосовали ли уже за эту пару
     if (currentVotePairId === votePairId) {
         isVotingInProgress = false;
         return;
@@ -310,14 +309,9 @@ async function vote(heroNumber) {
     
     currentVotePairId = votePairId;
     
-    console.log("Голосование за героя:", selectedHero.id, "против:", otherHero.id);
-    console.log("Текущие рейтинги:", selectedHero.rating, "vs", otherHero.rating);
-    
-    // Используем ТЕКУЩИЕ значения для мгновенного отображения
     const userMadeRightChoice = selectedHero.rating > otherHero.rating;
-    console.log("Правильный выбор:", userMadeRightChoice);
     
-    // МГНОВЕННО показываем результат с текущими значениями
+    // Мгновенно показываем результат
     if (userMadeRightChoice) {
         playerScore++;
         if (tg) tg.HapticFeedback.impactOccurred('heavy');
@@ -332,20 +326,15 @@ async function vote(heroNumber) {
         playSmokeAnimation(`hero${heroNumber === 1 ? 2 : 1}-blue-smoke`, "https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Sprites/BlueSMoke256.png");
     }
     
-    // МГНОВЕННО показываем результат с текущими рейтингами
     showVoteResult(heroNumber, userMadeRightChoice, selectedHero.rating, otherHero.rating);
     
-    // Сохраняем прогресс
     votedHeroes.add(selectedHero.id);
     votedHeroes.add(otherHero.id);
     saveProgress();
     
-    // ОБНОВЛЯЕМ БАЗУ ДАННЫХ АСИНХРОННО В ФОНЕ (не ждем завершения)
     updateHeroStatsAsync(selectedHero.id, otherHero.id);
     
-    // Переходим к следующей паре или game over
     setTimeout(() => {
-        // Сбрасываем флаги блокировки
         isVotingInProgress = false;
         currentVotePairId = null;
         
@@ -357,12 +346,9 @@ async function vote(heroNumber) {
     }, 2500);
 }
 
-// Асинхронное обновление статистики (не ждем результата)
+// Асинхронное обновление статистики
 async function updateHeroStatsAsync(winnerId, loserId) {
     try {
-        console.log("Начинаем асинхронное обновление статистики...");
-        
-        // Сначала получаем текущие значения
         const { data: winnerData, error: winnerFetchError } = await supabase
             .from('Heroes_Table')
             .select('wins, viewers')
@@ -380,7 +366,6 @@ async function updateHeroStatsAsync(winnerId, loserId) {
             return;
         }
         
-        // Обновляем статистику для победителя
         const { error: winnerError } = await supabase
             .from('Heroes_Table')
             .update({ 
@@ -393,7 +378,6 @@ async function updateHeroStatsAsync(winnerId, loserId) {
             console.error("Ошибка при обновлении победителя:", winnerError);
         }
         
-        // Обновляем статистику для проигравшего
         const { error: loserError } = await supabase
             .from('Heroes_Table')
             .update({ 
@@ -405,8 +389,6 @@ async function updateHeroStatsAsync(winnerId, loserId) {
         if (loserError) {
             console.error("Ошибка при обновлении проигравшего:", loserError);
         }
-        
-        console.log("Статистика успешно обновлена в фоне");
             
     } catch (error) {
         console.error("Ошибка при асинхронном обновлении статистики:", error);
@@ -431,7 +413,7 @@ function showVoteResult(heroNumber, userWon, selectedRating, otherRating) {
     }
 }
 
-// Анимация дыма с ускорением второй половины
+// Анимация дыма
 function playSmokeAnimation(elementId, spriteUrl) {
     const el = document.getElementById(elementId);
     el.style.backgroundImage = `url(${spriteUrl})`;
@@ -443,14 +425,13 @@ function playSmokeAnimation(elementId, spriteUrl) {
     const frameSize = 256;
     const framesPerRow = 5;
     const totalFrames = 25;
-    const slowFrames = Math.floor(totalFrames / 2); // Первая половина кадров
-    const fastFrames = totalFrames - slowFrames; // Вторая половина кадров
+    const slowFrames = Math.floor(totalFrames / 2);
+    const fastFrames = totalFrames - slowFrames;
 
-    let intervalSpeed = 60; // Начальная скорость (медленная)
+    let intervalSpeed = 60;
     
     function animateFrame() {
         if (frame >= totalFrames) {
-            // Завершаем анимацию
             setTimeout(() => {
                 el.classList.remove("show");
                 el.style.backgroundImage = 'none';
@@ -469,34 +450,50 @@ function playSmokeAnimation(elementId, spriteUrl) {
 
         frame++;
         
-        // Меняем скорость на второй половине анимации
         if (frame === slowFrames) {
-            intervalSpeed = 30; // Ускоряем в 2 раза
+            intervalSpeed = 30;
         }
         
         setTimeout(animateFrame, intervalSpeed);
     }
 
-    // Запускаем анимацию
     setTimeout(animateFrame, intervalSpeed);
 }
 
 // Конец игры
 function gameOver() {
     gameActive = false;
-    
-    // Сохраняем максимальный счет
     maxScore = Math.max(maxScore, playerScore);
     saveProgress();
     
-    // Показываем затемнение
     document.body.style.opacity = '0.7';
     
-    // Показываем popup
     setTimeout(() => {
         showGameOverPopup();
     }, 1000);
 }
+
+// После загрузки имен героев добавьте этот код
+function adjustNameLength() {
+    const nameElements = document.querySelectorAll('.hero-name-text');
+    
+    nameElements.forEach(element => {
+        const text = element.textContent;
+        const length = text.length;
+        
+        // Убираем предыдущие классы
+        element.classList.remove('long-name', 'very-long-name');
+        
+        // Добавляем соответствующий класс в зависимости от длины
+        if (length > 20) {
+            element.classList.add('very-long-name');
+        } else if (length > 15) {
+            element.classList.add('long-name');
+        }
+    });
+}
+
+// Вызывайте эту функцию после установки имен героев
 
 function showGameOverPopup() {
     // Создаем popup элемент
@@ -559,6 +556,12 @@ function resetGameProgress() {
 document.addEventListener("DOMContentLoaded", function() {
     initTelegram();
     loadAllHeroes();
+    // Скрываем элементы, которые больше не нужны
+    document.querySelector('header h1').style.display = 'none';
+    document.querySelector('header p').style.display = 'none';
+    document.querySelector('.progress-container').style.display = 'none';
+    document.querySelector('.rating-notice').style.display = 'none';
+    document.querySelector('footer').style.display = 'none';
 });
 
 // Обработка клавиши Escape для выхода (в браузере)

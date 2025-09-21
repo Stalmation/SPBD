@@ -4,9 +4,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Super Hero Vote</title>
+    <title>Super Power Beat Down</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <link rel="stylesheet" href="styles.css?v=9">
+    <link rel="stylesheet" href="styles.css?v=10">
     <link rel="preconnect" href="https://xwtcasfvetisjaiijtsj.supabase.co">
     <link rel="dns-prefetch" href="https://xwtcasfvetisjaiijtsj.supabase.co">
 </head>
@@ -17,21 +17,11 @@
     
     <div class="container">
         <header>
-            <h1>SUPER HERO BEAT DOWN</h1>
-            <p>Who would win in a fight?</p>
-            <div class="progress-container">
-                <div class="progress-bar">
-                    <div class="progress-fill" id="progress-fill"></div>
-                </div>
-                <div class="progress-text" id="progress-text">0/312</div>
-            </div>
             <div class="player-stats">
                 <div class="stat-item">
-                    <span>Score: </span>
                     <span id="player-score">0</span>
                 </div>
                 <div class="stat-item">
-                    <span>Best: </span>
                     <span id="max-score">0</span>
                 </div>
                 <div class="stat-item">
@@ -39,10 +29,6 @@
                 </div>
             </div>
         </header>
-
-        <div class="rating-notice">
-            <p>Your vote shapes the hero ratings!</p>
-        </div>
 
         <div class="battle-area">
             <div class="hero-card" id="hero1" onclick="vote(1)">
@@ -60,12 +46,16 @@
                     <div class="win-lose-text">LOSE</div>
                     <div class="rating-percent" id="hero1-lose-percent"></div>
                 </div>
-                <div class="hero-info">
-                    <div class="hero-name" id="hero1-name"></div>
+                
+                <!-- Контейнер для имени -->
+                <div class="hero-name-container">
+                    <div class="hero-name-text" id="hero1-name"></div>
                 </div>
-                <!-- Moved publisher to top left -->
+                
+                <!-- Publisher logo -->
                 <div class="hero-publisher" id="hero1-publisher"></div>
-                <!-- Moved alignment badge to top right -->
+                
+                <!-- Alignment badge -->
                 <div class="hero-alignment" id="hero1-alignment"></div>
             </div>
             
@@ -86,21 +76,22 @@
                     <div class="win-lose-text">LOSE</div>
                     <div class="rating-percent" id="hero2-lose-percent"></div>
                 </div>
-                <div class="hero-info">
-                    <div class="hero-name" id="hero2-name"></div>
+                
+                <!-- Контейнер для имени -->
+                <div class="hero-name-container">
+                    <div class="hero-name-text" id="hero2-name"></div>
                 </div>
-                <!-- Moved publisher to top left -->
+                
+                <!-- Publisher logo -->
                 <div class="hero-publisher" id="hero2-publisher"></div>
-                <!-- Moved alignment badge to top right -->
+                
+                <!-- Alignment badge -->
                 <div class="hero-alignment" id="hero2-alignment"></div>
             </div>
         </div>
-
-        <footer>
-            <p>Complete all heroes to see the full ranking!</p>
-        </footer>
     </div>
 
-    <script type="module" src="app.js?v=9"></script>
+    <script type="module" src="app.js?v=10"></script>
+    <div class="comic-dots-overlay"></div>
 </body>
 </html>
