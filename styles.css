@@ -261,14 +261,77 @@ body {
     transform: translate(-50%, -50%) scale(0.65);
 }
 
+/* Подключаем шрифт Friday13 */
+@font-face {
+    font-family: 'Friday13';
+    src: url('fonts/friday13.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+}
+
+/* Стили для VS */
+/* Стили для VS */
 .vs {
-    font-size: 20px;
+    font-family: 'Friday13', 'Arial', sans-serif;
+    font-size: 110px;
     font-weight: bold;
-    color: #ffd700;
-    text-shadow: 0 0 12px rgba(255, 215, 0, 0.5);
-    padding: 8px 18px;
-    background: rgba(0, 0, 0, 0.3);
-    border-radius: 40px;
+    position: relative;
+    color: transparent;
+    padding: 0;
+    color: #f33a0c;
+    margin: 0px 0;
+    margin-bottom: -10px;
+    z-index: 5;
+    
+    /* Общая тень для всего элемента */
+    filter: drop-shadow(-2px 4px 2px rgba(0, 0, 0, 0.5));
+}
+
+.vs::before {
+    content: 'VS';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(169deg, #fff600 25%, #f33a0c 65%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    z-index: 3;
+}
+
+.vs::after {
+    content: 'VS';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    text-shadow: 
+        2.5px 2.5px 0 #000,
+        -2.5px -2.5px 0 #000,
+        2.5px -2.5px 0 #000,
+        -2.5px 2.5px 0 #000,
+        0px 2.5px 0 #000,
+        2.52px 0px 0 #000,
+        0px -2.5px 0 #000,
+        -2.5px 0px 0 #000;
+    z-index: 2;
+    color: transparent;
+}
+
+/* Адаптация для мобильных */
+@media (max-width: 768px) {
+    .vs {
+        font-size: 28px;
+    }
+}
+
+@media (max-width: 480px) {
+    .vs {
+        font-size: 24px;
+    }
 }
 
 /* Publisher logo (top left) */
