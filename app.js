@@ -6,7 +6,7 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// Глобальные переменные
+// Global variables
 let allHeroes = [];
 let currentHeroes = [];
 let nextHeroes = [];
@@ -15,57 +15,54 @@ let tg = null;
 let isVotingInProgress = false;
 let currentVotePairId = null;
 
-// Игровые переменные
+// Game variables
 let playerLives = 5;
 let playerScore = 0;
 let maxScore = 0;
 let gameActive = true;
 
-// Инициализация Telegram Web App
+// Publisher logo mapping
+const PUBLISHER_LOGOS = {
+    'dc': 'https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Owner/dc.webp',
+    'marvel': 'https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Owner/marvel.webp',
+    'valiant': 'https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Owner/valiant.webp',
+    'rebellion': 'https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Owner/rebellion.webp',
+    'dark horse': 'https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Owner/dark_horse.webp',
+    'dark_horse': 'https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Owner/dark_horse.webp'
+};
+
+// Initialize Telegram Web App
 function initTelegram() {
     if (typeof Telegram !== 'undefined' && Telegram.WebApp) {
         tg = Telegram.WebApp;
-        
-        // Полноэкранный режим
         tg.expand();
-        
-        // Включаем подтверждение закрытия
         tg.enableClosingConfirmation();
-        
-        // Устанавливаем цвета
         tg.setHeaderColor('#1a1a2e');
         tg.setBackgroundColor('#1a1a2e');
-        
-        // Скрываем кнопку "Назад"
         tg.BackButton.hide();
         
-        console.log("Telegram Web App инициализирован в полноэкранном режиме");
-        
-        // Слушаем событие закрытия
         tg.onEvent('viewportChanged', (data) => {
             if (data && data.isStateStable && !data.isExpanded) {
                 tg.close();
             }
         });
-        
     } else {
-        console.log("Запуск в браузере (не в Telegram)");
+        console.log("Running in browser (not Telegram)");
         setupBrowserExit();
     }
 }
 
 function setupBrowserExit() {
-    // Функция для браузерной версии
     document.addEventListener('keydown', function(e) {
         if (e.key === 'Escape') {
-            if (confirm('Выйти из игры?')) {
+            if (confirm('Exit the game?')) {
                 window.history.back();
             }
         }
     });
 }
 
-// Загрузка прогресса
+// Load progress
 function loadProgress() {
     try {
         const savedProgress = localStorage.getItem('heroVoteProgress');
@@ -94,7 +91,7 @@ function loadProgress() {
     }
 }
 
-// Сохранение прогресса
+// Save progress
 function saveProgress() {
     try {
         localStorage.setItem('heroVoteProgress', JSON.stringify(Array.from(votedHeroes)));
@@ -109,7 +106,7 @@ function saveProgress() {
     }
 }
 
-// Обновление интерфейса
+// Update UI
 function updateUI() {
     const scoreElement = document.getElementById('player-score');
     const livesElement = document.getElementById('player-lives');
@@ -120,34 +117,47 @@ function updateUI() {
     if (maxScoreElement) maxScoreElement.textContent = maxScore;
 }
 
-// Загрузка всех героев
+// Get publisher logo URL
+function getPublisherLogoUrl(publisherName) {
+    if (!publisherName) return null;
+    
+    const lowerName = publisherName.toLowerCase().trim();
+    return PUBLISHER_LOGOS[lowerName] || null;
+}
+
+// Load all heroes
 async function loadAllHeroes() {
     try {
         let { data, error } = await supabase
             .from("Heroes_Table")
-            .select("id, name, image_url, wins, loses, viewers, rating, good_bad, publisher, owner")
+            .select("id, name, image_url, wins, loses, viewers, rating, good_bad, publisher")
             .order('rating', { ascending: false });
 
         if (error) throw error;
         if (!data || data.length === 0) return;
 
-        allHeroes = data;
+        // Add logo URLs to each hero
+        allHeroes = data.map(hero => ({
+            ...hero,
+            logo_url: getPublisherLogoUrl(hero.publisher)
+        }));
+        
         loadProgress();
         startGame();
         
     } catch (error) {
-        console.error("Ошибка при загрузке героев:", error);
+        console.error("Error loading heroes:", error);
     }
 }
 
-// Начало игры
+// Start game
 function startGame() {
     gameActive = true;
     displayHeroes();
     updateUI();
 }
 
-// Выбор случайных героев
+// Get random heroes
 function getRandomHeroes() {
     if (allHeroes.length < 2) return null;
     
@@ -167,7 +177,7 @@ function getRandomHeroes() {
     return [availableHeroes[randomIndex1], availableHeroes[randomIndex2]];
 }
 
-// Экран завершения
+// Completion screen
 function showCompletionScreen() {
     gameActive = false;
     maxScore = Math.max(maxScore, playerScore);
@@ -198,18 +208,18 @@ function showCompletionScreen() {
     }, 1000);
 }
 
-// Предзагрузка изображений
+// Preload next pair
 function preloadNextPair() {
     const nextPair = getRandomHeroes();
     if (!nextPair) return;
     nextHeroes = nextPair;
     nextPair.forEach(hero => {
         if (hero.image_url) new Image().src = hero.image_url;
-        if (hero.owner) new Image().src = hero.owner;
+        if (hero.logo_url) new Image().src = hero.logo_url;
     });
 }
 
-// Скрыть все оверлеи и эффекты
+// Hide all overlays
 function hideAllOverlays() {
     const overlays = document.querySelectorAll('.hero-win-overlay, .hero-lose-overlay');
     overlays.forEach(overlay => overlay.classList.remove('show'));
@@ -218,17 +228,17 @@ function hideAllOverlays() {
     smokeEffects.forEach(smoke => smoke.classList.remove('show'));
 }
 
-// Получение текста выравнивания героя
+// Get hero alignment
 function getHeroAlignment(goodBad) {
     switch(goodBad) {
-        case 1: return { text: 'GOOD', color: '#0098d0' };
-        case 2: return { text: 'BAD', color: '#e00f0f' };
-        case 3: return { text: 'TRICKY', color: '#adadad' };
+        case 1: return { text: 'HERO', color: '#0098d0' };
+        case 2: return { text: 'EVIL', color: '#e00f0f' };
+        case 3: return { text: 'ANTI<br>HERO', color: '#adadad' };
         default: return { text: 'UNKNOWN', color: '#adadad' };
     }
 }
 
-// Отображение героев
+// Display heroes
 function displayHeroes() {
     if (!gameActive) return;
     
@@ -248,7 +258,7 @@ function displayHeroes() {
     
     preloadNextPair();
     
-    // Очищаем проценты
+    // Clear percentages
     ['hero1', 'hero2'].forEach(hero => {
         document.getElementById(`${hero}-win-percent`).textContent = '';
         document.getElementById(`${hero}-lose-percent`).textContent = '';
@@ -256,39 +266,43 @@ function displayHeroes() {
     
     currentHeroes.forEach((hero, index) => {
         const heroNum = index + 1;
-        document.getElementById(`hero${heroNum}-img`).src = hero.image_url;
+        const imgElement = document.getElementById(`hero${heroNum}-img`);
         const nameElement = document.getElementById(`hero${heroNum}-name`);
-        nameElement.textContent = hero.name;    
+        const publisherElement = document.getElementById(`hero${heroNum}-publisher`);
+        const alignmentElement = document.getElementById(`hero${heroNum}-alignment`);
         
-        // Автоподгонка размера шрифта
+        // Set hero image
+        imgElement.src = hero.image_url;
+        
+        // Set hero name with auto-sizing
+        nameElement.textContent = hero.name;
         if (hero.name.length > 12) {
             nameElement.style.fontSize = '6px';
         } else if (hero.name.length > 8) {
             nameElement.style.fontSize = '7px';
         } else {
             nameElement.style.fontSize = '8px';
-        }    
+        }
         
-        // Обновляем выравнивание
-        const alignmentElement = document.getElementById(`hero${heroNum}-alignment`);
+        // Set alignment
         const alignment = getHeroAlignment(hero.good_bad);
-        alignmentElement.textContent = alignment.text;
+        alignmentElement.innerHTML = alignment.text;
         alignmentElement.style.color = alignment.color;
         
-        // Обновляем издателя
-        const publisherElement = document.getElementById(`hero${heroNum}-publisher`);
+        // Set publisher logo
         publisherElement.innerHTML = '';
-        if (hero.owner) {
+        if (hero.logo_url) {
             const logoImg = document.createElement('img');
-            logoImg.src = hero.owner;
-            logoImg.alt = hero.publisher;
+            logoImg.src = hero.logo_url;
+            logoImg.alt = hero.publisher || 'Publisher';
             logoImg.className = 'publisher-logo';
+            logoImg.loading = 'lazy';
             publisherElement.appendChild(logoImg);
         }
     });
 }
 
-// Голосование
+// Vote function
 async function vote(heroNumber) {
     if (!gameActive || !currentHeroes || currentHeroes.length < 2 || 
         playerLives <= 0 || isVotingInProgress) {
@@ -311,7 +325,7 @@ async function vote(heroNumber) {
     
     const userMadeRightChoice = selectedHero.rating > otherHero.rating;
     
-    // Мгновенно показываем результат
+    // Show instant result
     if (userMadeRightChoice) {
         playerScore++;
         if (tg) tg.HapticFeedback.impactOccurred('heavy');
@@ -346,7 +360,7 @@ async function vote(heroNumber) {
     }, 2500);
 }
 
-// Асинхронное обновление статистики
+// Async stats update
 async function updateHeroStatsAsync(winnerId, loserId) {
     try {
         const { data: winnerData, error: winnerFetchError } = await supabase
@@ -362,7 +376,7 @@ async function updateHeroStatsAsync(winnerId, loserId) {
             .single();
         
         if (winnerFetchError || loserFetchError) {
-            console.error("Ошибка получения данных:", winnerFetchError || loserFetchError);
+            console.error("Fetch error:", winnerFetchError || loserFetchError);
             return;
         }
         
@@ -374,9 +388,7 @@ async function updateHeroStatsAsync(winnerId, loserId) {
             })
             .eq('id', winnerId);
         
-        if (winnerError) {
-            console.error("Ошибка при обновлении победителя:", winnerError);
-        }
+        if (winnerError) console.error("Winner update error:", winnerError);
         
         const { error: loserError } = await supabase
             .from('Heroes_Table')
@@ -386,16 +398,14 @@ async function updateHeroStatsAsync(winnerId, loserId) {
             })
             .eq('id', loserId);
         
-        if (loserError) {
-            console.error("Ошибка при обновлении проигравшего:", loserError);
-        }
+        if (loserError) console.error("Loser update error:", loserError);
             
     } catch (error) {
-        console.error("Ошибка при асинхронном обновлении статистики:", error);
+        console.error("Stats update error:", error);
     }
 }
 
-// Показ результата голосования
+// Show vote result
 function showVoteResult(heroNumber, userWon, selectedRating, otherRating) {
     const selectedHero = heroNumber;
     const otherHero = heroNumber === 1 ? 2 : 1;
@@ -413,7 +423,7 @@ function showVoteResult(heroNumber, userWon, selectedRating, otherRating) {
     }
 }
 
-// Анимация дыма
+// Smoke animation
 function playSmokeAnimation(elementId, spriteUrl) {
     const el = document.getElementById(elementId);
     el.style.backgroundImage = `url(${spriteUrl})`;
@@ -460,7 +470,7 @@ function playSmokeAnimation(elementId, spriteUrl) {
     setTimeout(animateFrame, intervalSpeed);
 }
 
-// Конец игры
+// Game over
 function gameOver() {
     gameActive = false;
     maxScore = Math.max(maxScore, playerScore);
@@ -473,30 +483,8 @@ function gameOver() {
     }, 1000);
 }
 
-// После загрузки имен героев добавьте этот код
-function adjustNameLength() {
-    const nameElements = document.querySelectorAll('.hero-name-text');
-    
-    nameElements.forEach(element => {
-        const text = element.textContent;
-        const length = text.length;
-        
-        // Убираем предыдущие классы
-        element.classList.remove('long-name', 'very-long-name');
-        
-        // Добавляем соответствующий класс в зависимости от длины
-        if (length > 20) {
-            element.classList.add('very-long-name');
-        } else if (length > 15) {
-            element.classList.add('long-name');
-        }
-    });
-}
-
-// Вызывайте эту функцию после установки имен героев
-
+// Game over popup
 function showGameOverPopup() {
-    // Создаем popup элемент
     const popup = document.createElement('div');
     popup.className = 'game-over-popup';
     popup.innerHTML = `
@@ -510,36 +498,28 @@ function showGameOverPopup() {
     
     document.body.appendChild(popup);
     
-    // Обработчик кнопки
     document.getElementById('restart-button').addEventListener('click', function() {
         popup.remove();
         resetGame();
     });
     
-    // Вибрация
     if (tg) tg.HapticFeedback.notificationOccurred('error');
 }
 
-// Сброс игры (сохраняем только maxScore)
+// Reset game
 function resetGame() {
-    // Сбрасываем только текущую сессию
     playerLives = 5;
     playerScore = 0;
     isVotingInProgress = false;
     currentVotePairId = null;
     gameActive = true;
     
-    // Восстанавливаем прозрачность
     document.body.style.opacity = '1';
-    
-    // Обновляем интерфейс
     updateUI();
-    
-    // Показываем новых героев
     displayHeroes();
 }
 
-// Полный сброс прогресса
+// Reset game progress
 function resetGameProgress() {
     playerLives = 5;
     playerScore = 0;
@@ -552,22 +532,30 @@ function resetGameProgress() {
     updateUI();
 }
 
-// Запуск при загрузке DOM
+// DOM loaded
 document.addEventListener("DOMContentLoaded", function() {
     initTelegram();
     loadAllHeroes();
-    // Скрываем элементы, которые больше не нужны
-    document.querySelector('header h1').style.display = 'none';
-    document.querySelector('header p').style.display = 'none';
-    document.querySelector('.progress-container').style.display = 'none';
-    document.querySelector('.rating-notice').style.display = 'none';
-    document.querySelector('footer').style.display = 'none';
+    
+    // Hide unnecessary elements
+    const elementsToHide = [
+        'header h1',
+        'header p',
+        '.progress-container',
+        '.rating-notice',
+        'footer'
+    ];
+    
+    elementsToHide.forEach(selector => {
+        const element = document.querySelector(selector);
+        if (element) element.style.display = 'none';
+    });
 });
 
-// Обработка клавиши Escape для выхода (в браузере)
+// Escape handler
 document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') {
-        if (confirm('Выйти из игры?')) {
+        if (confirm('Exit the game?')) {
             if (tg && tg.close) {
                 tg.close();
             } else {

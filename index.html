@@ -6,15 +6,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Super Power Beat Down</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <link rel="stylesheet" href="styles.css?v=10">
+    <link rel="stylesheet" href="styles.css?v=11">
     <link rel="preconnect" href="https://xwtcasfvetisjaiijtsj.supabase.co">
     <link rel="dns-prefetch" href="https://xwtcasfvetisjaiijtsj.supabase.co">
+    
+    <!-- Preload resources -->
+    <link rel="preload" href="https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Sprites/BlueSMoke256.webp" as="image">
+    <link rel="preload" href="https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Sprites/RedSmoke256.webp" as="image">
+    <link rel="preload" href="https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Owner/dc.webp" as="image">
+    <link rel="preload" href="https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Owner/marvel.webp" as="image">
+    <link rel="preload" href="https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Owner/valiant.webp" as="image">
+    <link rel="preload" href="https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Owner/rebellion.webp" as="image">
+    <link rel="preload" href="https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Owner/dark_horse.webp" as="image">
 </head>
 <body>
-    <!-- Preload smoke sprites -->
-    <link rel="preload" href="https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Sprites/BlueSMoke256.png" as="image">
-    <link rel="preload" href="https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Sprites/GraySmoke256.png" as="image">
-    
     <div class="container">
         <header>
             <div class="player-stats">
@@ -47,7 +52,7 @@
                     <div class="rating-percent" id="hero1-lose-percent"></div>
                 </div>
                 
-                <!-- Контейнер для имени -->
+                <!-- Name container -->
                 <div class="hero-name-container">
                     <div class="hero-name-text" id="hero1-name"></div>
                 </div>
@@ -77,7 +82,7 @@
                     <div class="rating-percent" id="hero2-lose-percent"></div>
                 </div>
                 
-                <!-- Контейнер для имени -->
+                <!-- Name container -->
                 <div class="hero-name-container">
                     <div class="hero-name-text" id="hero2-name"></div>
                 </div>
@@ -91,7 +96,7 @@
         </div>
     </div>
 
-    <script type="module" src="app.js?v=10"></script>
+    <script type="module" src="app.js?v=11"></script>
     <div class="comic-dots-overlay"></div>
 </body>
 </html>
