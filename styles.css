@@ -79,7 +79,7 @@ body {
     left: 50%;
     top: 50%;
     transform: translate(-50%, -50%);
-    font-size: 78px;
+    font-size: clamp(40px, 15vw, 78px); /* Адаптивный размер */
     line-height: 1;
     font-weight: normal;
 }
@@ -125,7 +125,7 @@ body {
     height: auto;
     aspect-ratio: 16/9;
     background: #000;
-    border: 4px solid #000;
+    border: 3px solid #000;
     border-radius: 4px;
     overflow: hidden;
     cursor: pointer;
@@ -148,30 +148,31 @@ body {
 
 .hero-name-container {
     position: absolute;
-    bottom: 2%; /* Относительно высоты карточки */
+    bottom: 3%; /* Согласовано с другими элементами */
     left: 50%;
     transform: translateX(-50%);
-    width: 75%; /* Ширина относительно карточки */
-    height: auto; /* Высота будет рассчитываться автоматически */
-    aspect-ratio: 95 / 15; /* Сохраняем соотношение 95:15 */
+    width: 80%; /* Ширина относительно карточки */
+    height: auto;
+    aspect-ratio: 95 / 15;
     background: linear-gradient(to bottom, #fafafa 0%, #7c92a4 100%);
     border: 3px solid #000;
-    border-radius: 3px;
+    border-radius: 4px;
     display: flex;
     align-items: center;
     justify-content: center;
     z-index: 15;
-    padding: 0.2vw;
-    
-    /* box-shadow: -2px 2px 3px rgba(0, 0, 0, 0.55);*/
-    min-width: 150px; /* Минимальный размер */
-    max-width: 950px; /* Максимальный размер */
+    padding: 0.5vw;
+    min-width: 120px;
+    max-width: 500px;
 }
 
+/* Удалите локальные шрифты и используйте веб-шрифты */
+@import url('https://fonts.googleapis.com/css2?family=Comic+Neue:wght@400;700&display=swap');
+
 .hero-name-text {
-    font-family: 'Comic Sans MS', sans-serif;
+    font-family: 'Comic Sans MS', 'Comic Neue', cursive;
     color: #000000;
-    font-weight: 500; /* Normal weight */
+    font-weight: 500;
     text-align: center;
     width: 100%;
     height: 100%;
@@ -182,8 +183,8 @@ body {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    font-size: min(4vw, 28px); /* Адаптивный размер относительно viewport */
-    padding: 2px 5px;
+    font-size: clamp(16px, 4vw, 32px) !important; /* Улучшенный clamp */
+    padding: 5px 8px;
     box-sizing: border-box;
 }
 
@@ -363,19 +364,38 @@ body {
 }
 
 /* Publisher logo (top left) */
+/* Publisher logo - ЛУЧШИЙ ВАРИАНТ */
 .hero-publisher {
     position: absolute;
     top: 20px;
-    left: 25px;
+    left: 20px;
     z-index: 10;
+    width: auto;
+    height: auto;
+    max-width: 15%; /* Максимум 15% ширины карточки */
+    max-height: 15%; /* Максимум 15% высоты карточки */
 }
 
 .publisher-logo {
-    width: 60%;        /* 8% от ширины viewport */
-    height: 60%;       /* 8% от ширины viewport */
+    width: auto;
+    height: auto;
+    max-width: 100%;
+    max-height: 100%;
     object-fit: contain;
+}
+
+@media (max-height: 600px) {
+    .hero-card {
+        width: calc(100% - 15px);
+        aspect-ratio: 760/427;
+    }
     
-    
+    .hero-publisher {
+        top: 8px;
+        left: 8px;
+        max-width: 22%;
+        max-height: 22%;
+    }
 }
 
 /* Стили для текста выравнивания с clamp */
