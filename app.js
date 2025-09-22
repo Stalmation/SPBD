@@ -109,12 +109,29 @@ function saveProgress() {
 // Update UI
 function updateUI() {
     const scoreElement = document.getElementById('player-score');
-    const livesElement = document.getElementById('player-lives');
     const maxScoreElement = document.getElementById('max-score');
     
     if (scoreElement) scoreElement.textContent = playerScore;
-    if (livesElement) livesElement.textContent = '★'.repeat(playerLives);
     if (maxScoreElement) maxScoreElement.textContent = maxScore;
+    
+    // Обновляем отображение жизней в виде звезд
+    updateLivesDisplay();
+}
+
+function updateLivesDisplay() {
+    const globalLives = document.getElementById('global-lives');
+    
+    if (globalLives) {
+        // Очищаем контейнер
+        globalLives.innerHTML = '';
+        
+        // Добавляем звезды по количеству жизней (горизонтально)
+        for (let i = 0; i < playerLives; i++) {
+            const star = document.createElement('div');
+            star.className = 'life-star';
+            globalLives.appendChild(star);
+        }
+    }
 }
 
 // Get publisher logo URL
@@ -233,7 +250,7 @@ function getHeroAlignment(goodBad) {
     switch(goodBad) {
         case 1: return { text: 'HERO', color: '#0098d0' };
         case 2: return { text: 'EVIL', color: '#e00f0f' };
-        case 3: return { text: 'ANTI<br>HERO', color: '#adadad' };
+        case 3: return { text: 'ANTI<br>HERO', color: '#adadadff' };
         default: return { text: 'UNKNOWN', color: '#adadad' };
     }
 }
@@ -515,7 +532,7 @@ function resetGame() {
     gameActive = true;
     
     document.body.style.opacity = '1';
-    updateUI();
+    updateUI(); // Эта функция уже включает updateLivesDisplay()
     displayHeroes();
 }
 
