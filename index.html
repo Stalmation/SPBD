@@ -1,3 +1,4 @@
+<!-- index.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -5,15 +6,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Super Power Beat Down</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <link rel="stylesheet" href="styles.css?v=9">
+    <link rel="stylesheet" href="styles.css?v=12">
     <link rel="preconnect" href="https://xwtcasfvetisjaiijtsj.supabase.co">
     <link rel="dns-prefetch" href="https://xwtcasfvetisjaiijtsj.supabase.co">
     <!-- Preload resources -->
     <link rel="preload" href="https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Images/LifeStar.webp" as="image">
-    <link href="https://fonts.googleapis.com/css2?family=Comic+Neue:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="preload" href="https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Images/vs.webp" as="image">
+    <link rel="preload" href="https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Images/hero.webp" as="image">
+    <link rel="preload" href="https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Images/evil.webp" as="image">
+    <link rel="preload" href="https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Images/anti_hero.webp" as="image">
+    <link rel="preload" href="https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Images/Win.webp" as="image">
+    <link rel="preload" href="https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Images/Lose.webp" as="image">
 </head>
 <body>
-    <!-- Preload smoke sprites -->
+    <!-- Preload smoke sprites and VS image -->
     <link rel="preload" href="https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Sprites/BlueSMoke256.png" as="image">
     <link rel="preload" href="https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Sprites/RedSmoke256.png" as="image">
     
@@ -40,71 +46,70 @@
                 </div>
             </div>
 
-            <div class="hero-card" id="hero1" onclick="vote(1)">
-                <img src="" alt="Hero 1" class="hero-image" id="hero1-img" loading="eager">
-                
-                <!-- Smoke effects -->
-                <div class="smoke-effect blue-smoke" id="hero1-blue-smoke"></div>
-                <div class="smoke-effect gray-smoke" id="hero1-gray-smoke"></div>
-                
-                <div class="hero-win-overlay" id="hero1-win">
-                    <div class="win-lose-text">WIN</div>
-                    <div class="rating-percent" id="hero1-win-percent"></div>
+            <!-- Контейнер для героя 1 -->
+            <div class="hero-complete-container">
+                <div class="hero-card" id="hero1" onclick="vote(1)">
+                    <img src="" alt="Hero 1" class="hero-image" id="hero1-img" loading="eager">
+                    
+                    <!-- Smoke effects -->
+                    <div class="smoke-effect blue-smoke" id="hero1-blue-smoke"></div>
+                    <div class="smoke-effect gray-smoke" id="hero1-gray-smoke"></div>
+
+                    <!-- УНИФИЦИРОВАННЫЙ оверлей для результатов -->
+                    <div class="hero-result-overlay" id="hero1-result">
+                        <div class="result-sprite"></div>
+                        <div class="result-rating-percent"></div>
+                    </div>
+                    
+                    <!-- Publisher logo -->
+                    <div class="hero-publisher" id="hero1-publisher"></div>
+                    
+                    <!-- Alignment badge -->
+                    <div class="hero-alignment" id="hero1-alignment"></div>
                 </div>
-                <div class="hero-lose-overlay" id="hero1-lose">
-                    <div class="win-lose-text">LOSE</div>
-                    <div class="rating-percent" id="hero1-lose-percent"></div>
-                </div>
                 
-                <!-- Name container -->
+                <!-- Name container ВНЕ карточки героя -->
                 <div class="hero-name-container">
                     <div class="hero-name-text" id="hero1-name"></div>
                 </div>
-                
-                <!-- Publisher logo -->
-                <div class="hero-publisher" id="hero1-publisher"></div>
-                
-                
-                
-                <!-- Alignment badge -->
-                <div class="hero-alignment" id="hero1-alignment"></div>
             </div>
             
-            <div class="vs">VS</div>
+            <!-- Заменяем текстовый VS на картинку -->
+            <div class="vs-container">
+                <img src="https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Images/vs.webp" alt="VS" class="vs-image">
+            </div>
             
-            <div class="hero-card" id="hero2" onclick="vote(2)">
-                <img src="" alt="Hero 2" class="hero-image" id="hero2-img" loading="eager">
-                
-                <!-- Smoke effects -->
-                <div class="smoke-effect blue-smoke" id="hero2-blue-smoke"></div>
-                <div class="smoke-effect gray-smoke" id="hero2-gray-smoke"></div>
-                
-                <div class="hero-win-overlay" id="hero2-win">
-                    <div class="win-lose-text">WIN</div>
-                    <div class="rating-percent" id="hero2-win-percent"></div>
+            <!-- Контейнер для героя 2 -->
+            <div class="hero-complete-container">
+                <div class="hero-card" id="hero2" onclick="vote(2)">
+                    <img src="" alt="Hero 2" class="hero-image" id="hero2-img" loading="eager">
+                    
+                    <!-- Smoke effects -->
+                    <div class="smoke-effect blue-smoke" id="hero2-blue-smoke"></div>
+                    <div class="smoke-effect gray-smoke" id="hero2-gray-smoke"></div>
+                    
+                    <!-- УНИФИЦИРОВАННЫЙ оверлей для результатов -->
+                    <div class="hero-result-overlay" id="hero2-result">
+                        <div class="result-sprite"></div>
+                        <div class="result-rating-percent"></div>
+                    </div>
+                    
+                    <!-- Publisher logo -->
+                    <div class="hero-publisher" id="hero2-publisher"></div>
+                    
+                    <!-- Alignment badge -->
+                    <div class="hero-alignment" id="hero2-alignment"></div>
                 </div>
-                <div class="hero-lose-overlay" id="hero2-lose">
-                    <div class="win-lose-text">LOSE</div>
-                    <div class="rating-percent" id="hero2-lose-percent"></div>
-                </div>
                 
-                <!-- Name container -->
+                <!-- Name container ВНЕ карточки героя -->
                 <div class="hero-name-container">
                     <div class="hero-name-text" id="hero2-name"></div>
                 </div>
-                
-                <!-- Publisher logo -->
-                <div class="hero-publisher" id="hero2-publisher"></div>
-                
-                
-                
-                <!-- Alignment badge -->
-                <div class="hero-alignment" id="hero2-alignment"></div>
             </div>
         </div>
     </div>
 
-    <script type="module" src="app.js?v=9"></script>
+    <script type="module" src="app.js?v=12"></script>
     <div class="comic-dots-overlay"></div>
 </body>
 </html>

@@ -114,7 +114,6 @@ function updateUI() {
     if (scoreElement) scoreElement.textContent = playerScore;
     if (maxScoreElement) maxScoreElement.textContent = maxScore;
     
-    // Обновляем отображение жизней в виде звезд
     updateLivesDisplay();
 }
 
@@ -122,10 +121,8 @@ function updateLivesDisplay() {
     const globalLives = document.getElementById('global-lives');
     
     if (globalLives) {
-        // Очищаем контейнер
         globalLives.innerHTML = '';
         
-        // Добавляем звезды по количеству жизней (горизонтально)
         for (let i = 0; i < playerLives; i++) {
             const star = document.createElement('div');
             star.className = 'life-star';
@@ -153,7 +150,6 @@ async function loadAllHeroes() {
         if (error) throw error;
         if (!data || data.length === 0) return;
 
-        // Add logo URLs to each hero
         allHeroes = data.map(hero => ({
             ...hero,
             logo_url: getPublisherLogoUrl(hero.publisher)
@@ -238,20 +234,83 @@ function preloadNextPair() {
 
 // Hide all overlays
 function hideAllOverlays() {
-    const overlays = document.querySelectorAll('.hero-win-overlay, .hero-lose-overlay');
-    overlays.forEach(overlay => overlay.classList.remove('show'));
+    const overlays = document.querySelectorAll('.hero-result-overlay');
+    overlays.forEach(overlay => {
+        overlay.classList.remove('show', 'win', 'lose');
+        const percentElement = overlay.querySelector('.result-rating-percent');
+        if (percentElement) percentElement.textContent = '';
+    });
     
     const smokeEffects = document.querySelectorAll('.smoke-effect');
     smokeEffects.forEach(smoke => smoke.classList.remove('show'));
 }
 
+// Show vote result with unified system
+function showVoteResult(heroNumber, userWon, selectedRating, otherRating) {
+    const selectedHero = heroNumber;
+    const otherHero = heroNumber === 1 ? 2 : 1;
+    
+    const selectedResult = document.getElementById(`hero${selectedHero}-result`);
+    const otherResult = document.getElementById(`hero${otherHero}-result`);
+    
+    if (userWon) {
+        showResultImage(selectedResult, 'win', `${selectedRating.toFixed(1)}%`);
+        showResultImage(otherResult, 'lose', `${otherRating.toFixed(1)}%`);
+    } else {
+        showResultImage(selectedResult, 'lose', `${selectedRating.toFixed(1)}%`);
+        showResultImage(otherResult, 'win', `${otherRating.toFixed(1)}%`);
+    }
+}
+
+// Function to show result image with percentage
+function showResultImage(element, type, percent) {
+    if (!element) return;
+    
+    const sprite = element.querySelector('.result-sprite');
+    const percentElement = element.querySelector('.result-rating-percent');
+    
+    if (!sprite || !percentElement) return;
+    
+    // Set the image
+    if (type === 'win') {
+        sprite.style.backgroundImage = "url('https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Images/Win.webp')";
+    } else {
+        sprite.style.backgroundImage = "url('https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Images/Lose.webp')";
+    }
+    
+    // Set the percentage
+    percentElement.textContent = percent;
+    
+    // Show the overlay with animation
+    element.className = `hero-result-overlay show ${type}`;
+    
+    // Auto-hide after animation
+    setTimeout(() => {
+        element.classList.remove('show', 'win', 'lose');
+        sprite.style.backgroundImage = '';
+        percentElement.textContent = '';
+    }, 1500);
+}
+
 // Get hero alignment
 function getHeroAlignment(goodBad) {
     switch(goodBad) {
-        case 1: return { text: 'HERO', color: '#0098d0' };
-        case 2: return { text: 'EVIL', color: '#e00f0f' };
-        case 3: return { text: 'ANTI<br>HERO', color: '#adadadff' };
-        default: return { text: 'UNKNOWN', color: '#adadad' };
+        case 1: return { 
+            imageUrl: 'https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Images/hero.webp',
+            alt: 'HERO'
+        };
+        case 2: return { 
+            imageUrl: 'https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Images/evil.webp',
+            alt: 'EVIL'
+        };
+        case 3: return { 
+            imageUrl: 'https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Images/anti_hero.webp',
+            alt: 'ANTI HERO'
+        };
+        default: return { 
+            imageUrl: null,
+            alt: 'UNKNOWN'
+        };
     }
 }
 
@@ -275,12 +334,6 @@ function displayHeroes() {
     
     preloadNextPair();
     
-    // Clear percentages
-    ['hero1', 'hero2'].forEach(hero => {
-        document.getElementById(`${hero}-win-percent`).textContent = '';
-        document.getElementById(`${hero}-lose-percent`).textContent = '';
-    });
-    
     currentHeroes.forEach((hero, index) => {
         const heroNum = index + 1;
         const imgElement = document.getElementById(`hero${heroNum}-img`);
@@ -303,8 +356,17 @@ function displayHeroes() {
         
         // Set alignment
         const alignment = getHeroAlignment(hero.good_bad);
-        alignmentElement.innerHTML = alignment.text;
-        alignmentElement.style.color = alignment.color;
+        alignmentElement.innerHTML = '';
+        if (alignment.imageUrl) {
+            const alignmentImg = document.createElement('img');
+            alignmentImg.src = alignment.imageUrl;
+            alignmentImg.alt = alignment.alt;
+            alignmentImg.className = 'alignment-image';
+            alignmentImg.loading = 'lazy';
+            alignmentElement.appendChild(alignmentImg);
+        } else {
+            alignmentElement.textContent = alignment.alt;
+        }
         
         // Set publisher logo
         publisherElement.innerHTML = '';
@@ -348,12 +410,12 @@ async function vote(heroNumber) {
         if (tg) tg.HapticFeedback.impactOccurred('heavy');
         
         playSmokeAnimation(`hero${heroNumber}-blue-smoke`, "https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Sprites/BlueSMoke256.png");
-        playSmokeAnimation(`hero${heroNumber === 1 ? 2 : 1}-gray-smoke`, "https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Sprites/GraySmoke256.png");
+        playSmokeAnimation(`hero${heroNumber === 1 ? 2 : 1}-gray-smoke`, "https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Sprites/RedSmoke256.png");
     } else {
         playerLives--;
         if (tg) tg.HapticFeedback.impactOccurred('medium');
         
-        playSmokeAnimation(`hero${heroNumber}-gray-smoke`, "https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Sprites/GraySmoke256.png");
+        playSmokeAnimation(`hero${heroNumber}-gray-smoke`, "https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Sprites/RedSmoke256.png");
         playSmokeAnimation(`hero${heroNumber === 1 ? 2 : 1}-blue-smoke`, "https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Sprites/BlueSMoke256.png");
     }
     
@@ -419,24 +481,6 @@ async function updateHeroStatsAsync(winnerId, loserId) {
             
     } catch (error) {
         console.error("Stats update error:", error);
-    }
-}
-
-// Show vote result
-function showVoteResult(heroNumber, userWon, selectedRating, otherRating) {
-    const selectedHero = heroNumber;
-    const otherHero = heroNumber === 1 ? 2 : 1;
-    
-    if (userWon) {
-        document.getElementById(`hero${selectedHero}-win`).classList.add('show');
-        document.getElementById(`hero${otherHero}-lose`).classList.add('show');
-        document.getElementById(`hero${selectedHero}-win-percent`).textContent = `${selectedRating.toFixed(1)}%`;
-        document.getElementById(`hero${otherHero}-lose-percent`).textContent = `${otherRating.toFixed(1)}%`;
-    } else {
-        document.getElementById(`hero${selectedHero}-lose`).classList.add('show');
-        document.getElementById(`hero${otherHero}-win`).classList.add('show');
-        document.getElementById(`hero${selectedHero}-lose-percent`).textContent = `${selectedRating.toFixed(1)}%`;
-        document.getElementById(`hero${otherHero}-win-percent`).textContent = `${otherRating.toFixed(1)}%`;
     }
 }
 
@@ -532,7 +576,7 @@ function resetGame() {
     gameActive = true;
     
     document.body.style.opacity = '1';
-    updateUI(); // Эта функция уже включает updateLivesDisplay()
+    updateUI();
     displayHeroes();
 }
 

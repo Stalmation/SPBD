@@ -23,20 +23,13 @@ body {
     left: 0;
     width: 100%;
     height: 100%;
-    /* Сетка точек */
     background-image: radial-gradient(circle, rgba(255, 64, 0, 0.632) 55%, transparent 16%);
-    background-size: 5px 5px; /* размер точек */
+    background-size: 5px 5px;
     background-repeat: repeat;
-    
     pointer-events: none;
     z-index: -1;
-    
-    mask: radial-gradient(circle at center, 
-        transparent 40%, 
-        black 70%);
-    -webkit-mask: radial-gradient(circle at center, 
-        transparent 40%, 
-        black 100%);
+    mask: radial-gradient(circle at center, transparent 40%, black 70%);
+    -webkit-mask: radial-gradient(circle at center, transparent 40%, black 100%);
 }
 
 .container {
@@ -54,7 +47,7 @@ body {
 }
 
 .player-stats {
-    position: relative;   /* чтобы можно было позиционировать центр */
+    position: relative;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -66,37 +59,27 @@ body {
     font-family: 'Comic Sans MS', sans-serif;
 }
 
-/* Звезды слева */
 .lives-stats {
     display: flex;
     align-items: center;
     justify-content: flex-start;
 }
 
-/* Центральная цифра */
 .score-stats {
-    position: absolute;      /* центрируем относительно .player-stats */
+    position: absolute;
     left: 50%;
     top: 50%;
     transform: translate(-50%, -50%);
-    font-size: clamp(40px, 15vw, 78px); /* Адаптивный размер */
+    font-size: 78px;
     line-height: 1;
     font-weight: normal;
 }
 
-/* Правая зона (пока пустая) */
 .right-stats {
     display: flex;
     align-items: center;
     justify-content: flex-end;
 }
-
-
-
-
-
-
-
 
 #player-lives {
     color: #ffd700;
@@ -118,16 +101,24 @@ body {
     z-index: 2;
 }
 
-.hero-card {
+.hero-complete-container {
     position: relative;
     width: calc(100% - 20px);
     max-width: 760px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.hero-card {
+    position: relative;
+    width: 100%;
     height: auto;
     aspect-ratio: 16/9;
     background: #000;
-    border: 3px solid #000;
+    border: 4px solid #000;
     border-radius: 4px;
-    overflow: hidden;
+    overflow: visible;
     cursor: pointer;
     transition: all 0.3s ease;
     box-shadow: -2px 2px 10px rgba(0, 0, 0, 0.5);
@@ -147,32 +138,28 @@ body {
 }
 
 .hero-name-container {
-    position: absolute;
-    bottom: 3%; /* Согласовано с другими элементами */
-    left: 50%;
-    transform: translateX(-50%);
-    width: 80%; /* Ширина относительно карточки */
+    position: relative;
+    margin-top: -40px;
+    width: 65%;
     height: auto;
     aspect-ratio: 95 / 15;
     background: linear-gradient(to bottom, #fafafa 0%, #7c92a4 100%);
     border: 3px solid #000;
-    border-radius: 4px;
+    box-shadow: -2px 2px 10px rgba(0, 0, 0, 0.5);
+    border-radius: 3px;
     display: flex;
     align-items: center;
     justify-content: center;
     z-index: 15;
-    padding: 0.5vw;
-    min-width: 120px;
-    max-width: 500px;
+    padding: 0.0vw;
+    min-width: 150px;
+    max-width: 950px;
 }
 
-/* Удалите локальные шрифты и используйте веб-шрифты */
-@import url('https://fonts.googleapis.com/css2?family=Comic+Neue:wght@400;700&display=swap');
-
 .hero-name-text {
-    font-family: 'Comic Sans MS', 'Comic Neue', cursive;
+    font-family: 'Comic Sans MS', sans-serif;
     color: #000000;
-    font-weight: 500;
+    font-weight: 400;
     text-align: center;
     width: 100%;
     height: 100%;
@@ -180,41 +167,31 @@ body {
     align-items: center;
     justify-content: center;
     line-height: 1.1;
+    margin-top: -10px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    font-size: clamp(16px, 4vw, 32px) !important; /* Улучшенный clamp */
-    padding: 5px 8px;
+    font-size: min(4vw, 28px);
+    padding: 2px 5px;
     box-sizing: border-box;
 }
 
-/* Для очень длинных имен - уменьшаем шрифт динамически */
 .hero-name-text.long-name {
     font-size: clamp(10px, 2vw, 20px);
 }
 
 .hero-name-text.very-long-name {
     font-size: clamp(8px, 1.5vw, 16px);
-    white-space: normal; /* Разрешаем перенос строк */
+    white-space: normal;
     line-height: 1.1;
 }
 
-/* Подключаем шрифт Adam */
-@font-face {
-    font-family: 'Adam';
-    src: url('fonts/adam.ttf') format('truetype');
-    font-weight: normal;
-    font-style: normal;
-}
-
-/* WIN/LOSE оверлеи */
-.hero-win-overlay,
-.hero-lose-overlay {
+/* НОВЫЕ СТИЛИ ДЛЯ УНИФИЦИРОВАННОГО РЕЗУЛЬТАТА */
+.hero-result-overlay {
     position: absolute;
     top: 45%;
     left: 50%;
     transform: translate(-50%, -50%) scale(0);
-    text-transform: uppercase;
     z-index: 20;
     opacity: 0;
     transition: all 0.3s ease;
@@ -223,20 +200,24 @@ body {
     flex-direction: column;
     align-items: center;
     justify-content: center;
+    pointer-events: none;
 }
 
-.win-lose-text {
-    font-size: 48px;
-    font-weight: bold;
-    text-shadow: 2px 2px 0 #000, 
-                -1px -1px 0 #000, 
-                1px -1px 0 #000, 
-                -1px 1px 0 #000, 
-                1px 1px 0 #000;
-    margin-bottom: 2px;
+.hero-result-overlay.show {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
 }
 
-.rating-percent {
+.result-sprite {
+    width: 200px;
+    height: 100px;
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+    margin-bottom: 10px;
+}
+
+.result-rating-percent {
     font-size: 32px;
     font-weight: bold;
     text-shadow: 2px 2px 0 #000, 
@@ -244,28 +225,15 @@ body {
                 1px -1px 0 #000, 
                 -1px 1px 0 #000, 
                 1px 1px 0 #000;
+    color: #ffd700;
 }
 
-.hero-win-overlay .win-lose-text {
+.hero-result-overlay.win .result-rating-percent {
     color: #4cc9f0;
 }
 
-.hero-win-overlay .rating-percent {
-    color: #ffd700;
-}
-
-.hero-lose-overlay .win-lose-text {
+.hero-result-overlay.lose .result-rating-percent {
     color: #ff6b6b;
-}
-
-.hero-lose-overlay .rating-percent {
-    color: #ffd700;
-}
-
-.hero-win-overlay.show,
-.hero-lose-overlay.show {
-    opacity: 1;
-    transform: translate(-50%, -50%) scale(1);
 }
 
 /* Smoke effects */
@@ -290,156 +258,93 @@ body {
     transform: translate(-50%, -50%) scale(0.65);
 }
 
-/* Подключаем шрифт Friday13 */
-@font-face {
-    font-family: 'Friday13';
-    src: url('fonts/friday13.ttf') format('truetype');
-    font-weight: normal;
-    font-style: normal;
-}
-
-/* Стили для VS */
-/* Стили для VS */
-.vs {
-    font-family: 'Friday13', 'Arial', sans-serif;
-    font-size: 110px;
-    font-weight: bold;
-    position: relative;
-    color: transparent;
-    padding: 0;
-    color: #f33a0c;
-    margin: 0px 0;
-    margin-bottom: -10px;
+.vs-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 5px 0;
     z-index: 5;
-    
-    /* Общая тень для всего элемента */
-    filter: drop-shadow(-2px 4px 2px rgba(0, 0, 0, 0.5));
+    width: 100%;
+    max-width: 760px;
 }
 
-.vs::before {
-    content: 'VS';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(169deg, #fff600 25%, #f33a0c 65%);
-    -webkit-background-clip: text;
-    background-clip: text;
-    -webkit-text-fill-color: transparent;
-    z-index: 3;
+.vs-image {
+    width: 15%;
+    max-width: 230px;
+    height: auto;
+    object-fit: contain;
 }
 
-.vs::after {
-    content: 'VS';
+.hero-publisher {
     position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    text-shadow: 
-        2.5px 2.5px 0 #000,
-        -2.5px -2.5px 0 #000,
-        2.5px -2.5px 0 #000,
-        -2.5px 2.5px 0 #000,
-        0px 2.5px 0 #000,
-        2.52px 0px 0 #000,
-        0px -2.5px 0 #000,
-        -2.5px 0px 0 #000;
-    z-index: 2;
-    color: transparent;
+    top: 20px;
+    left: 25px;
+    z-index: 10;
+}
+
+.publisher-logo {
+    width: 60%;
+    height: 60%;
+    object-fit: contain;
+}
+
+.alignment-image {
+    width: clamp(40px, 12vw, 75%);
+    height: auto;
+    object-fit: contain;
+    display: block;
+}
+
+.hero-alignment {
+    position: absolute;
+    top: 4%;
+    right: 0%;
+    background: transparent;
+    padding: 0;
+    z-index: 10;
+    border-radius: 3px;
+    max-width: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-shadow: none;
 }
 
 /* Адаптация для мобильных */
 @media (max-width: 768px) {
-    .vs {
-        font-size: 28px;
+    .vs-container {
+        margin: 0px 0;
+    }
+    
+    .vs-image {
+        width: 30%;
+        max-width: 150px;
+    }
+    
+    .alignment-image {
+        width: clamp(30px, 10vw, 60px);
     }
 }
 
 @media (max-width: 480px) {
-    .vs {
-        font-size: 24px;
+    .vs-image {
+        width: 35%;
+        max-width: 120px;
     }
-}
-
-/* Publisher logo (top left) */
-/* Publisher logo - ЛУЧШИЙ ВАРИАНТ */
-.hero-publisher {
-    position: absolute;
-    top: 20px;
-    left: 20px;
-    z-index: 10;
-    width: auto;
-    height: auto;
-    max-width: 15%; /* Максимум 15% ширины карточки */
-    max-height: 15%; /* Максимум 15% высоты карточки */
-}
-
-.publisher-logo {
-    width: auto;
-    height: auto;
-    max-width: 100%;
-    max-height: 100%;
-    object-fit: contain;
+    
+    .alignment-image {
+        width: clamp(25px, 8vw, 50px);
+    }
 }
 
 @media (max-height: 600px) {
     .hero-card {
-        width: calc(100% - 15px);
+        width: 100%;
         aspect-ratio: 760/427;
     }
     
-    .hero-publisher {
-        top: 8px;
-        left: 8px;
-        max-width: 22%;
-        max-height: 22%;
-    }
-}
-
-/* Стили для текста выравнивания с clamp */
-.hero-alignment {
-    position: absolute;
-    top: 4%;
-    right: 2%;
-    font-family: 'Adam', 'Arial', sans-serif;
-    font-size: clamp(16px, 5.5vw, 50px); /* Минимум 16px, идеально 5.5vw, максимум 55px */
-    font-weight: bold;
-    background: transparent;
-    padding: clamp(2px, 0.4vw, 8px) clamp(4px, 0.8vw, 8px);
-    z-index: 10;
-    text-shadow: 
-        2px 2px 0 #000,
-        -2px -2px 0 #000,
-        2px -2px 0 #000,
-        -2px 2px 0 #000,
-        0px 2px 0 #000,
-        2px 0px 0 #000,
-        0px -2px 0 #000,
-        -2px 0px 0 #000;
-    border-radius: 3px;
-    max-width: 50%;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-/* Адаптация для разных экранов */
-@media (max-height: 600px) {
-    .hero-card {
+    .hero-complete-container {
         width: calc(100% - 15px);
-        aspect-ratio: 760/427;
-    }
-    
-    
-    
-    .win-lose-text {
-        font-size: 36px;
-    }
-    
-    .rating-percent {
-        font-size: 24px;
     }
     
     .player-stats {
@@ -450,15 +355,29 @@ body {
         font-size: 18px;
     }
     
-    .vs {
-        font-size: 18px;
-        padding: 6px 15px;
+    .vs-container {
+        margin: 0px 0;
     }
     
+    .vs-image {
+        width: 25%;
+        max-width: 100px;
+    }
     
+    .hero-name-container {
+        margin-top: -12px;
+        width: 70%;
+    }
+    
+    .result-sprite {
+        width: 150px;
+        height: 75px;
+    }
+    
+    .result-rating-percent {
+        font-size: 24px;
+    }
 }
-
-
 
 /* Анимации */
 @keyframes fadeIn {
@@ -470,11 +389,11 @@ body {
     animation: fadeIn 0.4s ease-out;
 }
 
-.hero-card:nth-child(1) {
+.hero-complete-container:nth-child(1) {
     animation-delay: 0.1s;
 }
 
-.hero-card:nth-child(2) {
+.hero-complete-container:nth-child(3) {
     animation-delay: 0.2s;
 }
 
@@ -484,7 +403,7 @@ body {
     100% { transform: translate(-50%, -50%) scale(1); }
 }
 
-.hero-win-overlay.show {
+.hero-result-overlay.win.show {
     animation: pulse 0.5s ease-in-out;
 }
 
@@ -494,7 +413,7 @@ body {
     75% { transform: translate(-50%, -50%) scale(1) rotate(5deg); }
 }
 
-.hero-lose-overlay.show {
+.hero-result-overlay.lose.show {
     animation: shake 0.3s ease-in-out;
 }
 
@@ -532,8 +451,6 @@ body {
     font-size: 16px;
 }
 
-
-
 #restart-button, #complete-restart-button {
     background: linear-gradient(145deg, #4cc9f0, #3aa8d9);
     color: white;
@@ -551,31 +468,25 @@ body {
     transform: scale(0.95);
 }
 
-/* ПЕРЕОПРЕДЕЛЕНИЕ С ВЫСОКИМ ПРИОРИТЕТОМ */
-.hero-card .hero-name-container .hero-name-text {
+.hero-name-container .hero-name-text {
     font-size: clamp(20px, 4vw, 56px) !important;
     font-weight: normal;
     font-weight: 400 !important;
     color: #000000 !important;
 }
 
-
-
-/* Вариант 3 - ЛУЧШИЙ */
-
-
 .lives-stats {
     display: flex;
     align-items: center;
-    justify-content: flex-start; /* Выравнивание по левому краю */
+    justify-content: flex-start;
     width: 100%;
 }
 
 #global-lives {
     display: flex;
     align-items: center;
-    justify-content: flex-start; /* Выравнивание по левому краю */
-    gap: 0px; /* Расстояние между звездами */
+    justify-content: flex-start;
+    gap: 0px;
 }
 
 .life-star {
@@ -585,21 +496,19 @@ body {
     background-size: contain;
     background-repeat: no-repeat;
     background-position: center;
-    
 }
 
-/* Адаптация для мобильных */
 @media (max-width: 768px) {
     .player-stats {
-        max-width: calc(100% - 20px); /* Соответствует ширине карточек */
+        max-width: calc(100% - 20px);
         padding: 0 5px !important;
-        transform: none; /* Убираем transform */
+        transform: none;
         top: auto;
     }
     
     .lives-stats {
         gap: 0px;
-        padding: 6px 0; /* Убираем боковые отступы */
+        padding: 6px 0;
         font-size: 14px;
     }
     
@@ -607,5 +516,78 @@ body {
         width: 22px;
         height: 22px;
     }
+    
+    .hero-name-container {
+        margin-top: -10px;
+        width: 70%;
+    }
 }
 
+/* ДОБАВИТЬ В КОНЕЦ CSS */
+.hero-result-overlay {
+    position: absolute;
+    top: 40% !important; /* Сдвигаем немного выше */
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0);
+    z-index: 20;
+    opacity: 0;
+    transition: all 0.3s ease;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+}
+
+.hero-result-overlay.show {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+}
+
+.result-sprite {
+    width: 200px;
+    height: 100px;
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+    margin-bottom: 5px; /* Уменьшаем отступ */
+}
+
+.result-rating-percent {
+    font-size: 28px; /* Немного уменьшаем размер */
+    font-weight: bold;
+    text-shadow: 2px 2px 0 #000, 
+                -1px -1px 0 #000, 
+                1px -1px 0 #000, 
+                -1px 1px 0 #000, 
+                1px 1px 0 #000;
+    color: #ffd700;
+    margin-top: -5px; /* Поднимаем ближе к картинке */
+}
+
+.hero-result-overlay.win .result-rating-percent {
+    color: #4cc9f0;
+}
+
+.hero-result-overlay.lose .result-rating-percent {
+    color: #ff6b6b;
+}
+
+/* Адаптация для мобильных */
+@media (max-height: 600px) {
+    .hero-result-overlay {
+        top: 35% !important; /* Еще выше на маленьких экранах */
+    }
+    
+    .result-sprite {
+        width: 150px;
+        height: 75px;
+        margin-bottom: 2px;
+    }
+    
+    .result-rating-percent {
+        font-size: 22px;
+        margin-top: -3px;
+    }
+}
