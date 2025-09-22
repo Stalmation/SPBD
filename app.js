@@ -232,13 +232,15 @@ function preloadNextPair() {
     });
 }
 
-// Hide all overlays
+// Hide all overlays - ТЕПЕРЬ СКРЫВАЕТ ТОЛЬКО ПРИ СМЕНЕ ПАРЫ
 function hideAllOverlays() {
     const overlays = document.querySelectorAll('.hero-result-overlay');
     overlays.forEach(overlay => {
         overlay.classList.remove('show', 'win', 'lose');
         const percentElement = overlay.querySelector('.result-rating-percent');
         if (percentElement) percentElement.textContent = '';
+        const sprite = overlay.querySelector('.result-sprite');
+        if (sprite) sprite.style.backgroundImage = '';
     });
     
     const smokeEffects = document.querySelectorAll('.smoke-effect');
@@ -262,7 +264,7 @@ function showVoteResult(heroNumber, userWon, selectedRating, otherRating) {
     }
 }
 
-// Function to show result image with percentage
+// Function to show result image with percentage - БЕЗ АВТОМАТИЧЕСКОГО СКРЫТИЯ
 function showResultImage(element, type, percent) {
     if (!element) return;
     
@@ -281,15 +283,8 @@ function showResultImage(element, type, percent) {
     // Set the percentage
     percentElement.textContent = percent;
     
-    // Show the overlay with animation
+    // Show the overlay with animation - НЕТ setTimeout для скрытия
     element.className = `hero-result-overlay show ${type}`;
-    
-    // Auto-hide after animation
-    setTimeout(() => {
-        element.classList.remove('show', 'win', 'lose');
-        sprite.style.backgroundImage = '';
-        percentElement.textContent = '';
-    }, 1500);
 }
 
 // Get hero alignment
@@ -314,13 +309,14 @@ function getHeroAlignment(goodBad) {
     }
 }
 
-// Display heroes
+// Display heroes - ТЕПЕРЬ СКРЫВАЕТ ПРЕДЫДУЩИЕ ОВЕРЛЕИ ПЕРЕД ПОКАЗОМ НОВЫХ
 function displayHeroes() {
     if (!gameActive) return;
     
     isVotingInProgress = false;
     currentVotePairId = null;
     
+    // Скрываем оверлеи предыдущей пары ПЕРЕД показом новых героев
     hideAllOverlays();
     
     if (nextHeroes.length === 2) {
@@ -381,7 +377,7 @@ function displayHeroes() {
     });
 }
 
-// Vote function
+// Vote function - УВЕЛИЧИВАЕМ ЗАДЕРЖКУ ДО СМЕНЫ ПАРЫ
 async function vote(heroNumber) {
     if (!gameActive || !currentHeroes || currentHeroes.length < 2 || 
         playerLives <= 0 || isVotingInProgress) {
@@ -427,6 +423,7 @@ async function vote(heroNumber) {
     
     updateHeroStatsAsync(selectedHero.id, otherHero.id);
     
+    // УВЕЛИЧИВАЕМ ЗАДЕРЖКУ до 3 секунд перед сменой пары
     setTimeout(() => {
         isVotingInProgress = false;
         currentVotePairId = null;
@@ -434,9 +431,9 @@ async function vote(heroNumber) {
         if (playerLives <= 0) {
             gameOver();
         } else if (gameActive) {
-            displayHeroes();
+            displayHeroes(); // Здесь hideAllOverlays() скроет текущие оверлеи
         }
-    }, 2500);
+    }, 2500); // Увеличено с 2500 до 3000 мс
 }
 
 // Async stats update
