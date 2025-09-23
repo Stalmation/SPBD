@@ -235,6 +235,8 @@ function preloadNextPair() {
 // Hide all overlays - ТЕПЕРЬ СКРЫВАЕТ ТОЛЬКО ПРИ СМЕНЕ ПАРЫ
 function hideAllOverlays() {
     const overlays = document.querySelectorAll('.hero-result-overlay');
+    const starContainers = document.querySelectorAll('.star-rating-container');
+    
     overlays.forEach(overlay => {
         overlay.classList.remove('show', 'win', 'lose');
         const percentElement = overlay.querySelector('.result-rating-percent');
@@ -243,11 +245,20 @@ function hideAllOverlays() {
         if (sprite) sprite.style.backgroundImage = '';
     });
     
+    starContainers.forEach(container => {
+        container.classList.remove('show');
+        const percentElement = container.querySelector('.star-rating-percent');
+        if (percentElement) {
+            percentElement.textContent = '';
+            percentElement.innerHTML = '';
+        }
+    });
+    
     const smokeEffects = document.querySelectorAll('.smoke-effect');
     smokeEffects.forEach(smoke => smoke.classList.remove('show'));
 }
 
-// Show vote result with unified system
+// Обновляем функцию showVoteResult - УБИРАЕМ старые проценты
 function showVoteResult(heroNumber, userWon, selectedRating, otherRating) {
     const selectedHero = heroNumber;
     const otherHero = heroNumber === 1 ? 2 : 1;
@@ -256,22 +267,31 @@ function showVoteResult(heroNumber, userWon, selectedRating, otherRating) {
     const otherResult = document.getElementById(`hero${otherHero}-result`);
     
     if (userWon) {
-        showResultImage(selectedResult, 'win', `${selectedRating.toFixed(1)}%`);
-        showResultImage(otherResult, 'lose', `${otherRating.toFixed(1)}%`);
+        showResultImage(selectedResult, 'win'); // Убираем проценты
+        showResultImage(otherResult, 'lose');   // Убираем проценты
+        
+        // Показываем звезды с новыми процентами
+        showStarRating(selectedHero, selectedRating, true);
+        showStarRating(otherHero, otherRating, false);
     } else {
-        showResultImage(selectedResult, 'lose', `${selectedRating.toFixed(1)}%`);
-        showResultImage(otherResult, 'win', `${otherRating.toFixed(1)}%`);
+        showResultImage(selectedResult, 'lose'); // Убираем проценты
+        showResultImage(otherResult, 'win');     // Убираем проценты
+        
+        // Показываем звезды с новыми процентами
+        showStarRating(selectedHero, selectedRating, false);
+        showStarRating(otherHero, otherRating, true);
     }
 }
 
+
 // Function to show result image with percentage - БЕЗ АВТОМАТИЧЕСКОГО СКРЫТИЯ
-function showResultImage(element, type, percent) {
+function showResultImage(element, type) {
     if (!element) return;
     
     const sprite = element.querySelector('.result-sprite');
     const percentElement = element.querySelector('.result-rating-percent');
     
-    if (!sprite || !percentElement) return;
+    if (!sprite) return;
     
     // Set the image
     if (type === 'win') {
@@ -280,10 +300,12 @@ function showResultImage(element, type, percent) {
         sprite.style.backgroundImage = "url('https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Images/Lose.webp')";
     }
     
-    // Set the percentage
-    percentElement.textContent = percent;
+    // Очищаем старые проценты
+    if (percentElement) {
+        percentElement.textContent = '';
+    }
     
-    // Show the overlay with animation - НЕТ setTimeout для скрытия
+    // Show the overlay with animation
     element.className = `hero-result-overlay show ${type}`;
 }
 
@@ -435,6 +457,57 @@ async function vote(heroNumber) {
         }
     }, 2500); // Увеличено с 2500 до 3000 мс
 }
+
+// Функция показа звезды с рейтингом
+function showStarRating(heroNumber, rating, isWinner) {
+    const starContainer = document.getElementById(`hero${heroNumber}-star-rating`);
+    const starImage = starContainer.querySelector('.rating-star');
+    const percentElement = starContainer.querySelector('.star-rating-percent');
+    
+    if (!starContainer || !starImage || !percentElement) return;
+    
+    // Устанавливаем цвет звезды
+    starImage.src = isWinner 
+        ? 'https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Images/StarBlue.webp'
+        : 'https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Images/StarRed.webp';
+    
+    // Очищаем старые цифры
+    percentElement.innerHTML = '';
+    
+    // Форматируем рейтинг с запятой вместо точки и БЕЗ знака %
+    const ratingText = `${rating.toFixed(1)}`.replace('.', ',');
+    
+    // Всегда используем картинки для цифр
+    convertToImageBasedDigits(percentElement, ratingText);
+    
+    // Показываем звезду
+    starContainer.classList.add('show');
+    
+    // Автоматически скрываем через 2.5 секунды
+    setTimeout(() => {
+        starContainer.classList.remove('show');
+    }, 2500);
+}
+
+// Функция для создания цифр из картинок (fallback)
+function convertToImageBasedDigits(element, text) {
+    for (let i = 0; i < text.length; i++) {
+        const char = text[i];
+        if (char === ',') {
+            const commaSpan = document.createElement('span');
+            commaSpan.className = 'digit comma'; // Добавляем класс comma
+            commaSpan.style.backgroundImage = `url('https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Images/Numbers/comma.webp')`;
+            element.appendChild(commaSpan);
+        } else if (!isNaN(char) && char !== ' ') {
+            const digitSpan = document.createElement('span');
+            digitSpan.className = 'digit';
+            digitSpan.style.backgroundImage = `url('https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Images/Numbers/${char}.webp')`;
+            element.appendChild(digitSpan);
+        }
+    }
+}
+
+
 
 // Async stats update
 async function updateHeroStatsAsync(winnerId, loserId) {
