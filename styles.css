@@ -33,30 +33,35 @@ body {
 }
 
 .container {
-    width: 100%;
+    width: 100vw;
     height: 100vh;
+    max-width: 100%;
+    max-height: 100%;
+    overflow: hidden;
     display: flex;
     flex-direction: column;
+    justify-content: center;
     align-items: center;
-    justify-content: space-between;
-    gap: 0;
-    padding: 10px;
-    position: relative;
-    overflow: hidden;
-    z-index: 1;
+    padding: 10px; /* Добавляем отступы от краев */
+    box-sizing: border-box;
 }
 
 .player-stats {
     position: relative;
     display: flex;
     justify-content: space-between;
+    font-family: 'Comic Sans MS', cursive; /* МЕНЯЕМ ШРИФТ */
+    font-size: clamp(32px, 12vw, 85px); /* УВЕЛИЧИВАЕМ РАЗМЕР */
+    color: #fff;
     align-items: center;
     width: 100%;
-    max-width: 760px;
-    margin: 30px auto 0;
-    height: 70px;
-    background: transparent !important;
-    font-family: 'Comic Sans MS', sans-serif;
+    max-width: 100%;
+    margin: 2% auto 0;
+    height: auto;
+    min-height: 50px;
+    bottom: -10px; /* ПОЗИЦИОНИРУЕМ НИЖЕ */
+    padding: 0 2%;
+    box-sizing: border-box;
 }
 
 .lives-stats {
@@ -70,7 +75,7 @@ body {
     left: 50%;
     top: 50%;
     transform: translate(-50%, -50%);
-    font-size: 78px;
+    font-size: clamp(24px, 10vw, 78px); /* Адаптивный размер */
     line-height: 1;
     font-weight: normal;
 }
@@ -90,38 +95,39 @@ body {
 
 .battle-area {
     width: 100%;
+    max-width: min(95vw, 800px);
+    height: auto;
+    max-height: min(95vh, 600px);
     display: flex;
     flex-direction: column;
-    gap: 15px;
     align-items: center;
-    flex-grow: 1;
-    justify-content: center;
-    padding: 0;
-    position: relative;
-    z-index: 2;
+    gap: 10px; /* ОТСТУП МЕЖДУ ЭЛЕМЕНТАМИ */
+    padding: 5px 0; /* ВЕРТИКАЛЬНЫЕ ОТСТУПЫ */
 }
 
+/* ЗАМЕНИТЬ стили .hero-complete-container */
 .hero-complete-container {
     position: relative;
-    width: calc(100% - 20px);
-    max-width: 760px;
+    width: 100%;
+    max-width: 100%;
     display: flex;
     flex-direction: column;
     align-items: center;
+    flex: 1; /* Равномерное распределение пространства */
+    min-height: 0; /* Важно для flexbox */
 }
 
 .hero-card {
     position: relative;
     width: 100%;
-    height: auto;
-    aspect-ratio: 16/9;
+    height: 0;
+    padding-bottom: 56.25%; /* Соотношение 16:9 (9/16 = 0.5625) */
     background: #000;
-    border: 4px solid #000;
+    border: 3px solid #000;
     border-radius: 4px;
     overflow: visible;
     cursor: pointer;
-    transition: all 0.3s ease;
-    box-shadow: -2px 2px 10px rgba(0, 0, 0, 0.5);
+    box-shadow: -2px 2px 3px rgba(0, 0, 0, 0.35);
     box-sizing: border-box;
     position: relative;
     z-index: 3;
@@ -132,6 +138,9 @@ body {
 }
 
 .hero-image {
+    position: absolute;
+    top: 0;
+    left: 0;
     width: 100%;
     height: 100%;
     object-fit: cover;
@@ -139,21 +148,20 @@ body {
 
 .hero-name-container {
     position: relative;
-    margin-top: -40px;
+    margin-top: -8%; /* Относительное позиционирование */
     width: 65%;
     height: auto;
     aspect-ratio: 95 / 15;
     background: linear-gradient(to bottom, #fafafa 0%, #7c92a4 100%);
-    border: 3px solid #000;
-    box-shadow: -2px 2px 10px rgba(0, 0, 0, 0.5);
+    border: 2px solid #000;
+    box-shadow: -2px 2px 4px rgba(0, 0, 0, 0.35);
     border-radius: 3px;
     display: flex;
     align-items: center;
     justify-content: center;
     z-index: 15;
-    padding: 0.0vw;
-    min-width: 150px;
-    max-width: 950px;
+    padding: 0%;
+    min-width: 0; /* Разрешаем сжатие */
 }
 
 .hero-name-text {
@@ -167,12 +175,11 @@ body {
     align-items: center;
     justify-content: center;
     line-height: 1.1;
-    margin-top: -10px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    font-size: min(4vw, 28px);
-    padding: 2px 5px;
+    font-size: clamp(14px, 5vw, 32px); /* УВЕЛИЧИВАЕМ ШРИФТ */
+    padding: 1%;
     box-sizing: border-box;
 }
 
@@ -187,9 +194,10 @@ body {
 }
 
 /* НОВЫЕ СТИЛИ ДЛЯ УНИФИЦИРОВАННОГО РЕЗУЛЬТАТА */
+/* Оверлеи теперь позиционируются относительно hero-complete-container */
 .hero-result-overlay {
     position: absolute;
-    top: 45%;
+    top: 40% !important;
     left: 50%;
     transform: translate(-50%, -50%) scale(0);
     z-index: 20;
@@ -201,6 +209,8 @@ body {
     align-items: center;
     justify-content: center;
     pointer-events: none;
+    width: 80%; /* Относительная ширина */
+    max-width: 300px;
 }
 
 .hero-result-overlay.show {
@@ -209,12 +219,13 @@ body {
 }
 
 .result-sprite {
-    width: 200px;
-    height: 100px;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 2/1;
     background-size: contain;
     background-repeat: no-repeat;
     background-position: center;
-    margin-bottom: 10px;
+    margin-bottom: 5%;
 }
 
 .result-rating-percent {
@@ -242,8 +253,10 @@ body {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%) scale(0.75);
-    width: 256px;
-    height: 256px;
+    width: 80%; /* ОТНОСИТЕЛЬНЫЙ РАЗМЕР */
+    max-width: 200px;
+    height: auto;
+    aspect-ratio: 1/1;
     background-size: 1280px 1280px;
     background-repeat: no-repeat;
     image-rendering: pixelated;
@@ -262,34 +275,39 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    margin: 5px 0;
+    margin: 1% 0;
     z-index: 5;
-    width: 100%;
-    max-width: 760px;
+    width: 50%;
+    height: auto;
+    min-height: 40px; /* Минимальная высота */
 }
 
 .vs-image {
-    width: 15%;
-    max-width: 230px;
+    width: 20%;
+    max-width: 120px;
+    min-width: 60px;
     height: auto;
     object-fit: contain;
 }
 
 .hero-publisher {
     position: absolute;
-    top: 20px;
-    left: 25px;
+    top: 5%;
+    left: 3%;
     z-index: 10;
+    width: 15%;
+    max-width: 60px;
 }
 
 .publisher-logo {
-    width: 60%;
-    height: 60%;
+    width: 100%;
+    height: auto;
     object-fit: contain;
+    display: block;
 }
 
 .alignment-image {
-    width: clamp(40px, 12vw, 75%);
+    width: 100%;
     height: auto;
     object-fit: contain;
     display: block;
@@ -297,17 +315,17 @@ body {
 
 .hero-alignment {
     position: absolute;
-    top: 4%;
-    right: 0%;
+    top: 5%;
+    right: 3%;
     background: transparent;
     padding: 0;
     z-index: 10;
     border-radius: 3px;
-    max-width: 50%;
+    width: 15%;
+    max-width: 60px;
     display: flex;
     align-items: center;
     justify-content: center;
-    text-shadow: none;
 }
 
 /* Адаптация для мобильных */
@@ -479,23 +497,30 @@ body {
     display: flex;
     align-items: center;
     justify-content: flex-start;
-    width: 100%;
+    width: auto;
+    position: absolute;
+    left: 2%;
+    bottom: 0px; /* ПОЗИЦИОНИРУЕМ НИЖЕ */
+    left: -10px;
+    z-index: 20;
 }
 
 #global-lives {
     display: flex;
     align-items: center;
     justify-content: flex-start;
-    gap: 0px;
+    gap: 2px; /* УБИРАЕМ БОЛЬШИЕ ОТСТУПЫ */
 }
 
+
 .life-star {
-    width: 52px;
-    height: 52px;
+    width: clamp(29px, 15vw, 65px); /* УВЕЛИЧИВАЕМ РАЗМЕР */
+    height: clamp(29px, 15vw, 65px);
     background-image: url('https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Images/LifeStar.webp');
     background-size: contain;
     background-repeat: no-repeat;
     background-position: center;
+    
 }
 
 @media (max-width: 768px) {
@@ -545,22 +570,55 @@ body {
     transform: translate(-50%, -50%) scale(1);
 }
 
+/* Увеличиваем Win/Lose на 50% */
 .result-sprite {
-    width: 200px;
-    height: 100px;
+    width: 300px; /* Было 200px - увеличение на 50% */
+    height: 150px; /* Было 100px - увеличение на 50% */
     background-size: contain;
     background-repeat: no-repeat;
     background-position: center;
-    margin-bottom: 5px; /* Уменьшаем отступ */
+    margin-bottom: 5px;
+}
+
+/* Адаптация для мобильных */
+@media (max-height: 600px) {
+    .result-sprite {
+        width: 225px; /* Было 150px - увеличение на 50% */
+        height: 112px; /* Было 75px - увеличение на 50% */
+        margin-bottom: 2px;
+    }
+}
+
+/* Добавляем стили для значка процента */
+.star-rating-percent .digit.percent {
+    width: 30px; /* Размер для знака % */
+    height: 45px; /* Высота как у цифр */
+    align-self: center;
+    margin-bottom: 0;
+}
+
+/* Адаптация для мобильных */
+@media (max-height: 600px) {
+    .star-rating-percent .digit.percent {
+        width: 20px;
+        height: 30px;
+    }
+}
+
+@media (max-width: 480px) {
+    .star-rating-percent .digit.percent {
+        width: 18px;
+        height: 27px;
+    }
 }
 
 /* Стили для контейнера звезды с рейтингом */
 .star-rating-container {
     position: absolute;
-    top: 70%; /* Ниже результата Win/Lose */
+    top: 67%;
     left: 50%;
     transform: translate(-50%, -50%) scale(0);
-    z-index: 25;
+    z-index: 55;
     opacity: 0;
     transition: all 0.3s ease;
     text-align: center;
@@ -569,8 +627,10 @@ body {
     align-items: center;
     justify-content: center;
     pointer-events: none;
-    width: 300px; /* В 2 раза больше */
-    height: 300px; /* В 2 раза больше */
+    width: 60%;
+    max-width: 200px;
+    height: auto;
+    aspect-ratio: 1/1;
 }
 
 .star-rating-container.show {
@@ -579,14 +639,14 @@ body {
 }
 
 .rating-star {
-    width: 250px; /* В 2 раза больше */
-    height: 250px; /* В 2 раза больше */
+    width: 100%;
+    height: 100%;
     object-fit: contain;
     position: absolute;
     top: 50%;
     left: 50%;
+    z-index: 15;
     transform: translate(-50%, -50%);
-    
 }
 
 .star-rating-percent {
@@ -600,6 +660,7 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
+    z-index: 15;
     gap: -4; /* Убираем пробелы между цифрами */
 }
 
@@ -612,6 +673,7 @@ body {
     background-position: center;
     display: inline-block;
     vertical-align: middle;
+    z-index: 35;
     padding-left: -115px;
 }
 
@@ -646,7 +708,7 @@ body {
 
 /* Убираем старые проценты в Win/Lose оверлеях */
 .hero-result-overlay .result-rating-percent {
-    display: none !important;
+    display: show !important;
 }
 
 /* Адаптация для мобильных */
@@ -698,7 +760,7 @@ body {
 }
 
 .result-rating-percent {
-    font-size: 28px; /* Немного уменьшаем размер */
+    font-size: 280px; /* Немного уменьшаем размер */
     font-weight: bold;
     text-shadow: 2px 2px 0 #000, 
                 -1px -1px 0 #000, 
@@ -717,6 +779,32 @@ body {
     color: #ff6b6b;
 }
 
+/* Особые случаи для очень маленьких экранов */
+@media (max-width: 320px) {
+    .container {
+        padding: 5px;
+    }
+    
+    .hero-name-text {
+        font-size: clamp(10px, 3vw, 16px);
+    }
+    
+    .vs-image {
+        width: 25%;
+    }
+}
+
+/* Для очень высоких экранов */
+@media (min-height: 1000px) and (max-width: 768px) {
+    .battle-area {
+        max-height: 70vh;
+    }
+    
+    .hero-card {
+        padding-bottom: 50%; /* Меньше высота карточек */
+    }
+}
+
 /* Адаптация для мобильных */
 @media (max-height: 600px) {
     .hero-result-overlay {
@@ -732,5 +820,15 @@ body {
     .result-rating-percent {
         font-size: 22px;
         margin-top: -3px;
+    }
+}
+
+/* Поддержка безопасных зон */
+@supports (padding: max(0px)) {
+    .container {
+        padding-left: max(10px, env(safe-area-inset-left));
+        padding-right: max(10px, env(safe-area-inset-right));
+        padding-top: max(10px, env(safe-area-inset-top));
+        padding-bottom: max(10px, env(safe-area-inset-bottom));
     }
 }

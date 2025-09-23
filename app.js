@@ -458,6 +458,7 @@ async function vote(heroNumber) {
     }, 2500); // Увеличено с 2500 до 3000 мс
 }
 
+
 // Функция показа звезды с рейтингом
 function showStarRating(heroNumber, rating, isWinner) {
     const starContainer = document.getElementById(`hero${heroNumber}-star-rating`);
@@ -474,8 +475,8 @@ function showStarRating(heroNumber, rating, isWinner) {
     // Очищаем старые цифры
     percentElement.innerHTML = '';
     
-    // Форматируем рейтинг с запятой вместо точки и БЕЗ знака %
-    const ratingText = `${rating.toFixed(1)}`.replace('.', ',');
+    // Форматируем рейтинг с запятой вместо точки и ДОБАВЛЯЕМ знак %
+    const ratingText = `${rating.toFixed(1)}%`.replace('.', ','); // ДОБАВЛЕН ЗНАК %
     
     // Всегда используем картинки для цифр
     convertToImageBasedDigits(percentElement, ratingText);
@@ -490,14 +491,20 @@ function showStarRating(heroNumber, rating, isWinner) {
 }
 
 // Функция для создания цифр из картинок (fallback)
+// Функция для создания цифр из картинок (fallback)
 function convertToImageBasedDigits(element, text) {
     for (let i = 0; i < text.length; i++) {
         const char = text[i];
         if (char === ',') {
             const commaSpan = document.createElement('span');
-            commaSpan.className = 'digit comma'; // Добавляем класс comma
+            commaSpan.className = 'digit comma';
             commaSpan.style.backgroundImage = `url('https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Images/Numbers/comma.webp')`;
             element.appendChild(commaSpan);
+        } else if (char === '%') {
+            const percentSpan = document.createElement('span'); // ДОБАВЛЕНО ДЛЯ ПРОЦЕНТОВ
+            percentSpan.className = 'digit percent';
+            percentSpan.style.backgroundImage = `url('https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Images/Numbers/percent.webp')`;
+            element.appendChild(percentSpan);
         } else if (!isNaN(char) && char !== ' ') {
             const digitSpan = document.createElement('span');
             digitSpan.className = 'digit';
