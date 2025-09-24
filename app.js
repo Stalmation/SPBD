@@ -491,7 +491,6 @@ function showStarRating(heroNumber, rating, isWinner) {
 }
 
 // Функция для создания цифр из картинок (fallback)
-// Функция для создания цифр из картинок (fallback)
 function convertToImageBasedDigits(element, text) {
     for (let i = 0; i < text.length; i++) {
         const char = text[i];
@@ -501,7 +500,7 @@ function convertToImageBasedDigits(element, text) {
             commaSpan.style.backgroundImage = `url('https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Images/Numbers/comma.webp')`;
             element.appendChild(commaSpan);
         } else if (char === '%') {
-            const percentSpan = document.createElement('span'); // ДОБАВЛЕНО ДЛЯ ПРОЦЕНТОВ
+            const percentSpan = document.createElement('span');
             percentSpan.className = 'digit percent';
             percentSpan.style.backgroundImage = `url('https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Images/Numbers/percent.webp')`;
             element.appendChild(percentSpan);

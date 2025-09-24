@@ -219,7 +219,7 @@ body {
 }
 
 .result-sprite {
-    width: 100%;
+    width: 40%;
     height: auto;
     aspect-ratio: 2/1;
     background-size: contain;
@@ -321,8 +321,8 @@ body {
     padding: 0;
     z-index: 10;
     border-radius: 3px;
-    width: 15%;
-    max-width: 60px;
+    width: 20%; /* Было 15% - увеличиваем ширину */
+    max-width: 150px; /* Было 60px - увеличиваем максимальную ширину */
     display: flex;
     align-items: center;
     justify-content: center;
@@ -351,7 +351,7 @@ body {
     }
     
     .alignment-image {
-        width: clamp(25px, 8vw, 50px);
+        width: clamp(75px, 12vw, 120px);
     }
 }
 
@@ -570,15 +570,7 @@ body {
     transform: translate(-50%, -50%) scale(1);
 }
 
-/* Увеличиваем Win/Lose на 50% */
-.result-sprite {
-    width: 300px; /* Было 200px - увеличение на 50% */
-    height: 150px; /* Было 100px - увеличение на 50% */
-    background-size: contain;
-    background-repeat: no-repeat;
-    background-position: center;
-    margin-bottom: 5px;
-}
+
 
 /* Адаптация для мобильных */
 @media (max-height: 600px) {
@@ -679,11 +671,12 @@ body {
 
 /* Специальные стили для запятой - меньше и выровнена по низу */
 .star-rating-percent .digit.comma {
-    width: 10%;
-    height: 10%;
-    align-self: flex-end; /* Выравниваем по низу */
-    margin-bottom: 110px; /* Опускаем ниже */
-    gap: 30px;
+    width: 10px; /* Фиксированный размер */
+    height: 10px; /* Фиксированный размер */
+    align-self: center; /* Выравниваем по центру, а не по низу */
+    margin-bottom: 0; /* Убираем большой отступ */
+    margin-left: -5px; /* Немного сдвигаем к цифрам */
+    margin-right: -5px;
 }
 
 /* Анимация вылета звезды БЕЗ поворота */
@@ -692,12 +685,12 @@ body {
         transform: translate(-50%, -50%) scale(0);
         opacity: 0;
     }
-    70% { 
-        transform: translate(-50%, -50%) scale(1.1);
+    60% { 
+        transform: translate(-50%, -50%) scale(1.0);
         opacity: 1;
     }
     100% { 
-        transform: translate(-50%, -50%) scale(1);
+        transform: translate(-50%, -50%) scale(0.95);
         opacity: 1;
     }
 }
