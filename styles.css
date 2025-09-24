@@ -253,8 +253,8 @@ body {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%) scale(0.75);
-    width: 80%; /* ОТНОСИТЕЛЬНЫЙ РАЗМЕР */
-    max-width: 200px;
+    width: 250%; /* ОТНОСИТЕЛЬНЫЙ РАЗМЕР */
+    max-width: 300px;
     height: auto;
     aspect-ratio: 1/1;
     background-size: 1280px 1280px;
