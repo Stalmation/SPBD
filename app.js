@@ -459,7 +459,7 @@ async function vote(heroNumber) {
 }
 
 
-// Функция показа звезды с рейтингом
+// Функция показа звезды с рейтингом - ИСПРАВЛЕННАЯ
 function showStarRating(heroNumber, rating, isWinner) {
     const starContainer = document.getElementById(`hero${heroNumber}-star-rating`);
     const starImage = starContainer.querySelector('.rating-star');
@@ -475,8 +475,8 @@ function showStarRating(heroNumber, rating, isWinner) {
     // Очищаем старые цифры
     percentElement.innerHTML = '';
     
-    // Форматируем рейтинг с запятой вместо точки и ДОБАВЛЯЕМ знак %
-    const ratingText = `${rating.toFixed(1)}%`.replace('.', ','); // ДОБАВЛЕН ЗНАК %
+    // Форматируем рейтинг с запятой и ОБЯЗАТЕЛЬНО добавляем знак %
+    const ratingText = `${rating.toFixed(1)}%`.replace('.', ',');
     
     // Всегда используем картинки для цифр
     convertToImageBasedDigits(percentElement, ratingText);
@@ -490,7 +490,7 @@ function showStarRating(heroNumber, rating, isWinner) {
     }, 2500);
 }
 
-// Функция для создания цифр из картинок (fallback)
+// Функция для создания цифр из картинок (исправленная)
 function convertToImageBasedDigits(element, text) {
     for (let i = 0; i < text.length; i++) {
         const char = text[i];
