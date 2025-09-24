@@ -671,12 +671,46 @@ body {
 
 /* Специальные стили для запятой - меньше и выровнена по низу */
 .star-rating-percent .digit.comma {
-    width: 10px; /* Фиксированный размер */
-    height: 10px; /* Фиксированный размер */
-    align-self: center; /* Выравниваем по центру, а не по низу */
-    margin-bottom: 0; /* Убираем большой отступ */
-    margin-left: -5px; /* Немного сдвигаем к цифрам */
+    width: 10px;
+    height: 10px;
+    align-self: center; /* ВЫРАВНИВАЕМ ПО НИЖНЕМУ КРАЮ */
+    margin-bottom: -12px; /* ОПУСКАЕМ ВНИЗ */
+    margin-left: -5px;
     margin-right: -5px;
+}
+
+/* Стили для знака процента */
+.star-rating-percent .digit.percent {
+    width: 30px;
+    height: 45px;
+    align-self: center;
+    margin-bottom: 0;
+}
+
+@media (max-height: 600px) {
+    .star-rating-percent .digit.comma {
+        width: 8px;
+        height: 8px;
+        margin-bottom: -18px; /* Меньше отступ на мобильных */
+    }
+    
+    .star-rating-percent .digit.percent {
+        width: 20px;
+        height: 30px;
+    }
+}
+
+@media (max-width: 480px) {
+    .star-rating-percent .digit.comma {
+        width: 6px;
+        height: 6px;
+        margin-bottom: -16px;
+    }
+    
+    .star-rating-percent .digit.percent {
+        width: 18px;
+        height: 27px;
+    }
 }
 
 /* Анимация вылета звезды БЕЗ поворота */
@@ -725,7 +759,7 @@ body {
     .star-rating-percent .digit.comma {
         width: 10px;
         height: 16px;
-        margin-bottom: 6px;
+        margin-bottom: -16px;
     }
 }
 
@@ -746,9 +780,9 @@ body {
     }
     
     .star-rating-percent .digit.comma {
-        width: 8px;
+        width: 12px;
         height: 14px;
-        margin-bottom: 5px;
+        margin-bottom: -30px;
     }
 }
 
