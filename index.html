@@ -64,35 +64,38 @@
 
             <!-- Контейнер для героя 1 -->
             <div class="hero-complete-container">
+                
                 <div class="hero-card" id="hero1" onclick="vote(1)">
                     <img src="" alt="Hero 1" class="hero-image" id="hero1-img" loading="eager">
                     
-                    
-
                     <!-- Publisher logo -->
                     <div class="hero-publisher" id="hero1-publisher"></div>
                     
                     <!-- Alignment badge -->
                     <div class="hero-alignment" id="hero1-alignment"></div>
+                    
+                    <!-- Smoke effects ПЕРЕНОСИМ ВНУТРЬ hero-card -->
+                    
                 </div>
                 
-                <!-- УНИФИЦИРОВАННЫЙ оверлей для результатов (ПЕРЕНЕСЕН ВНЕ hero-card) -->
+                <!-- Оверлей для результатов -->
                 <div class="hero-result-overlay" id="hero1-result">
                     <div class="result-sprite"></div>
                     <div class="result-rating-percent"></div>
                 </div>
+                
+                <!-- Контейнер звезды (БЕЗ smoke-effects) -->
                 <div class="star-rating-container" id="hero1-star-rating">
-                    <!-- Smoke effects -->
-                    <div class="smoke-effect blue-smoke" id="hero1-blue-smoke"></div>
-                    <div class="smoke-effect gray-smoke" id="hero1-gray-smoke"></div>
                     <img src="" alt="Star" class="rating-star">
                     <div class="star-rating-percent"></div>
                 </div>
                 
-                <!-- Name container -->
+                <!-- Name container - СДВИГАЕМ НИЖЕ -->
                 <div class="hero-name-container">
                     <div class="hero-name-text" id="hero1-name"></div>
                 </div>
+                <div class="smoke-effect blue-smoke" id="hero1-blue-smoke"></div>
+                <div class="smoke-effect gray-smoke" id="hero1-gray-smoke"></div>
             </div>
             
             <!-- Заменяем текстовый VS на картинку -->
@@ -100,37 +103,41 @@
                 <img src="https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Images/vs.webp" alt="VS" class="vs-image">
             </div>
             
-            <!-- Контейнер для героя 2 -->
+            <!-- Аналогично для героя 2 -->
             <div class="hero-complete-container">
+                
+                
                 <div class="hero-card" id="hero2" onclick="vote(2)">
                     <img src="" alt="Hero 2" class="hero-image" id="hero2-img" loading="eager">
-                    
-                    
                     
                     <!-- Publisher logo -->
                     <div class="hero-publisher" id="hero2-publisher"></div>
                     
                     <!-- Alignment badge -->
                     <div class="hero-alignment" id="hero2-alignment"></div>
+                    
+                    
                 </div>
                 
-                <!-- УНИФИЦИРОВАННЫЙ оверлей для результатов (ПЕРЕНЕСЕН ВНЕ hero-card) -->
+                <!-- Оверлей для результатов -->
                 <div class="hero-result-overlay" id="hero2-result">
                     <div class="result-sprite"></div>
                     <div class="result-rating-percent"></div>
                 </div>
+                
+                <!-- Контейнер звезды (БЕЗ smoke-effects) -->
                 <div class="star-rating-container" id="hero2-star-rating">
-                    <!-- Smoke effects -->
-                    <div class="smoke-effect blue-smoke" id="hero2-blue-smoke"></div>
-                    <div class="smoke-effect gray-smoke" id="hero2-gray-smoke"></div>
                     <img src="" alt="Star" class="rating-star">
                     <div class="star-rating-percent"></div>
                 </div>
                 
-                <!-- Name container -->
+                <!-- Name container - СДВИГАЕМ НИЖЕ -->
                 <div class="hero-name-container">
                     <div class="hero-name-text" id="hero2-name"></div>
                 </div>
+                <!-- Smoke effects ПЕРЕНОСИМ ВНУТРЬ hero-card -->
+                <div class="smoke-effect blue-smoke" id="hero2-blue-smoke"></div>
+                <div class="smoke-effect gray-smoke" id="hero2-gray-smoke"></div>
             </div>
         </div>
     </div>

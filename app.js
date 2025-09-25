@@ -46,6 +46,23 @@ function initTelegram() {
                 tg.close();
             }
         });
+
+        // Проверяем поддержку вибрации
+        if (tg.HapticFeedback) {
+            console.log("HapticFeedback supported");
+            // Тестовая вибрация при загрузке (очень короткая)
+            setTimeout(() => {
+                try {
+                    tg.HapticFeedback.impactOccurred('light');
+                } catch (e) {
+                    console.log("HapticFeedback error:", e);
+                }
+            }, 1000);
+        } else {
+            console.log("HapticFeedback NOT supported");
+        }
+
+        
     } else {
         console.log("Running in browser (not Telegram)");
         setupBrowserExit();
@@ -190,7 +207,7 @@ function getRandomHeroes() {
     return [availableHeroes[randomIndex1], availableHeroes[randomIndex2]];
 }
 
-// Completion screen
+// Обработчик для кнопки "Play Again" в Completion Screen
 function showCompletionScreen() {
     gameActive = false;
     maxScore = Math.max(maxScore, playerScore);
@@ -215,10 +232,10 @@ function showCompletionScreen() {
         
         document.getElementById('complete-restart-button').addEventListener('click', function() {
             popup.remove();
-            resetGameProgress();
-            resetGame();
+            resetGame(); // Полный сброс прогресса
         });
     }, 1000);
+    playHaptic('win');
 }
 
 // Preload next pair
@@ -407,6 +424,9 @@ async function vote(heroNumber) {
     }
     
     isVotingInProgress = true;
+
+    // Показываем анимацию выбора
+    indicateSelection(heroNumber);
     
     const selectedHero = currentHeroes[heroNumber - 1];
     const otherHero = currentHeroes[heroNumber === 1 ? 1 : 0];
@@ -422,28 +442,36 @@ async function vote(heroNumber) {
     
     const userMadeRightChoice = selectedHero.rating > otherHero.rating;
     
-    // Show instant result
+    // Показываем результат сразу
     if (userMadeRightChoice) {
-        playerScore++;
-        if (tg) tg.HapticFeedback.impactOccurred('heavy');
-        
         playSmokeAnimation(`hero${heroNumber}-blue-smoke`, "https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Sprites/BlueSMoke256.webp");
         playSmokeAnimation(`hero${heroNumber === 1 ? 2 : 1}-gray-smoke`, "https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Sprites/RedSmoke256.webp");
     } else {
-        playerLives--;
-        if (tg) tg.HapticFeedback.impactOccurred('medium');
-        
         playSmokeAnimation(`hero${heroNumber}-gray-smoke`, "https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Sprites/RedSmoke256.webp");
         playSmokeAnimation(`hero${heroNumber === 1 ? 2 : 1}-blue-smoke`, "https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Sprites/BlueSMoke256.webp");
     }
     
     showVoteResult(heroNumber, userMadeRightChoice, selectedHero.rating, otherHero.rating);
     
-    votedHeroes.add(selectedHero.id);
-    votedHeroes.add(otherHero.id);
-    saveProgress();
-    
-    updateHeroStatsAsync(selectedHero.id, otherHero.id);
+    // ЗАДЕРЖКА перед начислением очков/жизней
+    setTimeout(() => {
+        // Начисляем очки/жизни только после задержки
+        if (userMadeRightChoice) {
+            playerScore++;
+            if (tg) tg.HapticFeedback.impactOccurred('heavy');
+        } else {
+            playerLives--;
+            if (tg) tg.HapticFeedback.impactOccurred('medium');
+        }
+        
+        updateUI(); // Обновляем интерфейс
+        
+        votedHeroes.add(selectedHero.id);
+        votedHeroes.add(otherHero.id);
+        saveProgress();
+        
+        updateHeroStatsAsync(selectedHero.id, otherHero.id);
+    }, 2500); // Задержка 1.5 секунды
     
     // УВЕЛИЧИВАЕМ ЗАДЕРЖКУ до 3 секунд перед сменой пары
     setTimeout(() => {
@@ -453,10 +481,20 @@ async function vote(heroNumber) {
         if (playerLives <= 0) {
             gameOver();
         } else if (gameActive) {
-            displayHeroes(); // Здесь hideAllOverlays() скроет текущие оверлеи
+            displayHeroes();
         }
-    }, 2500); // Увеличено с 2500 до 3000 мс
+    }, 2500); // Увеличено до 3000 мс
+
+    // Виброотдача при выборе
+    playHaptic('selection');
+    
+    if (userMadeRightChoice) {
+        playHaptic('correct');
+    } else {
+        playHaptic('wrong');
+    }
 }
+
 
 
 // Функция показа звезды с рейтингом - ИСПРАВЛЕННАЯ
@@ -560,55 +598,159 @@ async function updateHeroStatsAsync(winnerId, loserId) {
     }
 }
 
-// Smoke animation
+// Smoke animation - FIXED with acceleration
 function playSmokeAnimation(elementId, spriteUrl) {
     const el = document.getElementById(elementId);
-    el.style.backgroundImage = `url(${spriteUrl})`;
-    el.style.backgroundSize = '1280px 1280px';
-    el.style.backgroundRepeat = 'no-repeat';
-    el.classList.add("show");
-
-    let frame = 0;
-    const frameSize = 256;
-    const framesPerRow = 5;
-    const totalFrames = 25;
-    const slowFrames = Math.floor(totalFrames / 2);
-    const fastFrames = totalFrames - slowFrames;
-
-    let intervalSpeed = 60;
+    if (!el) return;
     
-    function animateFrame() {
-        if (frame >= totalFrames) {
-            setTimeout(() => {
-                el.classList.remove("show");
-                el.style.backgroundImage = 'none';
-                el.style.backgroundPosition = "0px 0px";
-            }, 100);
-            return;
+    // Полностью сбрасываем стили
+    el.style.backgroundImage = 'none';
+    el.style.opacity = '0';
+    el.style.transform = 'translate(-50%, -50%) scale(0.65)';
+    el.style.overflow = 'hidden'; // Обеспечиваем обрезку
+    
+    setTimeout(() => {
+        // Устанавливаем спрайт
+        el.style.backgroundImage = `url(${spriteUrl})`;
+        el.style.backgroundSize = '1280px 1280px';
+        el.style.backgroundRepeat = 'no-repeat';
+        el.style.backgroundPosition = '0px 0px';
+        el.style.opacity = '1';
+        el.style.overflow = 'hidden'; // Обеспечиваем обрезку
+        el.classList.add("show");
+        
+        let frame = 0;
+        const frameSize = 256;
+        const framesPerRow = 5;
+        const totalFrames = 25;
+        
+        // Разделяем анимацию на две части
+        const slowFrames = 10; // Первые 15 кадров - нормальная скорость
+        const fastFrames = 15; // Последние 10 кадров - ускоренные
+        
+        let currentInterval = 60; // Начальная скорость (медленно)
+        
+        function animateFrame() {
+            if (frame >= totalFrames) {
+                // Плавное завершение
+                setTimeout(() => {
+                    el.classList.remove("show");
+                    el.style.opacity = '0';
+                    setTimeout(() => {
+                        el.style.backgroundImage = 'none';
+                    }, 200);
+                }, 150);
+                return;
+            }
+            
+            // Расчет позиции кадра с правильной обрезкой
+            const col = frame % framesPerRow;
+            const row = Math.floor(frame / framesPerRow);
+            
+            const x = -col * frameSize;
+            const y = -row * frameSize;
+            
+            // Устанавливаем позицию - важно для избежания моргания
+            el.style.backgroundPosition = `${x}px ${y}px`;
+            
+            // Плавное масштабирование в начале
+            if (frame < 2) {
+                const scale = 0.65 + (frame * 0.02);
+                el.style.transform = `translate(-50%, -50%) scale(${scale})`;
+            }
+            // Плавное масштабирование в начале
+            if (frame > 1) {
+                const scale = 1 
+                el.style.transform = `translate(-50%, -50%) scale(${scale})`;
+            }
+            
+            frame++;
+            
+            // Динамическое изменение скорости - ПЛАВНОЕ УСКОРЕНИЕ
+            if (frame === slowFrames) {
+                // Резкий переход на быструю скорость
+                currentInterval = 30;
+            } else if (frame > slowFrames && frame < totalFrames - 2) {
+                // Плавное дополнительное ускорение
+                currentInterval = Math.max(20, 30 - (frame - slowFrames) * 2);
+            }
+            
+            setTimeout(animateFrame, currentInterval);
         }
-
-        const col = frame % framesPerRow;
-        const row = Math.floor(frame / framesPerRow);
         
-        const x = -col * frameSize;
-        const y = -row * frameSize;
+        // Начинаем анимацию
+        animateFrame();
         
-        el.style.backgroundPosition = `${x}px ${y}px`;
-
-        frame++;
-        
-        if (frame === slowFrames) {
-            intervalSpeed = 30;
-        }
-        
-        setTimeout(animateFrame, intervalSpeed);
-    }
-
-    setTimeout(animateFrame, intervalSpeed);
+    }, 30);
 }
 
-// Game over
+// Упрощенная функция
+function indicateSelection(heroNumber) {
+    const container = document.querySelector(`#hero${heroNumber}`).closest('.hero-complete-container');
+    if (!container) return;
+    
+    container.classList.add('selected');
+    
+    setTimeout(() => {
+        container.classList.remove('selected');
+    }, 300);
+}
+
+// Улучшенная система вибрации
+function playHaptic(type) {
+    // Сначала пробуем Telegram вибрацию
+    if (tg && tg.HapticFeedback) {
+        try {
+            switch(type) {
+                case 'selection': 
+                    tg.HapticFeedback.impactOccurred('light');
+                    break;
+                case 'correct':
+                    tg.HapticFeedback.impactOccurred('heavy');
+                    break;
+                case 'wrong':
+                    tg.HapticFeedback.impactOccurred('medium');
+                    break;
+                case 'game_over':
+                    tg.HapticFeedback.notificationOccurred('error');
+                    break;
+                case 'win':
+                    tg.HapticFeedback.notificationOccurred('success');
+                    break;
+            }
+            return; // Если сработало, выходим
+        } catch (e) {
+            console.log("Telegram haptic failed");
+        }
+    }
+    
+    // Fallback: стандартная вибрация браузера (работает везде)
+    if (navigator.vibrate) {
+        switch(type) {
+            case 'selection': navigator.vibrate(30); break;     // Короткий щелчок
+            case 'correct': navigator.vibrate(80); break;       // Длинный позитивный
+            case 'wrong': navigator.vibrate(150); break;        // Длинный негативный
+            case 'game_over': navigator.vibrate([100, 50, 100]); break; // Паттерн проигрыша
+            case 'win': navigator.vibrate([50, 30, 50, 30, 50]); break; // Паттерн победы
+        }
+    }
+}
+
+// Game over function
 function gameOver() {
+    gameActive = false;
+    maxScore = Math.max(maxScore, playerScore);
+    saveProgress();
+    
+    document.body.style.opacity = '0.7';
+    playHaptic('game_over');
+    setTimeout(() => {
+        showGameOverPopup();
+    }, 1000);
+}
+
+// Обработчик для кнопки "Try Again" в Game Over
+function showGameOverPopup() {
     gameActive = false;
     maxScore = Math.max(maxScore, playerScore);
     saveProgress();
@@ -616,62 +758,94 @@ function gameOver() {
     document.body.style.opacity = '0.7';
     
     setTimeout(() => {
-        showGameOverPopup();
+        const popup = document.createElement('div');
+        popup.className = 'game-over-popup';
+        popup.innerHTML = `
+            <div class="popup-content">
+                <h2>💀 GAME OVER!</h2>
+                <p>Your score: <span class="score">${playerScore}</span></p>
+                <p>Best score: <span class="best">${maxScore}</span></p>
+                <button id="restart-button">🔄 Try Again</button>
+            </div>
+        `;
+        
+        document.body.appendChild(popup);
+        
+        document.getElementById('restart-button').addEventListener('click', function() {
+            popup.remove();
+            resetGame(); // Полный сброс прогресса
+        });
     }, 1000);
-}
-
-// Game over popup
-function showGameOverPopup() {
-    const popup = document.createElement('div');
-    popup.className = 'game-over-popup';
-    popup.innerHTML = `
-        <div class="popup-content">
-            <h2>💀 GAME OVER!</h2>
-            <p>Your score: <span class="score">${playerScore}</span></p>
-            <p>Best score: <span class="best">${maxScore}</span></p>
-            <button id="restart-button">🔄 Try Again</button>
-        </div>
-    `;
-    
-    document.body.appendChild(popup);
-    
-    document.getElementById('restart-button').addEventListener('click', function() {
-        popup.remove();
-        resetGame();
-    });
     
     if (tg) tg.HapticFeedback.notificationOccurred('error');
 }
 
 // Reset game
+// Reset game - ПОЛНЫЙ СБРОС ПРОГРЕССА
 function resetGame() {
+    // Полностью сбрасываем весь прогресс
     playerLives = 5;
     playerScore = 0;
+    votedHeroes.clear();
     isVotingInProgress = false;
     currentVotePairId = null;
     gameActive = true;
+    
+    // Очищаем localStorage
+    localStorage.removeItem('heroVoteProgress');
+    localStorage.removeItem('heroGameStats');
     
     document.body.style.opacity = '1';
     updateUI();
     displayHeroes();
 }
 
-// Reset game progress
-function resetGameProgress() {
-    playerLives = 5;
-    playerScore = 0;
-    votedHeroes.clear();
-    maxScore = 0;
-    isVotingInProgress = false;
-    currentVotePairId = null;
-    localStorage.removeItem('heroVoteProgress');
-    localStorage.removeItem('heroGameStats');
-    updateUI();
-}
+// DOM loaded
+document.addEventListener("DOMContentLoaded", function() {
+    initTelegram();
+    loadAllHeroes();
+    
+    // Hide unnecessary elements
+    const elementsToHide = [
+        'header h1',
+        'header p',
+        '.progress-container',
+        '.rating-notice',
+        'footer'
+    ];
+    
+    elementsToHide.forEach(selector => {
+        const element = document.querySelector(selector);
+        if (element) element.style.display = 'none';
+    });
+});
+
+// Escape handler - ДОБАВЛЯЕМ ПЕРЕЗАГРУЗКУ ПО F5
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        if (confirm('Exit the game?')) {
+            if (tg && tg.close) {
+                tg.close();
+            } else {
+                window.history.back();
+            }
+        }
+    }
+    
+    // Добавляем обработку F5 для перезагрузки с полным сбросом (без подтверждения)
+    if (e.key === 'F5' || (e.ctrlKey && e.key === 'r')) {
+        e.preventDefault();
+        resetGame(); // Сразу сбрасываем без подтверждения
+    }
+});
 
 // DOM loaded
 document.addEventListener("DOMContentLoaded", function() {
     initTelegram();
+    // Всегда сбрасываем игру при загрузке в Telegram
+    if (typeof Telegram !== 'undefined' && Telegram.WebApp) {
+        resetGame();
+    }
     loadAllHeroes();
     
     // Hide unnecessary elements
