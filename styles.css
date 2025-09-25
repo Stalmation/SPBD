@@ -40,10 +40,11 @@ body {
     overflow: hidden;
     display: flex;
     flex-direction: column;
-    justify-content: center;
+    justify-content: center; /* Меняем с center на flex-start */
     align-items: center;
-    padding: 10px; /* Добавляем отступы от краев */
+    padding: 5px 10px 10px 10px; /* Уменьшаем верхний padding */
     box-sizing: border-box;
+    margin-top: -30px; /* Сдвигаем весь контейнер вверх */
 }
 
 .player-stats {
