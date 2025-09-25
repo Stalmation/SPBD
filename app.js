@@ -856,15 +856,6 @@ document.addEventListener("DOMContentLoaded", function() {
         '.rating-notice',
         'footer'
     ];
-    
-    elementsToHide.forEach(selector => {
-        const element = document.querySelector(selector);
-        if (element) element.style.display = 'none';
-    });
-});
-
-// Escape handler
-document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') {
         if (confirm('Exit the game?')) {
             if (tg && tg.close) {
@@ -874,6 +865,12 @@ document.addEventListener('keydown', function(e) {
             }
         }
     }
+    elementsToHide.forEach(selector => {
+        const element = document.querySelector(selector);
+        if (element) element.style.display = 'none';
+    });
 });
+
+
 
 window.vote = vote;
