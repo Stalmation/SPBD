@@ -210,7 +210,7 @@ body {
     top: 40% !important;
     left: 50%;
     transform: translate(-50%, -50%) scale(0);
-    z-index: 20;
+    z-index: 60;
     opacity: 0;
     transition: all 0.3s ease;
     text-align: center;
@@ -579,11 +579,11 @@ body {
     }
     40% { 
         transform: translate(-50%, -50%) scale(1.1);
-        opacity: 0.8;
+        opacity: 1;
     }
     100% { 
-        transform: translate(-50%, -50%) scale(0);
-        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.0);
+        opacity: 1;
     }
 }
 
@@ -796,24 +796,36 @@ body {
     }
 }
 
-/* Анимация вылета звезды БЕЗ поворота */
 @keyframes starPop {
     0% { 
         transform: translate(-50%, -50%) scale(0);
         opacity: 0;
     }
     60% { 
-        transform: translate(-50%, -50%) scale(1.0);
+        transform: translate(-50%, -50%) scale(1.03);
         opacity: 1;
     }
-    100% { 
-        transform: translate(-50%, -50%) scale(0.95);
+    65% {
+        transform: translate(-50%, -50%) scale(0.99) rotate(1deg);
+        
+    }
+    65% {
+        transform: translate(-50%, -50%) scale(1.00) rotate(-0.5deg);
+    }
+    70% {
+        transform: translate(-50%, -50%) scale(0.99) translateX(2px) rotate(0.3deg);
+    }
+    85% {
+        transform: translate(-50%, -50%) scale(1.00) translateX(-1px) translateY(1px) rotate(-0.2deg);
+    }
+    95% { 
+        transform: translate(-50%, -50%) scale(1) rotate(0deg);
         opacity: 1;
     }
 }
 
 .star-rating-container.show {
-    animation: starPop 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    animation: starPop 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; /* Было 0.8s, стало 0.4s */
 }
 
 /* Убираем старые проценты в Win/Lose оверлеях */
@@ -848,6 +860,7 @@ body {
 
 @media (max-width: 480px) {
     .star-rating-container {
+        top: 65% !important; /* Еще выше для маленьких экранов */
         width: 180px;
         height: 180px;
     }
@@ -906,7 +919,7 @@ body {
 }
 
 
-/* Анимация удаления жизни */
+/* Анимация удаления жизни - ОСТАВЛЯЕМ ТОЛЬКО ЭТОТ БЛОК */
 @keyframes lifeRemove {
     0% { 
         transform: scale(1);
@@ -926,6 +939,10 @@ body {
     animation: lifeRemove 0.4s cubic-bezier(0.55, 0.085, 0.68, 0.53) forwards;
 }
 
+
+
+
+
 /* Увеличение логотипов Valiant и Dark Horse на 50% */
 .hero-publisher img[alt*="valiant"],
 .hero-publisher img[alt*="Valiant"],
@@ -935,6 +952,8 @@ body {
     transform: scale(1.5); /* Увеличиваем на 50% */
     transform-origin: top left;
 }
+
+
 
 /* Для очень высоких экранов */
 @media (min-height: 1000px) and (max-width: 768px) {

@@ -452,7 +452,6 @@ function displayHeroes() {
     });
 }
 
-// Vote function - УВЕЛИЧИВАЕМ ЗАДЕРЖКУ ДО СМЕНЫ ПАРЫ
 async function vote(heroNumber) {
     if (!gameActive || !currentHeroes || currentHeroes.length < 2 || 
         playerLives <= 0 || isVotingInProgress) {
@@ -481,18 +480,21 @@ async function vote(heroNumber) {
     
     const userMadeRightChoice = selectedHero.rating > otherHero.rating;
     
-    // Виброотдача при выборе - ИСПРАВЛЕНО
+    // Виброотдача при выборе
     playHaptic('selection');
     
-    if (userMadeRightChoice) {
-        playSmokeAnimation(`hero${heroNumber}-blue-smoke`, "https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Sprites/BlueSMoke256.webp");
-        playSmokeAnimation(`hero${heroNumber === 1 ? 2 : 1}-gray-smoke`, "https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Sprites/RedSmoke256.webp");
-        playHaptic('correct'); // Виброотдача для правильного ответа
-    } else {
-        playSmokeAnimation(`hero${heroNumber}-gray-smoke`, "https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Sprites/RedSmoke256.webp");
-        playSmokeAnimation(`hero${heroNumber === 1 ? 2 : 1}-blue-smoke`, "https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Sprites/BlueSMoke256.webp");
-        playHaptic('wrong'); // Виброотдача для неправильного ответа
-    }
+    // Запускаем дым СРАЗУ с небольшой задержкой для синхронизации с ударом звезды
+    setTimeout(() => {
+        if (userMadeRightChoice) {
+            playSmokeAnimation(`hero${heroNumber}-blue-smoke`, "https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Sprites/BlueSMoke256.webp");
+            playSmokeAnimation(`hero${heroNumber === 1 ? 2 : 1}-gray-smoke`, "https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Sprites/RedSmoke256.webp");
+            playHaptic('correct');
+        } else {
+            playSmokeAnimation(`hero${heroNumber}-gray-smoke`, "https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Sprites/RedSmoke256.webp");
+            playSmokeAnimation(`hero${heroNumber === 1 ? 2 : 1}-blue-smoke`, "https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Sprites/BlueSMoke256.webp");
+            playHaptic('wrong');
+        }
+    }, 0); // Запускаем дым через 150мс, когда звезда начинает "удар"
     
     showVoteResult(heroNumber, userMadeRightChoice, selectedHero.rating, otherHero.rating);
     
@@ -513,9 +515,9 @@ async function vote(heroNumber) {
         saveProgress();
         
         updateHeroStatsAsync(selectedHero.id, otherHero.id);
-    }, 2500);
+    }, 2500); // Уменьшаем до 2000мс, так как анимация звезды ускорилась
     
-    // Задержка перед сменой пары (увеличена для завершения анимаций)
+    // Задержка перед сменой пары
     setTimeout(() => {
         isVotingInProgress = false;
         currentVotePairId = null;
@@ -525,7 +527,7 @@ async function vote(heroNumber) {
         } else if (gameActive) {
             displayHeroes();
         }
-    }, 2500);
+    }, 2500); // Уменьшаем до 2000мс
 }
 
 
@@ -547,23 +549,30 @@ function showStarRating(heroNumber, rating, isWinner) {
     // Очищаем старые цифры
     percentElement.innerHTML = '';
     
-    // Форматируем рейтинг с запятой БЕЗ знака %
+    // Форматируем рейтинг с запятой
     const ratingText = `${rating.toFixed(1)}`.replace('.', ',');
     
-    // Всегда используем картинки для цифр
+    // Используем картинки для цифр
     convertToImageBasedDigits(percentElement, ratingText);
     
-    // Показываем звезду
-    starContainer.classList.add('show');
+    // Сбрасываем классы перед показом
+    starContainer.classList.remove('show', 'hiding');
     
-    // Автоматически скрываем через 1.8 секунды (синхронизируем с общей анимацией)
+    // Небольшая задержка для плавного появления
+    setTimeout(() => {
+        starContainer.classList.add('show');
+    }, 50);
+    
+    // Автоматически скрываем через 2 секунды
     setTimeout(() => {
         starContainer.classList.add('hiding');
+        setTimeout(() => {
+            starContainer.classList.remove('show', 'hiding');
+        }, 400);
     }, 2000);
 }
 
 
-// И добавьте эту функцию обратно:
 function updateLivesWithAnimation() {
     const globalLives = document.getElementById('global-lives');
     if (!globalLives) return;
@@ -580,7 +589,7 @@ function updateLivesWithAnimation() {
             if (lastLifeStar.parentNode === globalLives) {
                 globalLives.removeChild(lastLifeStar);
             }
-        }, 400); // Длительность анимации
+        }, 400);
     }
 }
 
@@ -897,6 +906,11 @@ function resetGame() {
 document.addEventListener("DOMContentLoaded", function() {
     initTelegram();
     loadAllHeroes();
+
+    // Добавляем вызов дисклеймера
+    setTimeout(() => {
+        showWelcomeDisclaimer();
+    }, 1000);
     
     // Hide unnecessary elements
     const elementsToHide = [
