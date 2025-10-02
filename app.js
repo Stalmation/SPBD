@@ -51,36 +51,6 @@ function initTelegram() {
             }
         });
 
-        // Дополнительные настройки для полноэкранного режима
-        try {
-            // Пытаемся войти в полноэкранный режим
-            if (tg.isExpanded !== undefined && !tg.isExpanded) {
-                tg.expand();
-            }
-            
-            // Скрываем любые системные UI
-            tg.settings = {
-                hideAllSystemUI: true
-            };
-            
-        } catch (e) {
-            console.log("Fullscreen settings error:", e);
-        }
-
-        // Скрываем нижнюю панель (если есть)
-        if (tg.MainButton) {
-            tg.MainButton.hide();
-        }
-
-        // Добавьте этот обработчик для принудительного скрытия
-        setTimeout(() => {
-            try {
-                tg.expand(); // Еще раз пытаемся расшириться
-            } catch (e) {
-                console.log("Secondary expand attempt failed:", e);
-            }
-        }, 1000);
-
         // Проверяем поддержку вибрации
         if (tg.HapticFeedback) {
             console.log("HapticFeedback supported");
@@ -101,24 +71,6 @@ function initTelegram() {
         console.log("Running in browser (not Telegram)");
         setupBrowserExit();
     }
-}
-
-
-// Добавьте эту функцию для очистки
-function clearGameMemory() {
-    // Очищаем все таймауты
-    animationTimeouts.forEach(timeout => clearTimeout(timeout));
-    animationTimeouts = [];
-    
-    // Сбрасываем состояния
-    isVotingInProgress = false;
-    currentVotePairId = null;
-    
-    // Очищаем DOM элементы
-    const overlays = document.querySelectorAll('.hero-result-overlay, .star-rating-container, .smoke-effect');
-    overlays.forEach(el => {
-        el.classList.remove('show', 'hiding', 'win', 'lose');
-    });
 }
 
 function setupBrowserExit() {
@@ -163,12 +115,6 @@ function loadProgress() {
 // Save progress
 function saveProgress() {
     try {
-        // Ограничиваем размер votedHeroes (максимум 500 героев)
-        if (votedHeroes.size > 500) {
-            const array = Array.from(votedHeroes);
-            votedHeroes = new Set(array.slice(-500)); // Оставляем только последние 500
-        }
-        
         localStorage.setItem('heroVoteProgress', JSON.stringify(Array.from(votedHeroes)));
         localStorage.setItem('heroGameStats', JSON.stringify({
             lives: playerLives,
@@ -178,9 +124,6 @@ function saveProgress() {
         updateUI();
     } catch (error) {
         console.error("Error saving progress:", error);
-        // Если ошибка - очищаем localStorage
-        localStorage.clear();
-        votedHeroes = new Set();
     }
 }
 
@@ -381,7 +324,7 @@ function hideAnimations() {
     setTimeout(() => {
         overlays.forEach(overlay => overlay.classList.remove('hiding'));
         starContainers.forEach(container => container.classList.remove('hiding'));
-    }, 300);
+    }, 600);
 }
 
 // Обновляем функцию showResultImage с синхронизированными таймингами
@@ -405,10 +348,12 @@ function showResultImage(element, type) {
     
     element.className = `hero-result-overlay show ${type}`;
     
-    // Автоматически скрываем через HERO_DISPLAY_DURATION - 300ms
+    // СИНХРОНИЗИРУЕМ С ЗВЕЗДАМИ: показываем с задержкой 50ms и скрываем через HERO_DISPLAY_DURATION - 500ms
     setTimeout(() => {
-        element.classList.remove('show');
-    }, HERO_DISPLAY_DURATION - 300);
+        element.classList.add('show');
+    }, 50);
+    
+    
 }
 
 // Get hero alignment
@@ -559,28 +504,37 @@ async function vote(heroNumber) {
     // Показываем результаты сразу
     showVoteResult(heroNumber, userMadeRightChoice, selectedHero.rating, otherHero.rating);
     
-    // Начисление очков/жизней через 500ms после начала
+    // Отнимание жизни раньше (например, за 800ms до основной логики)
+    setTimeout(() => {
+        if (!userMadeRightChoice) {
+            playerLives--;
+            updateLivesWithAnimation();
+            // Обновляем UI сразу для отображения измененных жизней
+            updateUI();
+        }
+    }, HERO_DISPLAY_DURATION - 500);
+
+    // Основная логика через 500ms (как было изначально)
     setTimeout(() => {
         if (userMadeRightChoice) {
             playerScore++;
-        } else {
-            playerLives--;
-            updateLivesWithAnimation();
+            // UI обновляется здесь для правильного выбора
+            updateUI();
         }
-        
-        updateUI();
+        // Для неправильного выбора UI уже обновлен выше, 
+        // но если нужно обновить что-то еще, можно оставить
         
         votedHeroes.add(selectedHero.id);
         votedHeroes.add(otherHero.id);
         saveProgress();
         
         updateHeroStatsAsync(selectedHero.id, otherHero.id);
-    }, 500);
+    }, HERO_DISPLAY_DURATION);
     
     // Скрываем анимации за 300ms до смены героев
     setTimeout(() => {
         hideAnimations();
-    }, HERO_DISPLAY_DURATION - 300);
+    }, HERO_DISPLAY_DURATION - 500);
     
     // Смена пары героев через HERO_DISPLAY_DURATION
     setTimeout(() => {
@@ -590,7 +544,7 @@ async function vote(heroNumber) {
         if (playerLives <= 0) {
             setTimeout(() => {
                 gameOver();
-            }, 300);
+            }, 500);
         } else if (gameActive) {
             displayHeroes();
         }
@@ -623,13 +577,7 @@ function showStarRating(heroNumber, rating, isWinner) {
         starContainer.classList.add('show');
     }, 50);
     
-    // Звезда автоматически скрывается через HERO_DISPLAY_DURATION - 300ms
-    setTimeout(() => {
-        starContainer.classList.add('hiding');
-        setTimeout(() => {
-            starContainer.classList.remove('show', 'hiding');
-        }, 300);
-    }, HERO_DISPLAY_DURATION - 300);
+    // УБИРАЕМ лишнее скрытие здесь - оно будет в hideAnimations()
 }
 
 
@@ -655,7 +603,7 @@ function updateLivesWithAnimation() {
             if (lastLifeStar.parentNode === globalLives && lastLifeStar.classList.contains('life-star-removing')) {
                 globalLives.removeChild(lastLifeStar);
             }
-        }, 600); // Увеличиваем с 400 до 600мс
+        }, 400); // Увеличиваем с 400 до 600мс
     }
 }
 
@@ -923,7 +871,7 @@ function showGameOverPopup() {
         popup.className = 'game-over-popup';
         popup.innerHTML = `
             <div class="popup-content">
-                <h2>💀 GAME OVER!</h2>
+                <h2>GAME OVER</h2>
                 <p>Your score: <span class="score">${playerScore}</span></p>
                 <p>Best score: <span class="best">${maxScore}</span></p>
                 <button id="restart-button">🔄 Try Again</button>
@@ -944,8 +892,6 @@ function showGameOverPopup() {
 // Reset game
 // Reset game - ПОЛНЫЙ СБРОС ПРОГРЕССА
 function resetGame() {
-
-    clearGameMemory(); // ДОБАВЬТЕ ЭТУ СТРОЧКУ
     // Полностью сбрасываем весь прогресс
     playerLives = 5;
     playerScore = 0;
