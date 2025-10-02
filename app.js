@@ -302,6 +302,7 @@ function showVoteResult(heroNumber, userWon, selectedRating, otherRating) {
         showStarRating(selectedHero, selectedRating, false);
         showStarRating(otherHero, otherRating, true);
     }
+    
 }
 
 // Новая функция для скрытия анимаций с реверсом
