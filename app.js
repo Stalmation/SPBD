@@ -315,39 +315,7 @@ function updateUI() {
     }
 }
 
-// Функция для показа приветственного дисклеймера
-function showWelcomeDisclaimer() {
-    const hasSeenDisclaimer = localStorage.getItem('hasSeenDisclaimer');
-    
-    if (!hasSeenDisclaimer) {
-        AnimationManager.setTimeout(() => {
-            const popup = document.createElement('div');
-            popup.className = 'game-over-popup';
-            popup.innerHTML = `
-                <div class="popup-content">
-                    <h2>🎮 SUPER POWER BEAT DOWN</h2>
-                    <div style="text-align: left; margin: 15px 0;">
-                        <p><strong>Правила игры:</strong></p>
-                        <p>• Выбирайте героя с более высоким рейтингом</p>
-                        <p>• У вас есть 5 жизней</p>
-                        <p>• За правильный выбор получаете +1 очко</p>
-                        <p>• За ошибку теряете 1 жизнь</p>
-                        <p>• Играйте пока не закончатся герои или жизни!</p>
-                    </div>
-                    <button id="understand-button">ПОНЯТНО!</button>
-                </div>
-            `;
-            
-            document.body.appendChild(popup);
-            
-            document.getElementById('understand-button').addEventListener('click', function() {
-                localStorage.setItem('hasSeenDisclaimer', 'true');
-                popup.remove();
-                document.body.style.opacity = '1';
-            });
-        }, 500);
-    }
-}
+
 
 function updateLivesDisplay() {
     const globalLives = document.getElementById('global-lives');
@@ -1063,9 +1031,7 @@ document.addEventListener("DOMContentLoaded", function() {
     initNetworkMonitoring();
     initNavigationControl();
 
-    AnimationManager.setTimeout(() => {
-        showWelcomeDisclaimer();
-    }, 1000);
+    
     
     // Hide unnecessary elements
     const elementsToHide = [
