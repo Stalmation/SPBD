@@ -1023,6 +1023,14 @@ function resetGame() {
 
 // DOM loaded
 document.addEventListener("DOMContentLoaded", function() {
+
+    // ОЧИСТКА: удаляем все возможные заблокированные попапы
+    const blockedPopups = document.querySelectorAll('.game-over-popup, .network-error-popup');
+    blockedPopups.forEach(popup => popup.remove());
+
+    // Восстанавливаем нормальную opacity
+    document.body.style.opacity = '1';
+
     initTelegram();
     
     // ВСЕГДА сбрасываем игру при загрузке (анти-читерство)
