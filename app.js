@@ -86,10 +86,9 @@ function initTelegram() {
         tg = Telegram.WebApp;
         tg.expand();
         tg.enableClosingConfirmation();
-        tg.setHeaderColor('secondary_bg_color');
-        tg.setBackgroundColor('secondary_bg_color');
+        tg.setHeaderColor('#ff5f00');
+        tg.setBackgroundColor('#ff5f00');
         tg.BackButton.hide();
-        
         
         // УБИРАЕМ tg.hideTopBar() - этого метода не существует
         tg.disableVerticalSwipes();
@@ -154,7 +153,24 @@ function preventNavigationPanel(event) {
     }
 }
 
-
+// Инициализация управления навигацией
+function initNavigationControl() {
+    // Скрываем панель при загрузке
+    setTimeout(hideNavigationPanel, 100);
+    
+    // Обработчики для предотвращения появления панели
+    document.addEventListener('touchstart', preventNavigationPanel, { passive: false });
+    document.addEventListener('touchend', preventNavigationPanel, { passive: false });
+    document.addEventListener('touchmove', preventNavigationPanel, { passive: false });
+    
+    // При фокусе на странице снова скрываем панель
+    window.addEventListener('focus', hideNavigationPanel);
+    
+    // При изменении размера окна (когда панель появляется/исчезает)
+    window.addEventListener('resize', function() {
+        setTimeout(hideNavigationPanel, 50);
+    });
+}
 
 // Умный мониторинг сети
 function initNetworkMonitoring() {
@@ -237,7 +253,10 @@ function showNetworkError() {
     
     document.body.appendChild(popup);
     
-    
+    // Блокируем игровые элементы
+    document.querySelectorAll('.hero-card').forEach(card => {
+        card.style.pointerEvents = 'none';
+    });
 }
 
 // Функция скрытия ошибки сети
@@ -251,7 +270,10 @@ function hideNetworkError() {
         }, 300);
     }
     
-    
+    // Восстанавливаем игровые элементы
+    document.querySelectorAll('.hero-card').forEach(card => {
+        card.style.pointerEvents = '';
+    });
 }
 
 // Load progress - ТОЛЬКО ДЛЯ МАКСИМАЛЬНОГО СЧЕТА
@@ -1011,7 +1033,7 @@ document.addEventListener("DOMContentLoaded", function() {
     resetGame();
     loadAllHeroes();
     initNetworkMonitoring();
-   
+    initNavigationControl();
 
     AnimationManager.setTimeout(() => {
         showWelcomeDisclaimer();
