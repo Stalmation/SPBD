@@ -4,10 +4,55 @@ import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 const SUPABASE_URL = "https://xwtcasfvetisjaiijtsj.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh3dGNhc2Z2ZXRpc2phaWlqdHNqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgyMTA5OTMsImV4cCI6MjA3Mzc4Njk5M30.b8ScpPxBx6K0HmWynqppBLSxxuENNmOJR7Kcl6hIo2s";
 
-// Добавляем в начало файла константы для управления таймингами
-const HERO_DISPLAY_DURATION = 3000; // Основное время показа пары героев (можно менять)
+// Константы для управления таймингами
+const HERO_DISPLAY_DURATION = 3000;
+const SMOKE_ANIMATION_DURATION = 1250;
+// Добавьте после констант в начале файла (после SMOKE_ANIMATION_DURATION)
+const NETWORK_CHECK_TIMEOUT = 10000;
+
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// Менеджер анимаций для предотвращения утечек памяти
+const AnimationManager = {
+    timeouts: new Set(),
+    frames: new Set(),
+    smokeAnimations: new Set(),
+    
+    setTimeout(callback, delay) {
+        const timeoutId = setTimeout(() => {
+            callback();
+            this.timeouts.delete(timeoutId);
+        }, delay);
+        this.timeouts.add(timeoutId);
+        return timeoutId;
+    },
+    
+    requestAnimationFrame(callback) {
+        const frameId = requestAnimationFrame(() => {
+            callback();
+            this.frames.delete(frameId);
+        });
+        this.frames.add(frameId);
+        return frameId;
+    },
+    
+    addSmokeAnimation(animationId) {
+        this.smokeAnimations.add(animationId);
+    },
+    
+    removeSmokeAnimation(animationId) {
+        this.smokeAnimations.delete(animationId);
+    },
+    
+    clearAll() {
+        this.timeouts.forEach(timeout => clearTimeout(timeout));
+        this.frames.forEach(frame => cancelAnimationFrame(frame));
+        this.smokeAnimations.clear();
+        this.timeouts.clear();
+        this.frames.clear();
+    }
+};
 
 // Global variables
 let allHeroes = [];
@@ -17,13 +62,13 @@ let votedHeroes = new Set();
 let tg = null;
 let isVotingInProgress = false;
 let currentVotePairId = null;
-
+let networkErrorShown = false;
 // Game variables
 let playerLives = 5;
 let playerScore = 0;
 let maxScore = 0;
 let gameActive = true;
-let animationTimeouts = [];
+let navigationPanelHidden = false;
 
 // Publisher logo mapping
 const PUBLISHER_LOGOS = {
@@ -50,25 +95,7 @@ function initTelegram() {
                 tg.close();
             }
         });
-
-        // Проверяем поддержку вибрации
-        if (tg.HapticFeedback) {
-            console.log("HapticFeedback supported");
-            // Тестовая вибрация при загрузке (очень короткая)
-            setTimeout(() => {
-                try {
-                    tg.HapticFeedback.impactOccurred('light');
-                } catch (e) {
-                    console.log("HapticFeedback error:", e);
-                }
-            }, 1000);
-        } else {
-            console.log("HapticFeedback NOT supported");
-        }
-
-        
     } else {
-        console.log("Running in browser (not Telegram)");
         setupBrowserExit();
     }
 }
@@ -83,58 +110,202 @@ function setupBrowserExit() {
     });
 }
 
-// Load progress
-function loadProgress() {
-    try {
-        const savedProgress = localStorage.getItem('heroVoteProgress');
-        const savedStats = localStorage.getItem('heroGameStats');
-        
-        if (savedProgress) {
-            const parsedProgress = JSON.parse(savedProgress);
-            if (Array.isArray(parsedProgress)) {
-                votedHeroes = new Set(parsedProgress);
-            }
-        }
-        
-        if (savedStats) {
-            const stats = JSON.parse(savedStats);
-            playerLives = stats.lives || 5;
-            playerScore = stats.score || 0;
-            maxScore = stats.maxScore || 0;
-        }
-        
-        updateUI();
-    } catch (error) {
-        console.error("Error loading progress:", error);
-        votedHeroes = new Set();
-        playerLives = 5;
-        playerScore = 0;
+// Функция для скрытия навигационной панели на Android
+function hideNavigationPanel() {
+    // Метод для полноэкранного режима
+    if (document.documentElement.requestFullscreen) {
+        document.documentElement.requestFullscreen();
+    } else if (document.documentElement.webkitRequestFullscreen) {
+        document.documentElement.webkitRequestFullscreen();
+    } else if (document.documentElement.mozRequestFullScreen) {
+        document.documentElement.mozRequestFullScreen();
+    } else if (document.documentElement.msRequestFullscreen) {
+        document.documentElement.msRequestFullscreen();
+    }
+    
+    // Дополнительные методы для мобильных браузеров
+    if (window.navigation && navigation.setAppBadge) {
+        // Современный API
+    }
+    
+    // CSS трюк для скрытия панели
+    document.body.style.height = '100vh';
+    window.scrollTo(0, 0);
+    
+    navigationPanelHidden = true;
+}
+
+// Обработчик касаний - предотвращаем появление панели
+function preventNavigationPanel(event) {
+    // Предотвращаем долгое нажатие (которое вызывает панель на некоторых устройствах)
+    if (event.touches && event.touches.length > 0) {
+        event.preventDefault();
     }
 }
 
-// Save progress
+// Инициализация управления навигацией
+function initNavigationControl() {
+    // Скрываем панель при загрузке
+    setTimeout(hideNavigationPanel, 100);
+    
+    // Обработчики для предотвращения появления панели
+    document.addEventListener('touchstart', preventNavigationPanel, { passive: false });
+    document.addEventListener('touchend', preventNavigationPanel, { passive: false });
+    document.addEventListener('touchmove', preventNavigationPanel, { passive: false });
+    
+    // При фокусе на странице снова скрываем панель
+    window.addEventListener('focus', hideNavigationPanel);
+    
+    // При изменении размера окна (когда панель появляется/исчезает)
+    window.addEventListener('resize', function() {
+        setTimeout(hideNavigationPanel, 50);
+    });
+}
+
+// Умный мониторинг сети
+function initNetworkMonitoring() {
+    // Слушаем нативные события браузера
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    
+    // Проверяем при взаимодействии с пользователем
+    document.addEventListener('click', debouncedNetworkCheck);
+    document.addEventListener('touchstart', debouncedNetworkCheck);
+    
+    // Периодическая проверка только при активной сессии
+    setInterval(() => {
+        if (document.visibilityState === 'visible') {
+            checkNetworkWithTimeout();
+        }
+    }, 30000); // 1 раз в 30 секунд
+}
+
+// Обработчик появления сети
+function handleOnline() {
+    if (networkErrorShown) {
+        hideNetworkError();
+        // Автоматическое восстановление
+        if (gameActive && !currentHeroes.length) {
+            displayHeroes();
+        }
+    }
+    networkErrorShown = false;
+}
+
+// Обработчик потери сети
+function handleOffline() {
+    if (!networkErrorShown) {
+        showNetworkError();
+    }
+}
+
+// Проверка сети с таймаутом
+function checkNetworkWithTimeout() {
+    if (!navigator.onLine && !networkErrorShown) {
+        setTimeout(() => {
+            if (!navigator.onLine && document.visibilityState === 'visible') {
+                showNetworkError();
+            }
+        }, 2000);
+    }
+}
+
+// Задержка для избежания частых проверок
+function debouncedNetworkCheck() {
+    if (networkErrorShown) return;
+    
+    clearTimeout(window.networkDebounce);
+    window.networkDebounce = setTimeout(() => {
+        if (!navigator.onLine && !networkErrorShown) {
+            showNetworkError();
+        }
+    }, 1000);
+}
+
+// Функция показа ошибки сети
+function showNetworkError() {
+    if (document.querySelector('.network-error-popup') || networkErrorShown) return;
+    
+    networkErrorShown = true;
+    
+    const popup = document.createElement('div');
+    popup.className = 'network-error-popup';
+    popup.innerHTML = `
+        <div class="network-error-content">
+            <div class="network-error-icon">📶</div>
+            <h3>Internet Lost</h3>
+            <p>Check your connection</p>
+            <p style="font-size: 12px; margin-top: 10px; opacity: 0.8;">
+                Reconnecting automatically...
+            </p>
+        </div>
+    `;
+    
+    document.body.appendChild(popup);
+    
+    // Блокируем игровые элементы
+    document.querySelectorAll('.hero-card').forEach(card => {
+        card.style.pointerEvents = 'none';
+    });
+}
+
+// Функция скрытия ошибки сети
+function hideNetworkError() {
+    const popup = document.querySelector('.network-error-popup');
+    if (popup) {
+        popup.style.animation = 'slideOutUp 0.3s ease-in forwards';
+        setTimeout(() => {
+            popup.remove();
+            networkErrorShown = false;
+        }, 300);
+    }
+    
+    // Восстанавливаем игровые элементы
+    document.querySelectorAll('.hero-card').forEach(card => {
+        card.style.pointerEvents = '';
+    });
+}
+
+// Load progress - ТОЛЬКО ДЛЯ МАКСИМАЛЬНОГО СЧЕТА
+function loadProgress() {
+    try {
+        const savedStats = localStorage.getItem('heroGameStats');
+        
+        if (savedStats) {
+            const stats = JSON.parse(savedStats);
+            maxScore = stats.maxScore || 0;
+        }
+        
+        // ПРИ ПЕРЕЗАГРУЗКЕ ВСЕГДА СБРАСЫВАЕМ ТЕКУЩИЙ ПРОГРЕСС
+        playerLives = 5;
+        playerScore = 0;
+        votedHeroes = new Set();
+        
+        updateUI();
+    } catch (error) {
+        playerLives = 5;
+        playerScore = 0;
+        votedHeroes = new Set();
+        maxScore = 0;
+    }
+}
+
+// Save progress - ТОЛЬКО ДЛЯ МАКСИМАЛЬНОГО СЧЕТА
 function saveProgress() {
     try {
-        localStorage.setItem('heroVoteProgress', JSON.stringify(Array.from(votedHeroes)));
         localStorage.setItem('heroGameStats', JSON.stringify({
-            lives: playerLives,
-            score: playerScore,
             maxScore: Math.max(maxScore, playerScore)
         }));
         updateUI();
     } catch (error) {
-        console.error("Error saving progress:", error);
+        // Убраны console.log для продакшена
     }
 }
 
 function updateUI() {
     const scoreElement = document.getElementById('player-score');
-    const maxScoreElement = document.getElementById('max-score');
-    
     if (scoreElement) scoreElement.textContent = playerScore;
-    if (maxScoreElement) maxScoreElement.textContent = maxScore;
     
-    // НЕ обновляем отображение жизней здесь, только если не в процессе анимации
     if (!isVotingInProgress) {
         updateLivesDisplay();
     }
@@ -182,7 +353,7 @@ async function loadAllHeroes() {
         startGame();
         
     } catch (error) {
-        console.error("Error loading heroes:", error);
+        // Убраны console.log для продакшена
     }
 }
 
@@ -221,7 +392,7 @@ function showCompletionScreen() {
     
     document.body.style.opacity = '0.7';
     
-    setTimeout(() => {
+    AnimationManager.setTimeout(() => {
         const popup = document.createElement('div');
         popup.className = 'game-over-popup';
         popup.innerHTML = `
@@ -238,7 +409,7 @@ function showCompletionScreen() {
         
         document.getElementById('complete-restart-button').addEventListener('click', function() {
             popup.remove();
-            resetGame(); // Полный сброс прогресса
+            resetGame();
         });
     }, 1000);
     playHaptic('win');
@@ -255,7 +426,7 @@ function preloadNextPair() {
     });
 }
 
-// Hide all overlays - ТЕПЕРЬ СКРЫВАЕТ ТОЛЬКО ПРИ СМЕНЕ ПАРЫ
+// Hide all overlays
 function hideAllOverlays() {
     const overlays = document.querySelectorAll('.hero-result-overlay');
     const starContainers = document.querySelectorAll('.star-rating-container');
@@ -281,7 +452,7 @@ function hideAllOverlays() {
     smokeEffects.forEach(smoke => smoke.classList.remove('show'));
 }
 
-// Обновляем функцию showVoteResult с синхронизированными таймингами
+// Оптимизированная функция показа результатов
 function showVoteResult(heroNumber, userWon, selectedRating, otherRating) {
     const selectedHero = heroNumber;
     const otherHero = heroNumber === 1 ? 2 : 1;
@@ -302,33 +473,32 @@ function showVoteResult(heroNumber, userWon, selectedRating, otherRating) {
         showStarRating(selectedHero, selectedRating, false);
         showStarRating(otherHero, otherRating, true);
     }
-    
 }
 
-// Новая функция для скрытия анимаций с реверсом
+// Оптимизированная функция скрытия анимаций
 function hideAnimations() {
-    // Скрываем оверлеи с анимацией исчезновения
-    const overlays = document.querySelectorAll('.hero-result-overlay.show');
-    overlays.forEach(overlay => {
-        overlay.classList.remove('show');
-        overlay.classList.add('hiding');
+    AnimationManager.requestAnimationFrame(() => {
+        const overlays = document.querySelectorAll('.hero-result-overlay.show');
+        const starContainers = document.querySelectorAll('.star-rating-container.show');
+        
+        overlays.forEach(overlay => {
+            overlay.classList.remove('show');
+            overlay.classList.add('hiding');
+        });
+        
+        starContainers.forEach(container => {
+            container.classList.remove('show');
+            container.classList.add('hiding');
+        });
+        
+        AnimationManager.setTimeout(() => {
+            overlays.forEach(overlay => overlay.classList.remove('hiding'));
+            starContainers.forEach(container => container.classList.remove('hiding'));
+        }, 600);
     });
-    
-    // Скрываем звезды с анимацией исчезновения
-    const starContainers = document.querySelectorAll('.star-rating-container.show');
-    starContainers.forEach(container => {
-        container.classList.remove('show');
-        container.classList.add('hiding');
-    });
-    
-    // Убираем класс hiding после завершения анимации
-    setTimeout(() => {
-        overlays.forEach(overlay => overlay.classList.remove('hiding'));
-        starContainers.forEach(container => container.classList.remove('hiding'));
-    }, 600);
 }
 
-// Обновляем функцию showResultImage с синхронизированными таймингами
+// Оптимизированная функция показа изображения результата
 function showResultImage(element, type) {
     if (!element) return;
     
@@ -349,12 +519,9 @@ function showResultImage(element, type) {
     
     element.className = `hero-result-overlay show ${type}`;
     
-    // СИНХРОНИЗИРУЕМ С ЗВЕЗДАМИ: показываем с задержкой 50ms и скрываем через HERO_DISPLAY_DURATION - 500ms
-    setTimeout(() => {
+    AnimationManager.setTimeout(() => {
         element.classList.add('show');
     }, 50);
-    
-    
 }
 
 // Get hero alignment
@@ -379,16 +546,15 @@ function getHeroAlignment(goodBad) {
     }
 }
 
-// Display heroes - ТЕПЕРЬ СКРЫВАЕТ ПРЕДЫДУЩИЕ ОВЕРЛЕИ ПЕРЕД ПОКАЗОМ НОВЫХ
+// Оптимизированная функция отображения героев
 function displayHeroes() {
     if (!gameActive) return;
     
     isVotingInProgress = false;
     currentVotePairId = null;
     
-    // Очищаем таймауты анимаций
-    animationTimeouts.forEach(timeout => clearTimeout(timeout));
-    animationTimeouts = [];
+    // Очищаем все анимации
+    AnimationManager.clearAll();
     
     // Скрываем все анимации
     hideAllOverlays();
@@ -405,6 +571,7 @@ function displayHeroes() {
     
     preloadNextPair();
     
+    // Используем DocumentFragment для батч-обновления DOM
     currentHeroes.forEach((hero, index) => {
         const heroNum = index + 1;
         const imgElement = document.getElementById(`hero${heroNum}-img`);
@@ -415,16 +582,16 @@ function displayHeroes() {
         // Set hero image
         if (imgElement) imgElement.src = hero.image_url;
         
-        // Set hero name with improved font handling
+        // Set hero name с оптимизацией
         if (nameElement) {
             nameElement.textContent = hero.name;
-            // Упрощаем авто-размер шрифта
+            // ВОЗВРАЩАЕМ рабочие inline стили
             if (hero.name.length > 15) {
-                nameElement.style.fontSize = '5px';
+                nameElement.style.fontSize = 'clamp(14px, 3vw, 20px)';
             } else if (hero.name.length > 10) {
-                nameElement.style.fontSize = '6px';
+                nameElement.style.fontSize = 'clamp(16px, 4vw, 24px)';
             } else {
-                nameElement.style.fontSize = '7px';
+                nameElement.style.fontSize = 'clamp(18px, 5vw, 28px)';
             }
         }
         
@@ -457,23 +624,28 @@ function displayHeroes() {
     });
 }
 
-// Обновляем функцию vote с синхронизированными таймингами
+// Оптимизированная функция голосования
+// Оптимизированная функция голосования
 async function vote(heroNumber) {
+    
+
     if (!gameActive || !currentHeroes || currentHeroes.length < 2 || 
         playerLives <= 0 || isVotingInProgress) {
         return;
     }
     
+    // Сразу скрываем навигационную панель если появилась
+    if (!navigationPanelHidden) {
+        hideNavigationPanel();
+    }
     isVotingInProgress = true;
-
-    // Очищаем предыдущие таймауты анимаций
-    animationTimeouts.forEach(timeout => clearTimeout(timeout));
-    animationTimeouts = [];
 
     indicateSelection(heroNumber);
     
     const selectedHero = currentHeroes[heroNumber - 1];
-    const otherHero = currentHeroes[heroNumber === 1 ? 1 : 0];
+    
+    // ИСПРАВЛЕНИЕ: только одно объявление otherHero
+    const otherHero = heroNumber === 1 ? currentHeroes[1] : currentHeroes[0];
     
     const votePairId = `${selectedHero.id}-${otherHero.id}`;
     
@@ -486,11 +658,10 @@ async function vote(heroNumber) {
     
     const userMadeRightChoice = selectedHero.rating > otherHero.rating;
     
-    // Виброотдача при выборе
     playHaptic('selection');
     
-    // Запускаем дым сразу
-    setTimeout(() => {
+    // Запускаем дым с оптимизацией
+    AnimationManager.setTimeout(() => {
         if (userMadeRightChoice) {
             playSmokeAnimation(`hero${heroNumber}-blue-smoke`, "https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Sprites/BlueSMoke256.webp");
             playSmokeAnimation(`hero${heroNumber === 1 ? 2 : 1}-gray-smoke`, "https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Sprites/RedSmoke256.webp");
@@ -502,28 +673,21 @@ async function vote(heroNumber) {
         }
     }, 0);
     
-    // Показываем результаты сразу
     showVoteResult(heroNumber, userMadeRightChoice, selectedHero.rating, otherHero.rating);
     
-    // Отнимание жизни раньше (например, за 800ms до основной логики)
-    setTimeout(() => {
+    AnimationManager.setTimeout(() => {
         if (!userMadeRightChoice) {
             playerLives--;
             updateLivesWithAnimation();
-            // Обновляем UI сразу для отображения измененных жизней
             updateUI();
         }
     }, HERO_DISPLAY_DURATION - 500);
 
-    // Основная логика через 500ms (как было изначально)
-    setTimeout(() => {
+    AnimationManager.setTimeout(() => {
         if (userMadeRightChoice) {
             playerScore++;
-            // UI обновляется здесь для правильного выбора
             updateUI();
         }
-        // Для неправильного выбора UI уже обновлен выше, 
-        // но если нужно обновить что-то еще, можно оставить
         
         votedHeroes.add(selectedHero.id);
         votedHeroes.add(otherHero.id);
@@ -532,18 +696,16 @@ async function vote(heroNumber) {
         updateHeroStatsAsync(selectedHero.id, otherHero.id);
     }, HERO_DISPLAY_DURATION);
     
-    // Скрываем анимации за 300ms до смены героев
-    setTimeout(() => {
+    AnimationManager.setTimeout(() => {
         hideAnimations();
     }, HERO_DISPLAY_DURATION - 500);
     
-    // Смена пары героев через HERO_DISPLAY_DURATION
-    setTimeout(() => {
+    AnimationManager.setTimeout(() => {
         isVotingInProgress = false;
         currentVotePairId = null;
         
         if (playerLives <= 0) {
-            setTimeout(() => {
+            AnimationManager.setTimeout(() => {
                 gameOver();
             }, 500);
         } else if (gameActive) {
@@ -552,10 +714,7 @@ async function vote(heroNumber) {
     }, HERO_DISPLAY_DURATION);
 }
 
-
-
-
-// Обновляем функцию showStarRating с синхронизированными таймингами
+// Оптимизированная функция показа звездного рейтинга
 function showStarRating(heroNumber, rating, isWinner) {
     const starContainer = document.getElementById(`hero${heroNumber}-star-rating`);
     const starImage = starContainer.querySelector('.rating-star');
@@ -574,14 +733,12 @@ function showStarRating(heroNumber, rating, isWinner) {
     
     starContainer.classList.remove('show', 'hiding');
     
-    setTimeout(() => {
+    AnimationManager.setTimeout(() => {
         starContainer.classList.add('show');
     }, 50);
-    
-    // УБИРАЕМ лишнее скрытие здесь - оно будет в hideAnimations()
 }
 
-
+// Оптимизированная функция обновления жизней
 function updateLivesWithAnimation() {
     const globalLives = document.getElementById('global-lives');
     if (!globalLives) return;
@@ -590,46 +747,45 @@ function updateLivesWithAnimation() {
     if (lifeStars.length > 0) {
         const lastLifeStar = lifeStars[lifeStars.length - 1];
         
-        // Удаляем класс анимации если был добавлен ранее
+        // Используем CSS transitions вместо JS анимаций
         lastLifeStar.classList.remove('life-star-removing');
         
-        // Принудительно перезапускаем анимацию
+        // Принудительный reflow только один раз
         void lastLifeStar.offsetWidth;
         
-        // Добавляем класс для анимации исчезновения
         lastLifeStar.classList.add('life-star-removing');
         
-        // Увеличиваем время удаления элемента чтобы анимация успела завершиться
-        setTimeout(() => {
+        AnimationManager.setTimeout(() => {
             if (lastLifeStar.parentNode === globalLives && lastLifeStar.classList.contains('life-star-removing')) {
                 globalLives.removeChild(lastLifeStar);
             }
-        }, 400); // Увеличиваем с 400 до 600мс
+        }, 400);
     }
 }
 
-// Функция для создания цифр из картинок (обновленная - без %)
+// Оптимизированная функция создания цифр из картинок
 function convertToImageBasedDigits(element, text) {
-    element.innerHTML = ''; // Очищаем элемент
+    // Создаем DocumentFragment для батч-вставки
+    const fragment = document.createDocumentFragment();
     
     for (let i = 0; i < text.length; i++) {
         const char = text[i];
+        const digitSpan = document.createElement('span');
+        
         if (char === ',' || char === '.') {
-            const dotSpan = document.createElement('span');
-            dotSpan.className = 'digit comma';
-            dotSpan.style.backgroundImage = `url('https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Images/Numbers/dot.webp')`;
-            element.appendChild(dotSpan);
+            digitSpan.className = 'digit comma';
+            digitSpan.style.backgroundImage = `url('https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Images/Numbers/dot.webp')`;
         } else if (!isNaN(char) && char !== ' ') {
-            const digitSpan = document.createElement('span');
             digitSpan.className = 'digit';
             digitSpan.style.backgroundImage = `url('https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Images/Numbers/${char}.webp')`;
-            element.appendChild(digitSpan);
         }
-        // Убираем обработку знака %
+        
+        fragment.appendChild(digitSpan);
     }
+    
+    // Один раз обновляем DOM
+    element.appendChild(fragment);
 }
-
-
 
 // Async stats update
 async function updateHeroStatsAsync(winnerId, loserId) {
@@ -646,10 +802,7 @@ async function updateHeroStatsAsync(winnerId, loserId) {
             .eq('id', loserId)
             .single();
         
-        if (winnerFetchError || loserFetchError) {
-            console.error("Fetch error:", winnerFetchError || loserFetchError);
-            return;
-        }
+        if (winnerFetchError || loserFetchError) return;
         
         const { error: winnerError } = await supabase
             .from('Heroes_Table')
@@ -659,8 +812,6 @@ async function updateHeroStatsAsync(winnerId, loserId) {
             })
             .eq('id', winnerId);
         
-        if (winnerError) console.error("Winner update error:", winnerError);
-        
         const { error: loserError } = await supabase
             .from('Heroes_Table')
             .update({ 
@@ -668,33 +819,33 @@ async function updateHeroStatsAsync(winnerId, loserId) {
                 viewers: (loserData.viewers || 0) + 1
             })
             .eq('id', loserId);
-        
-        if (loserError) console.error("Loser update error:", loserError);
             
     } catch (error) {
-        console.error("Stats update error:", error);
+        // Убраны console.log для продакшена
     }
 }
 
-// Обновляем функцию playSmokeAnimation с фиксированной длительностью
+// Оптимизированная анимация дыма с использованием CSS анимаций
 function playSmokeAnimation(elementId, spriteUrl) {
     const el = document.getElementById(elementId);
     if (!el) return;
     
-    // Полностью сбрасываем стили
+    const animationId = `${elementId}-${Date.now()}`;
+    AnimationManager.addSmokeAnimation(animationId);
+    
+    // Сбрасываем стили
     el.style.backgroundImage = 'none';
     el.style.opacity = '0';
     el.style.transform = 'translate(-50%, -50%) scale(0.65)';
-    el.style.overflow = 'hidden';
     
-    setTimeout(() => {
-        // Устанавливаем спрайт
+    AnimationManager.setTimeout(() => {
+        if (!AnimationManager.smokeAnimations.has(animationId)) return;
+        
         el.style.backgroundImage = `url(${spriteUrl})`;
         el.style.backgroundSize = '1280px 1280px';
         el.style.backgroundRepeat = 'no-repeat';
         el.style.backgroundPosition = '0px 0px';
         el.style.opacity = '1';
-        el.style.overflow = 'hidden';
         el.classList.add("show");
         
         let frame = 0;
@@ -702,22 +853,21 @@ function playSmokeAnimation(elementId, spriteUrl) {
         const framesPerRow = 5;
         const totalFrames = 25;
         
-        // Фиксированная скорость анимации дыма (не зависит от HERO_DISPLAY_DURATION)
         const slowFrames = 10;
         const fastFrames = 15;
         
-        const slowFrameTime = 60; // Медленные кадры
-        const fastFrameTime = 30; // Быстрые кадры
+        const slowFrameTime = 60;
+        const fastFrameTime = 30;
         
         let currentInterval = slowFrameTime;
         
         function animateFrame() {
-            if (frame >= totalFrames) {
-                // Автоматически скрываем дым через HERO_DISPLAY_DURATION - 300ms
-                setTimeout(() => {
+            if (!AnimationManager.smokeAnimations.has(animationId) || frame >= totalFrames) {
+                AnimationManager.removeSmokeAnimation(animationId);
+                AnimationManager.setTimeout(() => {
                     el.classList.remove("show");
                     el.style.opacity = '0';
-                    setTimeout(() => {
+                    AnimationManager.setTimeout(() => {
                         el.style.backgroundImage = 'none';
                     }, 200);
                 }, HERO_DISPLAY_DURATION - 300 - (totalFrames * (slowFrameTime + fastFrameTime) / 2));
@@ -730,15 +880,26 @@ function playSmokeAnimation(elementId, spriteUrl) {
             const x = -col * frameSize;
             const y = -row * frameSize;
             
+            // Используем transform для hardware acceleration
             el.style.backgroundPosition = `${x}px ${y}px`;
             
-            if (frame < 2) {
-                const scale = 0.40 + (frame * 0.02);
-                el.style.transform = `translate(-50%, -55%) scale(${scale})`;
-            }
-            if (frame > 1) {
-                const scale = 1;
-                el.style.transform = `translate(-50%, -50%) scale(${scale})`;
+            // Оптимизация для разных размеров экранов
+            if (window.innerWidth >= 769) {
+                if (frame < 2) {
+                    const scale = 0.50 + (frame * 0.03);
+                    el.style.transform = `translate(-50%, -55%) scale(${scale})`;
+                }
+                if (frame > 1) {
+                    el.style.transform = `translate(-50%, -50%) scale(1.3)`;
+                }
+            } else {
+                if (frame < 2) {
+                    const scale = 0.40 + (frame * 0.02);
+                    el.style.transform = `translate(-50%, -55%) scale(${scale})`;
+                }
+                if (frame > 1) {
+                    el.style.transform = `translate(-50%, -50%) scale(0.8)`;
+                }
             }
             
             frame++;
@@ -747,7 +908,8 @@ function playSmokeAnimation(elementId, spriteUrl) {
                 currentInterval = fastFrameTime;
             }
             
-            setTimeout(animateFrame, currentInterval);
+            // Используем менеджер анимаций для предотвращения утечек
+            AnimationManager.setTimeout(animateFrame, currentInterval);
         }
         
         animateFrame();
@@ -755,21 +917,19 @@ function playSmokeAnimation(elementId, spriteUrl) {
     }, 50);
 }
 
-// Упрощенная функция
 function indicateSelection(heroNumber) {
     const container = document.querySelector(`#hero${heroNumber}`).closest('.hero-complete-container');
     if (!container) return;
     
     container.classList.add('selected');
     
-    setTimeout(() => {
+    AnimationManager.setTimeout(() => {
         container.classList.remove('selected');
     }, 300);
 }
 
-// Улучшаем функцию вибрации
+// Улучшенная функция вибрации
 function playHaptic(type) {
-    // Сначала пробуем Telegram вибрацию
     if (tg && tg.HapticFeedback) {
         try {
             switch(type) {
@@ -789,14 +949,12 @@ function playHaptic(type) {
                     tg.HapticFeedback.notificationOccurred('success');
                     break;
             }
-            console.log(`Haptic: ${type}`);
             return;
         } catch (e) {
-            console.log("Telegram haptic failed:", e);
+            // Fallback silently
         }
     }
     
-    // Fallback: стандартная вибрация браузера
     if (navigator.vibrate) {
         switch(type) {
             case 'selection': navigator.vibrate(50); break;
@@ -805,18 +963,15 @@ function playHaptic(type) {
             case 'game_over': navigator.vibrate([100, 50, 100]); break;
             case 'win': navigator.vibrate([50, 30, 50, 30, 50]); break;
         }
-        console.log(`Fallback haptic: ${type}`);
-    } else {
-        console.log(`Haptic not supported for: ${type}`);
     }
 }
 
-// Новая функция для показа приветственного дисклеймера
+// Функция для показа приветственного дисклеймера
 function showWelcomeDisclaimer() {
     const hasSeenDisclaimer = localStorage.getItem('hasSeenDisclaimer');
     
     if (!hasSeenDisclaimer) {
-        setTimeout(() => {
+        AnimationManager.setTimeout(() => {
             const popup = document.createElement('div');
             popup.className = 'game-over-popup';
             popup.innerHTML = `
@@ -845,7 +1000,6 @@ function showWelcomeDisclaimer() {
     }
 }
 
-
 // Game over function
 function gameOver() {
     gameActive = false;
@@ -854,12 +1008,11 @@ function gameOver() {
     
     document.body.style.opacity = '0.7';
     playHaptic('game_over');
-    setTimeout(() => {
+    AnimationManager.setTimeout(() => {
         showGameOverPopup();
     }, 1000);
 }
 
-// Обработчик для кнопки "Try Again" в Game Over
 function showGameOverPopup() {
     gameActive = false;
     maxScore = Math.max(maxScore, playerScore);
@@ -867,7 +1020,7 @@ function showGameOverPopup() {
     
     document.body.style.opacity = '0.7';
     
-    setTimeout(() => {
+    AnimationManager.setTimeout(() => {
         const popup = document.createElement('div');
         popup.className = 'game-over-popup';
         popup.innerHTML = `
@@ -883,17 +1036,16 @@ function showGameOverPopup() {
         
         document.getElementById('restart-button').addEventListener('click', function() {
             popup.remove();
-            resetGame(); // Полный сброс прогресса
+            resetGame();
         });
     }, 1000);
     
     if (tg) tg.HapticFeedback.notificationOccurred('error');
 }
 
-// Reset game
-// Reset game - ПОЛНЫЙ СБРОС ПРОГРЕССА
+// Reset game - ПОЛНЫЙ СБРОС ПРОГРЕССА ПРИ КАЖДОМ ЗАПУСКЕ
 function resetGame() {
-    // Полностью сбрасываем весь прогресс
+    // Всегда полный сброс прогресса
     playerLives = 5;
     playerScore = 0;
     votedHeroes.clear();
@@ -901,9 +1053,11 @@ function resetGame() {
     currentVotePairId = null;
     gameActive = true;
     
-    // Очищаем localStorage
+    // Очищаем localStorage от прогресса (но оставляем максимальный счет)
     localStorage.removeItem('heroVoteProgress');
-    localStorage.removeItem('heroGameStats');
+    
+    // Очищаем все анимации
+    AnimationManager.clearAll();
     
     document.body.style.opacity = '1';
     updateUI();
@@ -913,10 +1067,14 @@ function resetGame() {
 // DOM loaded
 document.addEventListener("DOMContentLoaded", function() {
     initTelegram();
+    
+    // ВСЕГДА сбрасываем игру при загрузке (анти-читерство)
+    resetGame();
     loadAllHeroes();
+    initNetworkMonitoring();
+    initNavigationControl();
 
-    // Добавляем вызов дисклеймера
-    setTimeout(() => {
+    AnimationManager.setTimeout(() => {
         showWelcomeDisclaimer();
     }, 1000);
     
@@ -935,7 +1093,7 @@ document.addEventListener("DOMContentLoaded", function() {
     });
 });
 
-// Escape handler - ДОБАВЛЯЕМ ПЕРЕЗАГРУЗКУ ПО F5
+// Escape handler
 document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') {
         if (confirm('Exit the game?')) {
@@ -947,45 +1105,11 @@ document.addEventListener('keydown', function(e) {
         }
     }
     
-    // Добавляем обработку F5 для перезагрузки с полным сбросом (без подтверждения)
+    // F5 для перезагрузки с полным сбросом
     if (e.key === 'F5' || (e.ctrlKey && e.key === 'r')) {
         e.preventDefault();
-        resetGame(); // Сразу сбрасываем без подтверждения
-    }
-});
-
-// DOM loaded
-document.addEventListener("DOMContentLoaded", function() {
-    initTelegram();
-    // Всегда сбрасываем игру при загрузке в Telegram
-    if (typeof Telegram !== 'undefined' && Telegram.WebApp) {
         resetGame();
     }
-    loadAllHeroes();
-    
-    // Hide unnecessary elements
-    const elementsToHide = [
-        'header h1',
-        'header p',
-        '.progress-container',
-        '.rating-notice',
-        'footer'
-    ];
-    if (e.key === 'Escape') {
-        if (confirm('Exit the game?')) {
-            if (tg && tg.close) {
-                tg.close();
-            } else {
-                window.history.back();
-            }
-        }
-    }
-    elementsToHide.forEach(selector => {
-        const element = document.querySelector(selector);
-        if (element) element.style.display = 'none';
-    });
 });
-
-
 
 window.vote = vote;
