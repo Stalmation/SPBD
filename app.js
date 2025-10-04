@@ -115,11 +115,69 @@ function setupBrowserExit() {
     });
 }
 
+// Функция для скрытия навигационной панели на Android
+function hideNavigationPanel() {
+    // Только если пользователь уже взаимодействовал с страницей
+    if (document.visibilityState === 'visible') {
+        // Метод для полноэкранного режима (только по жесту пользователя)
+        try {
+            if (document.documentElement.requestFullscreen) {
+                // Не вызываем автоматически - только по жесту
+            } else if (document.documentElement.webkitRequestFullscreen) {
+                // Не вызываем автоматически
+            }
+        } catch (e) {
+            // Игнорируем ошибки полноэкранного режима
+        }
+    }
+    
+    // CSS трюк для скрытия панели (без полноэкранного режима)
+    document.body.style.height = '100vh';
+    window.scrollTo(0, 0);
+    
+    navigationPanelHidden = true;
+}
 
+// Обработчик касаний - предотвращаем появление панели
+function preventNavigationPanel(event) {
+    // Предотвращаем долгое нажатие (которое вызывает панель на некоторых устройствах)
+    if (event.touches && event.touches.length > 0) {
+        event.preventDefault();
+    }
+}
 
-
-
-
+// Инициализация управления навигацией
+function initNavigationControl() {
+    // Скрываем панель при загрузке, но без полноэкранного режима
+    setTimeout(() => {
+        try {
+            hideNavigationPanel();
+        } catch (e) {
+            // Игнорируем ошибки
+        }
+    }, 100);
+    
+    // Обработчики для предотвращения появления панели
+    document.addEventListener('touchstart', preventNavigationPanel, { passive: false });
+    document.addEventListener('touchend', preventNavigationPanel, { passive: false });
+    document.addEventListener('touchmove', preventNavigationPanel, { passive: false });
+    
+    // При фокусе на странице снова скрываем панель
+    window.addEventListener('focus', () => {
+        setTimeout(hideNavigationPanel, 50);
+    });
+    
+    // При изменении размера окна
+    window.addEventListener('resize', function() {
+        setTimeout(() => {
+            try {
+                hideNavigationPanel();
+            } catch (e) {
+                // Игнорируем ошибки
+            }
+        }, 50);
+    });
+}
 
 // Умный мониторинг сети
 function initNetworkMonitoring() {
@@ -992,7 +1050,7 @@ document.addEventListener("DOMContentLoaded", function() {
     
     try {
         initNetworkMonitoring();
-        
+        initNavigationControl();
     } catch (e) {
         console.log('Navigation control failed');
     }
