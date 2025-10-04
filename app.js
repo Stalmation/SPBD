@@ -138,19 +138,45 @@ function hideNavigationPanel() {
     navigationPanelHidden = true;
 }
 
-
+// Обработчик касаний - предотвращаем появление панели
+function preventNavigationPanel(event) {
+    // Предотвращаем долгое нажатие (которое вызывает панель на некоторых устройствах)
+    if (event.touches && event.touches.length > 0) {
+        event.preventDefault();
+    }
+}
 
 // Инициализация управления навигацией
 function initNavigationControl() {
-    // ТОЛЬКО базовые вещи, без блокировки тач-событий
+    // Скрываем панель при загрузке, но без полноэкранного режима
     setTimeout(() => {
         try {
-            document.body.style.height = '100vh';
-            window.scrollTo(0, 0);
-        } catch (e) {}
+            hideNavigationPanel();
+        } catch (e) {
+            // Игнорируем ошибки
+        }
     }, 100);
     
-    navigationPanelHidden = true;
+    // Обработчики для предотвращения появления панели
+    document.addEventListener('touchstart', preventNavigationPanel, { passive: false });
+    document.addEventListener('touchend', preventNavigationPanel, { passive: false });
+    document.addEventListener('touchmove', preventNavigationPanel, { passive: false });
+    
+    // При фокусе на странице снова скрываем панель
+    window.addEventListener('focus', () => {
+        setTimeout(hideNavigationPanel, 50);
+    });
+    
+    // При изменении размера окна
+    window.addEventListener('resize', function() {
+        setTimeout(() => {
+            try {
+                hideNavigationPanel();
+            } catch (e) {
+                // Игнорируем ошибки
+            }
+        }, 50);
+    });
 }
 
 // Умный мониторинг сети
