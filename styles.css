@@ -5,16 +5,25 @@
     box-sizing: border-box;
     -webkit-tap-highlight-color: transparent;
 }
+/* Принудительное скрытие навигационной панели */
+html, body {
+    overscroll-behavior: none; /* Предотвращает pull-to-refresh */
+    -webkit-overflow-scrolling: touch;
+}
 
 body {
     font-family: 'Arial', 'Helvetica', sans-serif;
     background: radial-gradient(circle at center, #ff8f00 0%, #ff5f00 100%);
-    color: white;
+    color: #ff8f00;
     min-height: 100vh;
     padding: 0;
     overflow: hidden;
     transition: opacity 0.5s ease;
     position: relative;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
 }
 
 
@@ -52,6 +61,8 @@ body {
     padding: 5px 10px 10px 10px; /* Уменьшаем верхний padding */
     box-sizing: border-box;
     margin-top: -30px; /* Сдвигаем весь контейнер вверх */
+    height: -webkit-fill-available;
+    padding-bottom: env(safe-area-inset-bottom); /* Учет безопасной зоны */
 }
 
 .player-stats {
@@ -519,6 +530,7 @@ body {
 .popup-content p {
     margin: 8px 0;
     font-size: 16px;
+    color: white;
 }
 
 #restart-button, #complete-restart-button {
@@ -854,6 +866,22 @@ body {
         height: 180px;
     }
     
+    body {
+        /* Предотвращаем появление навигационной панели */
+        position: relative;
+        width: 100%;
+        height: 100%;
+        top: 0;
+        left: 0;
+        overflow: hidden;
+        background: radial-gradient(circle at center, #ff8f00 0%, #ff5f00 100%); /* Сохраняем градиент */
+    }
+    
+    .container {
+        height: 100%;
+        min-height: -webkit-fill-available;
+    }
+    
     .rating-star {
         width: 160px;
         height: 160px;
@@ -994,6 +1022,23 @@ body {
         overflow: hidden;
     }
     
+    body {
+        /* Предотвращаем появление навигационной панели */
+        position: relative;
+        width: 100%;
+        height: 100%;
+        top: 0;
+        left: 0;
+        overflow: hidden;
+        background: radial-gradient(circle at center, #ff8f00 0%, #ff5f00 100%); /* Сохраняем градиент */
+        color: #ffffff;
+    }
+    
+    .container {
+        height: 100%;
+        min-height: -webkit-fill-available;
+    }
+
     .battle-area {
         max-height: 90vh; 
         height: 90vh; 
