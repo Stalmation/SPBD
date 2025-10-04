@@ -99,12 +99,7 @@ function initTelegram() {
             }
         });
         
-        // Дополнительно для полноэкранного режима
-        setTimeout(() => {
-            if (tg.viewportStableHeight) {
-                tg.viewportStableHeight = window.innerHeight;
-            }
-        }, 100);
+       
     } else {
         setupBrowserExit();
     }
@@ -122,23 +117,21 @@ function setupBrowserExit() {
 
 // Функция для скрытия навигационной панели на Android
 function hideNavigationPanel() {
-    // Метод для полноэкранного режима
-    if (document.documentElement.requestFullscreen) {
-        document.documentElement.requestFullscreen();
-    } else if (document.documentElement.webkitRequestFullscreen) {
-        document.documentElement.webkitRequestFullscreen();
-    } else if (document.documentElement.mozRequestFullScreen) {
-        document.documentElement.mozRequestFullScreen();
-    } else if (document.documentElement.msRequestFullscreen) {
-        document.documentElement.msRequestFullscreen();
+    // Только если пользователь уже взаимодействовал с страницей
+    if (document.visibilityState === 'visible') {
+        // Метод для полноэкранного режима (только по жесту пользователя)
+        try {
+            if (document.documentElement.requestFullscreen) {
+                // Не вызываем автоматически - только по жесту
+            } else if (document.documentElement.webkitRequestFullscreen) {
+                // Не вызываем автоматически
+            }
+        } catch (e) {
+            // Игнорируем ошибки полноэкранного режима
+        }
     }
     
-    // Дополнительные методы для мобильных браузеров
-    if (window.navigation && navigation.setAppBadge) {
-        // Современный API
-    }
-    
-    // CSS трюк для скрытия панели
+    // CSS трюк для скрытия панели (без полноэкранного режима)
     document.body.style.height = '100vh';
     window.scrollTo(0, 0);
     
@@ -155,8 +148,14 @@ function preventNavigationPanel(event) {
 
 // Инициализация управления навигацией
 function initNavigationControl() {
-    // Скрываем панель при загрузке
-    setTimeout(hideNavigationPanel, 100);
+    // Скрываем панель при загрузке, но без полноэкранного режима
+    setTimeout(() => {
+        try {
+            hideNavigationPanel();
+        } catch (e) {
+            // Игнорируем ошибки
+        }
+    }, 100);
     
     // Обработчики для предотвращения появления панели
     document.addEventListener('touchstart', preventNavigationPanel, { passive: false });
@@ -164,11 +163,19 @@ function initNavigationControl() {
     document.addEventListener('touchmove', preventNavigationPanel, { passive: false });
     
     // При фокусе на странице снова скрываем панель
-    window.addEventListener('focus', hideNavigationPanel);
-    
-    // При изменении размера окна (когда панель появляется/исчезает)
-    window.addEventListener('resize', function() {
+    window.addEventListener('focus', () => {
         setTimeout(hideNavigationPanel, 50);
+    });
+    
+    // При изменении размера окна
+    window.addEventListener('resize', function() {
+        setTimeout(() => {
+            try {
+                hideNavigationPanel();
+            } catch (e) {
+                // Игнорируем ошибки
+            }
+        }, 50);
     });
 }
 
@@ -1023,23 +1030,30 @@ function resetGame() {
 
 // DOM loaded
 document.addEventListener("DOMContentLoaded", function() {
-
     // ОЧИСТКА: удаляем все возможные заблокированные попапы
     const blockedPopups = document.querySelectorAll('.game-over-popup, .network-error-popup');
     blockedPopups.forEach(popup => popup.remove());
-
+    
     // Восстанавливаем нормальную opacity
     document.body.style.opacity = '1';
-
-    initTelegram();
     
-    // ВСЕГДА сбрасываем игру при загрузке (анти-читерство)
+    try {
+        initTelegram();
+    } catch (e) {
+        console.log('Telegram init failed, running in browser');
+        setupBrowserExit();
+    }
+    
+    // ВСЕГДА сбрасываем игру при загрузке
     resetGame();
     loadAllHeroes();
-    initNetworkMonitoring();
-    initNavigationControl();
-
     
+    try {
+        initNetworkMonitoring();
+        initNavigationControl();
+    } catch (e) {
+        console.log('Navigation control failed');
+    }
     
     // Hide unnecessary elements
     const elementsToHide = [
