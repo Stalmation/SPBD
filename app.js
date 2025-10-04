@@ -4,9 +4,6 @@ import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 const SUPABASE_URL = "https://xwtcasfvetisjaiijtsj.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh3dGNhc2Z2ZXRpc2phaWlqdHNqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgyMTA5OTMsImV4cCI6MjA3Mzc4Njk5M30.b8ScpPxBx6K0HmWynqppBLSxxuENNmOJR7Kcl6hIo2s";
 
-// Добавляем в начало файла константы для управления таймингами
-const HERO_DISPLAY_DURATION = 3000; // Основное время показа пары героев (можно менять)
-
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // Global variables
@@ -127,6 +124,7 @@ function saveProgress() {
     }
 }
 
+// Update UI
 function updateUI() {
     const scoreElement = document.getElementById('player-score');
     const maxScoreElement = document.getElementById('max-score');
@@ -134,10 +132,7 @@ function updateUI() {
     if (scoreElement) scoreElement.textContent = playerScore;
     if (maxScoreElement) maxScoreElement.textContent = maxScore;
     
-    // НЕ обновляем отображение жизней здесь, только если не в процессе анимации
-    if (!isVotingInProgress) {
-        updateLivesDisplay();
-    }
+    updateLivesDisplay();
 }
 
 function updateLivesDisplay() {
@@ -281,7 +276,7 @@ function hideAllOverlays() {
     smokeEffects.forEach(smoke => smoke.classList.remove('show'));
 }
 
-// Обновляем функцию showVoteResult с синхронизированными таймингами
+// Обновляем функцию showVoteResult - УБИРАЕМ старые проценты
 function showVoteResult(heroNumber, userWon, selectedRating, otherRating) {
     const selectedHero = heroNumber;
     const otherHero = heroNumber === 1 ? 2 : 1;
@@ -303,6 +298,10 @@ function showVoteResult(heroNumber, userWon, selectedRating, otherRating) {
         showStarRating(otherHero, otherRating, true);
     }
     
+    // Запланировать скрытие анимаций через 2 секунды (перед появлением новой пары)
+    animationTimeouts.push(setTimeout(() => {
+        hideAnimations();
+    }, 2000));
 }
 
 // Новая функция для скрытия анимаций с реверсом
@@ -325,10 +324,10 @@ function hideAnimations() {
     setTimeout(() => {
         overlays.forEach(overlay => overlay.classList.remove('hiding'));
         starContainers.forEach(container => container.classList.remove('hiding'));
-    }, 600);
+    }, 300);
 }
 
-// Обновляем функцию showResultImage с синхронизированными таймингами
+// Function to show result image with percentage - БЕЗ АВТОМАТИЧЕСКОГО СКРЫТИЯ
 function showResultImage(element, type) {
     if (!element) return;
     
@@ -337,24 +336,20 @@ function showResultImage(element, type) {
     
     if (!sprite) return;
     
+    // Set the image
     if (type === 'win') {
         sprite.style.backgroundImage = "url('https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Images/Win.webp')";
     } else {
         sprite.style.backgroundImage = "url('https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Images/Lose.webp')";
     }
     
+    // Очищаем старые проценты
     if (percentElement) {
         percentElement.textContent = '';
     }
     
+    // Show the overlay with animation
     element.className = `hero-result-overlay show ${type}`;
-    
-    // СИНХРОНИЗИРУЕМ С ЗВЕЗДАМИ: показываем с задержкой 50ms и скрываем через HERO_DISPLAY_DURATION - 500ms
-    setTimeout(() => {
-        element.classList.add('show');
-    }, 50);
-    
-    
 }
 
 // Get hero alignment
@@ -457,7 +452,6 @@ function displayHeroes() {
     });
 }
 
-// Обновляем функцию vote с синхронизированными таймингами
 async function vote(heroNumber) {
     if (!gameActive || !currentHeroes || currentHeroes.length < 2 || 
         playerLives <= 0 || isVotingInProgress) {
@@ -489,7 +483,7 @@ async function vote(heroNumber) {
     // Виброотдача при выборе
     playHaptic('selection');
     
-    // Запускаем дым сразу
+    // Запускаем дым СРАЗУ с небольшой задержкой для синхронизации с ударом звезды
     setTimeout(() => {
         if (userMadeRightChoice) {
             playSmokeAnimation(`hero${heroNumber}-blue-smoke`, "https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Sprites/BlueSMoke256.webp");
@@ -500,62 +494,46 @@ async function vote(heroNumber) {
             playSmokeAnimation(`hero${heroNumber === 1 ? 2 : 1}-blue-smoke`, "https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Sprites/BlueSMoke256.webp");
             playHaptic('wrong');
         }
-    }, 0);
+    }, 0); // Запускаем дым через 150мс, когда звезда начинает "удар"
     
-    // Показываем результаты сразу
     showVoteResult(heroNumber, userMadeRightChoice, selectedHero.rating, otherHero.rating);
     
-    // Отнимание жизни раньше (например, за 800ms до основной логики)
-    setTimeout(() => {
-        if (!userMadeRightChoice) {
-            playerLives--;
-            updateLivesWithAnimation();
-            // Обновляем UI сразу для отображения измененных жизней
-            updateUI();
-        }
-    }, HERO_DISPLAY_DURATION - 500);
-
-    // Основная логика через 500ms (как было изначально)
+    // Задержка перед начислением очков/жизней
     setTimeout(() => {
         if (userMadeRightChoice) {
             playerScore++;
-            // UI обновляется здесь для правильного выбора
-            updateUI();
+        } else {
+            playerLives--;
+            // Запускаем анимацию удаления жизни
+            updateLivesWithAnimation();
         }
-        // Для неправильного выбора UI уже обновлен выше, 
-        // но если нужно обновить что-то еще, можно оставить
+        
+        updateUI();
         
         votedHeroes.add(selectedHero.id);
         votedHeroes.add(otherHero.id);
         saveProgress();
         
         updateHeroStatsAsync(selectedHero.id, otherHero.id);
-    }, HERO_DISPLAY_DURATION);
+    }, 2500); // Уменьшаем до 2000мс, так как анимация звезды ускорилась
     
-    // Скрываем анимации за 300ms до смены героев
-    setTimeout(() => {
-        hideAnimations();
-    }, HERO_DISPLAY_DURATION - 500);
-    
-    // Смена пары героев через HERO_DISPLAY_DURATION
+    // Задержка перед сменой пары
     setTimeout(() => {
         isVotingInProgress = false;
         currentVotePairId = null;
         
         if (playerLives <= 0) {
-            setTimeout(() => {
-                gameOver();
-            }, 500);
+            gameOver();
         } else if (gameActive) {
             displayHeroes();
         }
-    }, HERO_DISPLAY_DURATION);
+    }, 2500); // Уменьшаем до 2000мс
 }
 
 
 
 
-// Обновляем функцию showStarRating с синхронизированными таймингами
+// Функция показа звезды с рейтингом - ИСПРАВЛЕННАЯ
 function showStarRating(heroNumber, rating, isWinner) {
     const starContainer = document.getElementById(`hero${heroNumber}-star-rating`);
     const starImage = starContainer.querySelector('.rating-star');
@@ -563,22 +541,35 @@ function showStarRating(heroNumber, rating, isWinner) {
     
     if (!starContainer || !starImage || !percentElement) return;
     
+    // Устанавливаем цвет звезды
     starImage.src = isWinner 
         ? 'https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Images/StarBlue.webp'
         : 'https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Images/StarRed.webp';
     
+    // Очищаем старые цифры
     percentElement.innerHTML = '';
     
+    // Форматируем рейтинг с запятой
     const ratingText = `${rating.toFixed(1)}`.replace('.', ',');
+    
+    // Используем картинки для цифр
     convertToImageBasedDigits(percentElement, ratingText);
     
+    // Сбрасываем классы перед показом
     starContainer.classList.remove('show', 'hiding');
     
+    // Небольшая задержка для плавного появления
     setTimeout(() => {
         starContainer.classList.add('show');
     }, 50);
     
-    // УБИРАЕМ лишнее скрытие здесь - оно будет в hideAnimations()
+    // Автоматически скрываем через 2 секунды
+    setTimeout(() => {
+        starContainer.classList.add('hiding');
+        setTimeout(() => {
+            starContainer.classList.remove('show', 'hiding');
+        }, 400);
+    }, 2000);
 }
 
 
@@ -590,21 +581,15 @@ function updateLivesWithAnimation() {
     if (lifeStars.length > 0) {
         const lastLifeStar = lifeStars[lifeStars.length - 1];
         
-        // Удаляем класс анимации если был добавлен ранее
-        lastLifeStar.classList.remove('life-star-removing');
-        
-        // Принудительно перезапускаем анимацию
-        void lastLifeStar.offsetWidth;
-        
         // Добавляем класс для анимации исчезновения
         lastLifeStar.classList.add('life-star-removing');
         
-        // Увеличиваем время удаления элемента чтобы анимация успела завершиться
+        // Удаляем элемент после завершения анимации
         setTimeout(() => {
-            if (lastLifeStar.parentNode === globalLives && lastLifeStar.classList.contains('life-star-removing')) {
+            if (lastLifeStar.parentNode === globalLives) {
                 globalLives.removeChild(lastLifeStar);
             }
-        }, 400); // Увеличиваем с 400 до 600мс
+        }, 400);
     }
 }
 
@@ -676,7 +661,7 @@ async function updateHeroStatsAsync(winnerId, loserId) {
     }
 }
 
-// Обновляем функцию playSmokeAnimation с фиксированной длительностью
+// Smoke animation - FIXED with acceleration
 function playSmokeAnimation(elementId, spriteUrl) {
     const el = document.getElementById(elementId);
     if (!el) return;
@@ -685,7 +670,7 @@ function playSmokeAnimation(elementId, spriteUrl) {
     el.style.backgroundImage = 'none';
     el.style.opacity = '0';
     el.style.transform = 'translate(-50%, -50%) scale(0.65)';
-    el.style.overflow = 'hidden';
+    el.style.overflow = 'hidden'; // Обеспечиваем обрезку
     
     setTimeout(() => {
         // Устанавливаем спрайт
@@ -694,7 +679,7 @@ function playSmokeAnimation(elementId, spriteUrl) {
         el.style.backgroundRepeat = 'no-repeat';
         el.style.backgroundPosition = '0px 0px';
         el.style.opacity = '1';
-        el.style.overflow = 'hidden';
+        el.style.overflow = 'hidden'; // Обеспечиваем обрезку
         el.classList.add("show");
         
         let frame = 0;
@@ -702,71 +687,64 @@ function playSmokeAnimation(elementId, spriteUrl) {
         const framesPerRow = 5;
         const totalFrames = 25;
         
-        // Фиксированная скорость анимации дыма (не зависит от HERO_DISPLAY_DURATION)
-        const slowFrames = 10;
-        const fastFrames = 15;
+        // Разделяем анимацию на две части
+        const slowFrames = 10; // Первые 15 кадров - нормальная скорость
+        const fastFrames = 15; // Последние 10 кадров - ускоренные
         
-        const slowFrameTime = 60; // Медленные кадры
-        const fastFrameTime = 30; // Быстрые кадры
-        
-        let currentInterval = slowFrameTime;
+        let currentInterval = 60; // Начальная скорость (медленно)
         
         function animateFrame() {
             if (frame >= totalFrames) {
-                // Автоматически скрываем дым через HERO_DISPLAY_DURATION - 300ms
+                // Плавное завершение
                 setTimeout(() => {
                     el.classList.remove("show");
                     el.style.opacity = '0';
                     setTimeout(() => {
                         el.style.backgroundImage = 'none';
                     }, 200);
-                }, HERO_DISPLAY_DURATION - 300 - (totalFrames * (slowFrameTime + fastFrameTime) / 2));
+                }, 150);
                 return;
             }
             
+            // Расчет позиции кадра с правильной обрезкой
             const col = frame % framesPerRow;
             const row = Math.floor(frame / framesPerRow);
             
             const x = -col * frameSize;
             const y = -row * frameSize;
             
+            // Устанавливаем позицию - важно для избежания моргания
             el.style.backgroundPosition = `${x}px ${y}px`;
             
-            // УСЛОВИЕ ДЛЯ БОЛЬШИХ ЭКРАНОВ
-            if (window.innerWidth >= 769) {
-                // Для больших экранов - увеличенный масштаб
-                if (frame < 2) {
-                    const scale = 0.50 + (frame * 0.03);
-                    el.style.transform = `translate(-50%, -55%) scale(${scale})`;
-                }
-                if (frame > 1) {
-                    const scale = 1.3; // Увеличиваем масштаб для больших экранов
-                    el.style.transform = `translate(-50%, -50%) scale(${scale})`;
-                }
-            } else {
-                // Для мобильных - стандартный масштаб
-                if (frame < 2) {
-                    const scale = 0.40 + (frame * 0.02);
-                    el.style.transform = `translate(-50%, -55%) scale(${scale})`;
-                }
-                if (frame > 1) {
-                    const scale = 0.8; // Стандартный масштаб для мобильных
-                    el.style.transform = `translate(-50%, -50%) scale(${scale})`;
-                }
+            // Плавное масштабирование в начале
+            if (frame < 2) {
+                const scale = 0.65 + (frame * 0.02);
+                el.style.transform = `translate(-50%, -50%) scale(${scale})`;
+            }
+            // Плавное масштабирование в начале
+            if (frame > 1) {
+                const scale = 1 
+                el.style.transform = `translate(-50%, -50%) scale(${scale})`;
             }
             
             frame++;
             
+            // Динамическое изменение скорости - ПЛАВНОЕ УСКОРЕНИЕ
             if (frame === slowFrames) {
-                currentInterval = fastFrameTime;
+                // Резкий переход на быструю скорость
+                currentInterval = 30;
+            } else if (frame > slowFrames && frame < totalFrames - 2) {
+                // Плавное дополнительное ускорение
+                currentInterval = Math.max(20, 30 - (frame - slowFrames) * 2);
             }
             
             setTimeout(animateFrame, currentInterval);
         }
         
+        // Начинаем анимацию
         animateFrame();
         
-    }, 50);
+    }, 30);
 }
 
 // Упрощенная функция
@@ -886,7 +864,7 @@ function showGameOverPopup() {
         popup.className = 'game-over-popup';
         popup.innerHTML = `
             <div class="popup-content">
-                <h2>GAME OVER</h2>
+                <h2>💀 GAME OVER!</h2>
                 <p>Your score: <span class="score">${playerScore}</span></p>
                 <p>Best score: <span class="best">${maxScore}</span></p>
                 <button id="restart-button">🔄 Try Again</button>
