@@ -1013,8 +1013,13 @@ document.addEventListener("DOMContentLoaded", function() {
         setupBrowserExit();
     }
     
-    resetGame();
-    loadAllHeroes();
+    loadAllHeroes().then(() => {
+        resetGame();
+    }).catch(() => {
+        resetGame();
+    });
+    
+  
     
     try {
         initNetworkMonitoring();
