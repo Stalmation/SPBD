@@ -80,6 +80,7 @@ const PUBLISHER_LOGOS = {
 };
 
 // Initialize Telegram Web App
+// Обновляем функцию initTelegram()
 function initTelegram() {
     if (typeof Telegram !== 'undefined' && Telegram.WebApp) {
         tg = Telegram.WebApp;
@@ -89,6 +90,9 @@ function initTelegram() {
         tg.setBackgroundColor('#1a1a2e');
         tg.BackButton.hide();
         
+        // Показываем кнопку запуска
+        createStartButton();
+        
         tg.onEvent('viewportChanged', (data) => {
             if (data && data.isStateStable && !data.isExpanded) {
                 tg.close();
@@ -96,6 +100,90 @@ function initTelegram() {
         });
     } else {
         setupBrowserExit();
+        // Для браузера тоже показываем кнопку
+        createStartButton();
+    }
+}
+
+// Функция для создания кнопки запуска
+function createStartButton() {
+    // Проверяем, есть ли уже кнопка
+    if (document.getElementById('start-button')) return;
+    
+    const startButton = document.createElement('button');
+    startButton.id = 'start-button';
+    startButton.className = 'telegram-start-button';
+    startButton.innerHTML = '🎮 START GAME';
+    startButton.onclick = startGameFromButton;
+    
+    document.body.appendChild(startButton);
+}
+
+// Функция запуска игры по кнопке
+function startGameFromButton() {
+    const startButton = document.getElementById('start-button');
+    if (startButton) {
+        startButton.style.display = 'none';
+    }
+    
+    document.body.style.opacity = '1';
+    
+    // Загружаем героев и запускаем игру
+    loadAllHeroes().then(() => {
+        if (allHeroes.length === 0) {
+            showTelegramError('Failed to load heroes. Please try again later.');
+            return;
+        }
+        
+        // Скрываем приветственный попап если он есть
+        const welcomePopup = document.querySelector('.game-over-popup');
+        if (welcomePopup) {
+            welcomePopup.remove();
+        }
+        
+        startGame();
+    }).catch(error => {
+        showTelegramError('Connection error. Check your internet and try again.');
+    });
+}
+
+// Функция показа ошибки для Telegram
+function showTelegramError(message) {
+    const errorPopup = document.createElement('div');
+    errorPopup.className = 'telegram-error-popup';
+    errorPopup.innerHTML = `
+        <div class="telegram-error-content">
+            <div class="error-icon">⚠️</div>
+            <h3>Launch Error</h3>
+            <p>${message}</p>
+            <div class="error-actions">
+                <button onclick="location.reload()">🔄 Reload</button>
+                <button onclick="showBotMessage()">📱 Contact Bot</button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(errorPopup);
+}
+
+// Функция для показа сообщения о контакте с ботом
+function showBotMessage() {
+    const errorPopup = document.querySelector('.telegram-error-popup');
+    if (errorPopup) {
+        errorPopup.innerHTML = `
+            <div class="telegram-error-content">
+                <div class="error-icon">🤖</div>
+                <h3>Contact Bot</h3>
+                <p>If the game doesn't start, write to our support bot:</p>
+                <p style="background: #2a2a4a; padding: 10px; border-radius: 8px; margin: 10px 0;">
+                    <strong>@SuperPowerBeatDownBot</strong>
+                </p>
+                <p style="font-size: 12px; opacity: 0.8;">
+                    Describe your problem and we'll help you!
+                </p>
+                <button onclick="location.reload()">🔄 Try Again</button>
+            </div>
+        `;
     }
 }
 
@@ -1006,21 +1094,25 @@ function resetGame() {
 }
 
 // DOM loaded
+// Обновляем DOMContentLoaded
 document.addEventListener("DOMContentLoaded", function() {
     initTelegram();
     initNetworkMonitoring();
     
-    // Сначала загружаем героев, потом сбрасываем игру
-    loadAllHeroes().then(() => {
-        // Инициализируем игру после загрузки данных
-        //resetGame();
+    // Сначала скрываем контент и показываем кнопку запуска
+    document.body.style.opacity = '0.3';
+    
+    // Предзагружаем данные, но не показываем игру сразу
+    loadAllHeroes().catch(error => {
+        console.error('Initial load failed:', error);
     });
 
-    
-
-    AnimationManager.setTimeout(() => {
-        showWelcomeDisclaimer();
-    }, 1000);
+    // Показываем приветствие только если нет кнопки запуска
+    if (!tg) {
+        AnimationManager.setTimeout(() => {
+            showWelcomeDisclaimer();
+        }, 1000);
+    }
     
     // Hide unnecessary elements
     const elementsToHide = [
