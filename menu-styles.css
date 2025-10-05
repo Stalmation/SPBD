@@ -1,0 +1,421 @@
+/* menu-styles.css */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+    overscroll-behavior: none;
+    -webkit-overflow-scrolling: touch;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+}
+
+body {
+    font-family: 'Arial', 'Helvetica', sans-serif;
+    background: radial-gradient(circle at center, #ff8f00 0%, #ff5f00 100%);
+    color: #fff;
+    min-height: 100vh;
+    padding: 0;
+    overflow: hidden;
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* Новый градиентный фон с лучами */
+.ray-gradient-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: 
+        radial-gradient(
+            circle at center,
+            transparent 0%,
+            rgba(255, 111, 0, 0.3) 20%,
+            rgba(255, 94, 0, 0.5) 40%,
+            rgba(255, 77, 0, 0.7) 60%,
+            rgba(255, 60, 0, 0.9) 80%,
+            rgba(255, 43, 0, 1) 100%
+        );
+    pointer-events: none;
+    z-index: -2;
+}
+
+.comic-dots-overlay {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: -1;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='8' height='8' fill='rgba(255,64,0,0.6)'><circle cx='2' cy='2' r='2'/><circle cx='6' cy='6' r='2'/></svg>");
+    background-size: 5px 5px;
+    background-repeat: repeat;
+    mask: radial-gradient(ellipse 50% 70% at center, transparent 40%, black 70%);
+    -webkit-mask: radial-gradient(ellipse 50% 70% at center, transparent 70%, black 100%);
+}
+
+/* Main Menu Styles */
+.main-menu-container {
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+    box-sizing: border-box;
+    position: relative;
+    z-index: 10;
+    justify-content: center; /* Центрируем все содержимое */
+}
+
+.logo-container {
+    margin-bottom: 40px; /* Отступ сверху для лого */
+    text-align: center;
+    animation: menuAppear 0.6s ease-out;
+    margin-top: -5vh; /* Поднимаем лого немного выше */
+}
+
+.main-logo {
+    width: min(55vw, 400px); /* Уменьшили на 25% */
+    height: auto;
+    max-height: 25vh; /* Уменьшили высоту */
+    object-fit: contain;
+    
+    animation: logoBreathing 3s ease-in-out infinite;
+}
+
+/* Анимация дыхания логотипа */
+@keyframes logoBreathing {
+    0%, 100% {
+        transform: scale(1, 1);
+    }
+    25% {
+        transform: scale(1.02, 0.98); /* Горизонтальное растяжение */
+    }
+    50% {
+        transform: scale(0.98, 1.02); /* Вертикальное растяжение */
+    }
+    75% {
+        transform: scale(1.01, 0.99); /* Легкое горизонтальное */
+    }
+}
+
+.menu-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 0px; /* Убрали зазоры - кнопки впритык */
+    width: min(65vw, 350px);
+    animation: menuAppear 0.6s ease-out 0.2s both;
+}
+
+/* Переменные для быстрого изменения размеров */
+:root {
+    --button-scale: 0.67; /* Масштаб 1.5 раза меньше (1/1.5 ≈ 0.67) */
+    --button-gap: 0px; /* Зазор между кнопками */
+}
+
+/* Базовые стили кнопок */
+.menu-btn {
+    background: linear-gradient(to bottom, #00e200, #00ac00);
+    color: white;
+    border: none;
+    padding: calc(20px * var(--button-scale)) calc(30px * var(--button-scale));
+    border-radius: calc(20px * var(--button-scale));
+    font-size: calc(30px * var(--button-scale));
+    font-weight: bold;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif; /* Шрифт как в Telegram */
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 1px 5px 5x rgba(0, 0, 0, .4); /* Сильно размытая тень */
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5); /* Тень текста */
+    position: relative;
+    overflow: hidden;
+    min-height: calc(50px * var(--button-scale));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    width: 100%;
+    margin: 0; /* Убираем внешние отступы */
+}
+
+/* Убрали обводку - удалили border property */
+
+/* Эффект нажатия */
+.menu-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+    transition: left 0.5s;
+}
+
+.menu-btn:active::before {
+    left: 100%;
+}
+
+/* Цвета для разных кнопок */
+.menu-btn.start-game {
+    background: linear-gradient(to bottom, #00e200, #00ac00);
+    font-size: calc(22px * var(--button-scale));
+    padding: calc(22px * var(--button-scale)) calc(35px * var(--button-scale));
+}
+
+.menu-btn.rules-btn {
+    background: linear-gradient(to bottom, #4cc9f0, #3aa8d9);
+}
+
+.menu-btn.records-btn {
+    background: linear-gradient(to bottom, #ffd700, #e6c200);
+    color: #8b6500;
+    text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.5);
+}
+
+.menu-btn.support-btn {
+    background: linear-gradient(to bottom, #ff6b6b, #e55a5a);
+}
+
+.menu-btn.settings-btn {
+    background: linear-gradient(to bottom, #9b59b6, #8e44ad);
+}
+
+/* Анимации */
+@keyframes menuAppear {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Анимации для кнопок */
+.menu-buttons button:nth-child(1) { animation: menuAppear 0.6s ease-out 0.3s both; }
+.menu-buttons button:nth-child(2) { animation: menuAppear 0.6s ease-out 0.4s both; }
+.menu-buttons button:nth-child(3) { animation: menuAppear 0.6s ease-out 0.5s both; }
+.menu-buttons button:nth-child(4) { animation: menuAppear 0.6s ease-out 0.6s both; }
+.menu-buttons button:nth-child(5) { animation: menuAppear 0.6s ease-out 0.7s both; }
+
+/* Popup styles for menu */
+.game-over-popup {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.9);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.popup-content {
+    background: linear-gradient(145deg, #2a2a4a, #1c1c34);
+    padding: 30px;
+    border-radius: 15px;
+    border: 2px solid #ffd700;
+    text-align: center;
+    box-shadow: 0 0 30px rgba(255, 215, 0, 0.4);
+    max-width: 90%;
+    width: 400px;
+}
+
+.popup-content h2 {
+    color: #ff6b6b;
+    margin-bottom: 20px;
+    font-size: 28px;
+    text-shadow: 2px 2px 2px rgba(0, 0, 0, 0.3);
+}
+
+.popup-content p {
+    margin: 10px 0;
+    font-size: 18px;
+    color: white;
+    text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.3);
+}
+
+#understand-button {
+    background: linear-gradient(to bottom, #00e200, #00ac00);
+    color: white;
+    border: none;
+    padding: 15px 30px;
+    border-radius: 12px;
+    font-size: 18px;
+    font-weight: bold;
+    margin-top: 20px;
+    cursor: pointer;
+    transition: transform 0.2s;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+#understand-button:active {
+    transform: scale(0.95);
+}
+
+/* ===== ДЛЯ ЭКРАНОВ 480px И МЕНЬШЕ ===== */
+@media (max-width: 480px) {
+    .main-menu-container {
+        padding: 15px;
+        justify-content: center; /* Центрируем на мобильных */
+    }
+    
+    .logo-container {
+        margin-bottom: 30px;
+        margin-top: -8vh; /* Больше поднимаем на мобильных */
+    }
+    
+    .main-logo {
+        width: 70vw;
+        max-height: 20vh;
+        margin-top: 40%;
+        animation: logoBreathingMobile 2.5s ease-in-out infinite;
+    }
+    
+    /* Упрощенная анимация для мобильных */
+    @keyframes logoBreathingMobile {
+        0%, 100% {
+            transform: scale(1, 1);
+        }
+        50% {
+            transform: scale(1.03, 0.97); /* Более заметное дыхание */
+        }
+    }
+    
+    .menu-buttons {
+        width: 45vw;
+        margin-top: 10%;
+        gap: 0px;
+    }
+    
+    .menu-btn {
+        padding: calc(16px * var(--button-scale)) calc(20px * var(--button-scale));
+        font-size: calc(18px * var(--button-scale));
+        border-radius: calc(14px * var(--button-scale));
+        min-height: calc(60px * var(--button-scale));
+        box-shadow: 0 2px 3px rgba(0, 0, 0, 0.35);
+    }
+    
+    .menu-btn.start-game {
+        font-size: calc(19px * var(--button-scale));
+        padding: calc(18px * var(--button-scale)) calc(25px * var(--button-scale));
+    }
+    
+    .popup-content {
+        padding: 20px;
+        width: 95%;
+    }
+    
+    .popup-content h2 {
+        font-size: 24px;
+        margin-bottom: 15px;
+    }
+    
+    .popup-content p {
+        font-size: 16px;
+    }
+    
+    #understand-button {
+        padding: 12px 25px;
+        font-size: 16px;
+        border-radius: 10px;
+    }
+}
+
+/* ===== ДЛЯ ПЛАНШЕТОВ ===== */
+@media (min-width: 769px) and (max-width: 1024px) {
+    .main-menu-container {
+        justify-content: center;
+    }
+    
+    .logo-container {
+        margin-top: -4vh;
+    }
+    
+    .main-logo {
+        width: 45vw;
+        max-height: 22vh;
+    }
+    
+    .menu-buttons {
+        width: 40vw;
+        max-width: 380px;
+        gap: 0px;
+    }
+    
+    .menu-btn {
+        padding: calc(22px * var(--button-scale)) calc(35px * var(--button-scale));
+        font-size: calc(22px * var(--button-scale));
+        border-radius: calc(14px * var(--button-scale));
+        min-height: calc(80px * var(--button-scale));
+    }
+    
+    .menu-btn.start-game {
+        font-size: calc(24px * var(--button-scale));
+        padding: calc(24px * var(--button-scale)) calc(40px * var(--button-scale));
+    }
+}
+
+/* ===== ДЛЯ ДЕСКТОПОВ ===== */
+@media (min-width: 1025px) {
+    .main-menu-container {
+        justify-content: center;
+    }
+    
+    .logo-container {
+        margin-top: -3vh;
+    }
+    
+    .main-logo {
+        width: 30vw;
+        max-width: 450px;
+        max-height: 23vh;
+    }
+    
+    .menu-buttons {
+        width: 22vw;
+        max-width: 350px;
+        gap: 0px;
+    }
+    
+    .menu-btn {
+        padding: calc(20px * var(--button-scale)) calc(32px * var(--button-scale));
+        font-size: calc(20px * var(--button-scale));
+        border-radius: calc(12px * var(--button-scale));
+        min-height: calc(75px * var(--button-scale));
+    }
+    
+    .menu-btn.start-game {
+        font-size: calc(22px * var(--button-scale));
+        padding: calc(22px * var(--button-scale)) calc(36px * var(--button-scale));
+    }
+    
+    /* Ховер эффекты только для десктопов */
+    .menu-btn:hover {
+        filter: brightness(1.1);
+        transform: translateY(-2px);
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5);
+    }
+    
+    .menu-btn:hover::before {
+        left: 100%;
+    }
+    
+    .menu-btn:active {
+        transform: translateY(-1px) scale(0.98);
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+    }
+}
