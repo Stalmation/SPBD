@@ -732,27 +732,13 @@ function playSmokeAnimation(elementId, spriteUrl) {
             
             el.style.backgroundPosition = `${x}px ${y}px`;
             
-            // УСЛОВИЕ ДЛЯ БОЛЬШИХ ЭКРАНОВ
-            if (window.innerWidth >= 769) {
-                // Для больших экранов - увеличенный масштаб
-                if (frame < 2) {
-                    const scale = 0.50 + (frame * 0.03);
-                    el.style.transform = `translate(-50%, -55%) scale(${scale})`;
-                }
-                if (frame > 1) {
-                    const scale = 1.3; // Увеличиваем масштаб для больших экранов
-                    el.style.transform = `translate(-50%, -50%) scale(${scale})`;
-                }
-            } else {
-                // Для мобильных - стандартный масштаб
-                if (frame < 2) {
-                    const scale = 0.40 + (frame * 0.02);
-                    el.style.transform = `translate(-50%, -55%) scale(${scale})`;
-                }
-                if (frame > 1) {
-                    const scale = 0.8; // Стандартный масштаб для мобильных
-                    el.style.transform = `translate(-50%, -50%) scale(${scale})`;
-                }
+            if (frame < 2) {
+                const scale = 0.40 + (frame * 0.02);
+                el.style.transform = `translate(-50%, -55%) scale(${scale})`;
+            }
+            if (frame > 1) {
+                const scale = 1;
+                el.style.transform = `translate(-50%, -50%) scale(${scale})`;
             }
             
             frame++;
