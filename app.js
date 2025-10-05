@@ -9,10 +9,7 @@ const HERO_DISPLAY_DURATION = 3000;
 const SMOKE_ANIMATION_DURATION = 1250;
 // Добавьте после констант в начале файла (после SMOKE_ANIMATION_DURATION)
 const NETWORK_CHECK_TIMEOUT = 10000;
-// Глобальные флаги для отслеживания состояния
-let appInitialized = false;
-let launchAttempts = 0;
-const MAX_LAUNCH_ATTEMPTS = 3;
+
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
@@ -82,195 +79,24 @@ const PUBLISHER_LOGOS = {
     'dark_horse': 'https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Owner/dark_horse.webp'
 };
 
-
-// Улучшенная функция показа ошибок
-function showTelegramError(message) {
-    // Удаляем старый попап ошибки если есть
-    const oldError = document.querySelector('.telegram-error-popup');
-    if (oldError) {
-        oldError.remove();
-    }
-    
-    const errorPopup = document.createElement('div');
-    errorPopup.className = 'telegram-error-popup';
-    errorPopup.innerHTML = `
-        <div class="telegram-error-content">
-            <div class="error-icon">⚠️</div>
-            <h3>Launch Error</h3>
-            <p>${message}</p>
-            <div class="error-actions">
-                <button onclick="hardReload()">🔄 Hard Reload</button>
-                <button onclick="showBotMessage()">📱 Contact Bot</button>
-                <button onclick="closeTelegramApp()">❌ Close App</button>
-            </div>
-            <p style="font-size: 12px; margin-top: 15px; opacity: 0.7;">
-                Attempt: ${launchAttempts}/${MAX_LAUNCH_ATTEMPTS}
-            </p>
-        </div>
-    `;
-    
-    document.body.appendChild(errorPopup);
-}
-
-// Обновляем функцию showBotMessage
-function showBotMessage() {
-    const errorPopup = document.querySelector('.telegram-error-popup');
-    if (errorPopup) {
-        errorPopup.innerHTML = `
-            <div class="telegram-error-content">
-                <div class="error-icon">🤖</div>
-                <h3>Contact Support</h3>
-                <p>If the game doesn't work, write to our bot:</p>
-                <div style="background: #2a2a4a; padding: 15px; border-radius: 10px; margin: 15px 0; border: 1px solid #4cc9f0;">
-                    <strong style="color: #4cc9f0; font-size: 18px;">@SuperPowerBeatDownBot</strong>
-                </div>
-                <p style="font-size: 14px; opacity: 0.8; margin: 10px 0;">
-                    Please describe:<br>
-                    • What exactly happens<br>
-                    • Your device type<br>
-                    • When the problem started
-                </p>
-                <div class="error-actions">
-                    <button onclick="hardReload()">🔄 Try Again</button>
-                    <button onclick="closeTelegramApp()">← Go Back</button>
-                </div>
-            </div>
-        `;
-    }
-}
-
-
-// Закрытие приложения Telegram
-function closeTelegramApp() {
-    if (tg && tg.close) {
-        try {
-            tg.close();
-        } catch (e) {
-            window.history.back();
-        }
-    } else {
-        window.history.back();
-    }
-}
-
-// Жесткая перезагрузка
-function hardReload() {
-    // Очищаем localStorage
-    localStorage.removeItem('heroGameStats');
-    localStorage.removeItem('hasSeenDisclaimer');
-    
-    // Полная перезагрузка
-    if (tg && tg.close) {
-        tg.close();
-    }
-    
-    // Перезагрузка через location.replace для избежания кеша
-    setTimeout(() => {
-        location.replace(location.href + '?t=' + Date.now());
-    }, 100);
-}
-
 // Initialize Telegram Web App
 function initTelegram() {
     if (typeof Telegram !== 'undefined' && Telegram.WebApp) {
         tg = Telegram.WebApp;
+        tg.expand();
+        tg.enableClosingConfirmation();
+        tg.setHeaderColor('#1a1a2e');
+        tg.setBackgroundColor('#1a1a2e');
+        tg.BackButton.hide();
         
-        // Всегда сбрасываем состояние при инициализации
-        appInitialized = false;
-        launchAttempts++;
-        
-        // Расширяем на полный экран
-        try {
-            tg.expand();
-            tg.enableClosingConfirmation();
-            tg.setHeaderColor('#1a1a2e');
-            tg.setBackgroundColor('#1a1a2e');
-            tg.BackButton.hide();
-        } catch (e) {
-            console.warn('Telegram WebApp methods failed:', e);
-        }
-        
-        // Показываем кнопку запуска только при первом запуске
-        if (launchAttempts <= MAX_LAUNCH_ATTEMPTS) {
-            createStartButton();
-        } else {
-            // После нескольких попыток показываем ошибку
-            showTelegramError('App initialization failed. Please restart Telegram.');
-        }
-        
-        // Обработчик изменения размера окна
         tg.onEvent('viewportChanged', (data) => {
             if (data && data.isStateStable && !data.isExpanded) {
-                try {
-                    tg.close();
-                } catch (e) {
-                    window.history.back();
-                }
+                tg.close();
             }
         });
-        
-        // Обработчик видимости страницы (для перезапуска)
-        tg.onEvent('viewportChanged', handleTelegramViewportChange);
-        
     } else {
-        // Режим браузера
         setupBrowserExit();
-        createStartButton();
     }
-}
-
-// Обработчик изменений viewport в Telegram
-function handleTelegramViewportChange() {
-    if (tg && !appInitialized) {
-        // Если приложение еще не инициализировано, пробуем снова
-        setTimeout(() => {
-            if (!appInitialized && launchAttempts < MAX_LAUNCH_ATTEMPTS) {
-                resetAppState();
-                createStartButton();
-            }
-        }, 1000);
-    }
-}
-
-// Функция сброса состояния приложения
-function resetAppState() {
-    appInitialized = false;
-    gameActive = false;
-    isVotingInProgress = false;
-    currentVotePairId = null;
-    
-    // Очищаем все анимации
-    AnimationManager.clearAll();
-    
-    // Сбрасываем DOM элементы
-    hideAllOverlays();
-    
-    // Очищаем текущих героев
-    currentHeroes = [];
-    nextHeroes = [];
-}
-
-// Улучшенная функция создания кнопки запуска
-function createStartButton() {
-    // Удаляем старую кнопку если есть
-    const oldButton = document.getElementById('start-button');
-    if (oldButton) {
-        oldButton.remove();
-    }
-    
-    const startButton = document.createElement('button');
-    startButton.id = 'start-button';
-    startButton.className = 'telegram-start-button';
-    startButton.innerHTML = '🎮 START GAME';
-    startButton.onclick = startGameFromButton;
-    
-    document.body.appendChild(startButton);
-    
-    // Показываем кнопку с анимацией
-    setTimeout(() => {
-        startButton.style.opacity = '1';
-        startButton.style.transform = 'translate(-50%, -50%) scale(1)';
-    }, 100);
 }
 
 function setupBrowserExit() {
@@ -483,86 +309,6 @@ function startGame() {
     gameActive = true;
     displayHeroes();
     updateUI();
-}
-
-// Улучшенная функция запуска игры
-function startGameFromButton() {
-    const startButton = document.getElementById('start-button');
-    
-    // Анимация исчезновения кнопки
-    if (startButton) {
-        startButton.style.opacity = '0';
-        startButton.style.transform = 'translate(-50%, -50%) scale(0.8)';
-        setTimeout(() => {
-            if (startButton.parentNode) {
-                startButton.remove();
-            }
-        }, 300);
-    }
-    
-    // Сбрасываем состояние перед запуском
-    resetAppState();
-    
-    // Показываем индикатор загрузки
-    showLoadingIndicator();
-    
-    // Загружаем героев с таймаутом
-    const loadTimeout = setTimeout(() => {
-        if (!appInitialized) {
-            hideLoadingIndicator();
-            showTelegramError('Loading timeout. Please check your connection.');
-        }
-    }, 10000);
-    
-    loadAllHeroes().then(() => {
-        clearTimeout(loadTimeout);
-        
-        if (allHeroes.length === 0) {
-            hideLoadingIndicator();
-            showTelegramError('No heroes data available. Please try again later.');
-            return;
-        }
-        
-        // Помечаем приложение как инициализированное
-        appInitialized = true;
-        
-        // Скрываем приветственный попап если он есть
-        const welcomePopup = document.querySelector('.game-over-popup');
-        if (welcomePopup) {
-            welcomePopup.remove();
-        }
-        
-        hideLoadingIndicator();
-        document.body.style.opacity = '1';
-        
-        // Запускаем игру
-        startGame();
-        
-    }).catch(error => {
-        clearTimeout(loadTimeout);
-        hideLoadingIndicator();
-        showTelegramError('Failed to load game data. Please try again.');
-        console.error('Game load error:', error);
-    });
-}
-
-// Индикатор загрузки
-function showLoadingIndicator() {
-    const loader = document.createElement('div');
-    loader.id = 'loading-indicator';
-    loader.className = 'telegram-loading';
-    loader.innerHTML = `
-        <div class="loading-spinner"></div>
-        <p>Loading game data...</p>
-    `;
-    document.body.appendChild(loader);
-}
-
-function hideLoadingIndicator() {
-    const loader = document.getElementById('loading-indicator');
-    if (loader) {
-        loader.remove();
-    }
 }
 
 // Get random heroes
@@ -1260,30 +1006,23 @@ function resetGame() {
 }
 
 // DOM loaded
-// Обновляем DOMContentLoaded
 document.addEventListener("DOMContentLoaded", function() {
-    // Сначала сбрасываем состояние
-    resetAppState();
-    
-    // Инициализируем Telegram
     initTelegram();
+    
+    // ВСЕГДА сбрасываем игру при загрузке (анти-читерство)
+    resetGame();
+    loadAllHeroes();
     initNetworkMonitoring();
+
+    AnimationManager.setTimeout(() => {
+        showWelcomeDisclaimer();
+    }, 1000);
     
-    // Скрываем основной контент до нажатия кнопки
-    document.body.style.opacity = '0.3';
-    
-    // Предзагружаем данные в фоне, но не показываем
-    setTimeout(() => {
-        loadAllHeroes().catch(error => {
-            console.log('Background preload failed, will retry on button click');
-        });
-    }, 500);
-    
-    // Скрываем ненужные элементы
+    // Hide unnecessary elements
     const elementsToHide = [
         'header h1',
         'header p',
-        '.progress-container', 
+        '.progress-container',
         '.rating-notice',
         'footer'
     ];
@@ -1294,18 +1033,22 @@ document.addEventListener("DOMContentLoaded", function() {
     });
 });
 
-// Обработчик Escape для отладки
+// Escape handler
 document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') {
-        if (confirm('Exit game?')) {
-            closeTelegramApp();
+        if (confirm('Exit the game?')) {
+            if (tg && tg.close) {
+                tg.close();
+            } else {
+                window.history.back();
+            }
         }
     }
     
-    // Ctrl+R для жесткой перезагрузки
-    if ((e.ctrlKey && e.key === 'r') || e.key === 'F5') {
+    // F5 для перезагрузки с полным сбросом
+    if (e.key === 'F5' || (e.ctrlKey && e.key === 'r')) {
         e.preventDefault();
-        hardReload();
+        resetGame();
     }
 });
 
