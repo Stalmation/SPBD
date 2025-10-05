@@ -1297,3 +1297,111 @@ body {
         width: 100%;
     }
 }
+
+/* Адаптация для очень низких экранов (менее 550px) */
+@media (max-height: 550px) {
+    .container {
+        padding-top: 0px;
+        margin-top: 0;
+        justify-content: flex-start;
+        height: calc(100vh - 60px); /* Резервируем место для хидера и кнопок */
+        overflow: hidden;
+    }
+    
+    .battle-area {
+       
+        max-width: 50vh;
+        height: 100vh;
+        gap: 5px;
+        padding: 5px 0;
+        justify-content: space-between;
+    }
+    
+    .hero-complete-container {
+        height: 35%;
+        max-height: 35%;
+    }
+    
+    .hero-card {
+        padding-bottom: 60%; /* Более квадратное соотношение */
+        max-height: 100%;
+        border-width: 2px;
+    }
+    
+    .hero-name-container {
+        margin-top: -6%;
+        width: 70%;
+        border-width: 2px;
+        min-height: 25px;
+    }
+    
+    .hero-name-text {
+        font-size: clamp(10px, 2vw, 15px) !important;
+        padding: 1% 1% !important;
+    }
+
+    .vs-container {
+        margin: 5px 0;
+        min-height: 5px;
+        height: 1%;
+    }
+    
+    .vs-image {
+        width: 5%;
+        height: 30px;
+        max-width: 20px;
+    }
+    
+    .player-stats {
+        margin: 25px auto 0;
+        height: 6%;
+        min-height: 40px;
+        font-size: clamp(24px, 8vw, 50px);
+    }
+    
+    .score-stats {
+        font-size: clamp(20px, 7vw, 45px);
+        margin-top: -3px;
+    }
+    
+    .lives-stats {
+        bottom: 0px;
+        left: -3px;
+    }
+    
+    .life-star {
+        width: 15px;
+        height: 15px;
+    }
+    
+    /* Регулируем позиции анимаций */
+    .star-rating-container {
+        top: 62% !important;
+        width: 45%;
+        max-width: 180px;
+    }
+    
+    .star-rating-percent .digit {
+        width: 35px;
+        height: 50px;
+    }
+    
+    .star-rating-percent .digit.comma {
+        width: 15px;
+        height: 20px;
+        margin-bottom: -45px;
+    }
+    
+    .hero-result-overlay {
+        top: 35% !important;
+        width: 65%;
+        max-width: 200px;
+    }
+    
+    .result-sprite {
+        width: 70%;
+        margin-bottom: 5px;
+    }
+
+}
+
