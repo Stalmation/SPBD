@@ -1008,10 +1008,14 @@ function resetGame() {
 // DOM loaded
 document.addEventListener("DOMContentLoaded", function() {
     initTelegram();
+    initNetworkMonitoring();
     
-    // ВСЕГДА сбрасываем игру при загрузке (анти-читерство)
-    resetGame();
-    loadAllHeroes();
+    // Сначала загружаем героев, потом сбрасываем игру
+    loadAllHeroes().then(() => {
+        // Инициализируем игру после загрузки данных
+        resetGame();
+    });
+
     initNetworkMonitoring();
 
     AnimationManager.setTimeout(() => {
