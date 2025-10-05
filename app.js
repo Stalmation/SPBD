@@ -7,8 +7,9 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 // Константы для управления таймингами
 const HERO_DISPLAY_DURATION = 3000;
 const SMOKE_ANIMATION_DURATION = 1250;
+// Добавьте после констант в начале файла (после SMOKE_ANIMATION_DURATION)
 const NETWORK_CHECK_TIMEOUT = 10000;
-const LONG_PRESS_THRESHOLD = 500; // Порог длительного касания (500 мс)
+
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
@@ -67,10 +68,6 @@ let playerLives = 5;
 let playerScore = 0;
 let maxScore = 0;
 let gameActive = true;
-let navigationPanelHidden = false;
-
-// Переменная для отслеживания времени касания
-let touchStartTime = 0;
 
 // Publisher logo mapping
 const PUBLISHER_LOGOS = {
@@ -88,10 +85,9 @@ function initTelegram() {
         tg = Telegram.WebApp;
         tg.expand();
         tg.enableClosingConfirmation();
-        tg.setHeaderColor('#ff5f00');
-        tg.setBackgroundColor('#ff5f00');
+        tg.setHeaderColor('#1a1a2e');
+        tg.setBackgroundColor('#1a1a2e');
         tg.BackButton.hide();
-        tg.disableVerticalSwipes();
         
         tg.onEvent('viewportChanged', (data) => {
             if (data && data.isStateStable && !data.isExpanded) {
@@ -113,101 +109,29 @@ function setupBrowserExit() {
     });
 }
 
-// Функция для скрытия навигационной панели на Android
-function hideNavigationPanel() {
-    if (document.visibilityState === 'visible') {
-        try {
-            if (document.documentElement.requestFullscreen) {
-                // Не вызываем автоматически
-            } else if (document.documentElement.webkitRequestFullscreen) {
-                // Не вызываем автоматически
-            }
-        } catch (e) {
-            // Игнорируем ошибки полноэкранного режима
-        }
-    }
-    
-    document.body.style.height = '100vh';
-    window.scrollTo(0, 0);
-    
-    navigationPanelHidden = true;
-}
-
-// Обработчик длительных касаний
-function preventNavigationPanel(event) {
-    const target = event.target.closest('.hero-card, #restart-button, #complete-restart-button');
-    if (target) {
-        // Пропускаем касания на интерактивных элементах
-        return;
-    }
-    
-    // Сохраняем время начала касания
-    if (event.type === 'touchstart') {
-        touchStartTime = Date.now();
-    }
-    
-    // Проверяем длительность касания при touchend
-    if (event.type === 'touchend') {
-        const touchDuration = Date.now() - touchStartTime;
-        if (touchDuration >= LONG_PRESS_THRESHOLD) {
-            event.preventDefault(); // Блокируем контекстное меню для длительных касаний
-        }
-    }
-    
-    // Блокируем touchmove для предотвращения прокрутки
-    if (event.type === 'touchmove') {
-        event.preventDefault();
-    }
-}
-
-// Инициализация управления навигацией
-function initNavigationControl() {
-    setTimeout(() => {
-        try {
-            hideNavigationPanel();
-        } catch (e) {
-            // Игнорируем ошибки
-        }
-    }, 100);
-    
-    document.addEventListener('touchstart', preventNavigationPanel, { passive: false });
-    document.addEventListener('touchend', preventNavigationPanel, { passive: false });
-    document.addEventListener('touchmove', preventNavigationPanel, { passive: false });
-    
-    window.addEventListener('focus', () => {
-        setTimeout(hideNavigationPanel, 50);
-    });
-    
-    window.addEventListener('resize', function() {
-        setTimeout(() => {
-            try {
-                hideNavigationPanel();
-            } catch (e) {
-                // Игнорируем ошибки
-            }
-        }, 50);
-    });
-}
-
 // Умный мониторинг сети
 function initNetworkMonitoring() {
+    // Слушаем нативные события браузера
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
     
+    // Проверяем при взаимодействии с пользователем
     document.addEventListener('click', debouncedNetworkCheck);
     document.addEventListener('touchstart', debouncedNetworkCheck);
     
+    // Периодическая проверка только при активной сессии
     setInterval(() => {
         if (document.visibilityState === 'visible') {
             checkNetworkWithTimeout();
         }
-    }, 30000);
+    }, 30000); // 1 раз в 30 секунд
 }
 
 // Обработчик появления сети
 function handleOnline() {
     if (networkErrorShown) {
         hideNetworkError();
+        // Автоматическое восстановление
         if (gameActive && !currentHeroes.length) {
             displayHeroes();
         }
@@ -265,6 +189,11 @@ function showNetworkError() {
     `;
     
     document.body.appendChild(popup);
+    
+    // Блокируем игровые элементы
+    document.querySelectorAll('.hero-card').forEach(card => {
+        card.style.pointerEvents = 'none';
+    });
 }
 
 // Функция скрытия ошибки сети
@@ -277,9 +206,14 @@ function hideNetworkError() {
             networkErrorShown = false;
         }, 300);
     }
+    
+    // Восстанавливаем игровые элементы
+    document.querySelectorAll('.hero-card').forEach(card => {
+        card.style.pointerEvents = '';
+    });
 }
 
-// Load progress
+// Load progress - ТОЛЬКО ДЛЯ МАКСИМАЛЬНОГО СЧЕТА
 function loadProgress() {
     try {
         const savedStats = localStorage.getItem('heroGameStats');
@@ -289,6 +223,7 @@ function loadProgress() {
             maxScore = stats.maxScore || 0;
         }
         
+        // ПРИ ПЕРЕЗАГРУЗКЕ ВСЕГДА СБРАСЫВАЕМ ТЕКУЩИЙ ПРОГРЕСС
         playerLives = 5;
         playerScore = 0;
         votedHeroes = new Set();
@@ -302,7 +237,7 @@ function loadProgress() {
     }
 }
 
-// Save progress
+// Save progress - ТОЛЬКО ДЛЯ МАКСИМАЛЬНОГО СЧЕТА
 function saveProgress() {
     try {
         localStorage.setItem('heroGameStats', JSON.stringify({
@@ -396,7 +331,7 @@ function getRandomHeroes() {
     return [availableHeroes[randomIndex1], availableHeroes[randomIndex2]];
 }
 
-// Обработчик для кнопки "Play Again"
+// Обработчик для кнопки "Play Again" в Completion Screen
 function showCompletionScreen() {
     gameActive = false;
     maxScore = Math.max(maxScore, playerScore);
@@ -544,35 +479,46 @@ function getHeroAlignment(goodBad) {
             alt: 'HERO'
         };
         case 2: return { 
-            imageUrl: 'https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Images/antihero.webp',
-            alt: 'ANTIHERO'
+            imageUrl: 'https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Images/evil.webp',
+            alt: 'EVIL'
         };
         case 3: return { 
-            imageUrl: 'https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Images/villain.webp',
-            alt: 'VILLAIN'
+            imageUrl: 'https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Images/anti_hero.webp',
+            alt: 'ANTI HERO'
         };
-        default: return { imageUrl: '', alt: '' };
+        default: return { 
+            imageUrl: null,
+            alt: 'UNKNOWN'
+        };
     }
 }
 
-// Display heroes
+// Оптимизированная функция отображения героев
 function displayHeroes() {
+    if (!gameActive) return;
+    
+    isVotingInProgress = false;
+    currentVotePairId = null;
+    
+    // Очищаем все анимации
+    AnimationManager.clearAll();
+    
+    // Скрываем все анимации
     hideAllOverlays();
+    hideAnimations();
     
-    if (!gameActive || playerLives <= 0) {
-        gameOver();
-        return;
+    if (nextHeroes.length === 2) {
+        currentHeroes = nextHeroes;
+        nextHeroes = [];
+    } else {
+        currentHeroes = getRandomHeroes();
     }
     
-    currentHeroes = nextHeroes.length ? nextHeroes : getRandomHeroes();
-    
-    if (!currentHeroes) {
-        showCompletionScreen();
-        return;
-    }
+    if (!currentHeroes) return;
     
     preloadNextPair();
     
+    // Используем DocumentFragment для батч-обновления DOM
     currentHeroes.forEach((hero, index) => {
         const heroNum = index + 1;
         const imgElement = document.getElementById(`hero${heroNum}-img`);
@@ -580,10 +526,13 @@ function displayHeroes() {
         const publisherElement = document.getElementById(`hero${heroNum}-publisher`);
         const alignmentElement = document.getElementById(`hero${heroNum}-alignment`);
         
+        // Set hero image
         if (imgElement) imgElement.src = hero.image_url;
         
+        // Set hero name с оптимизацией
         if (nameElement) {
             nameElement.textContent = hero.name;
+            // ВОЗВРАЩАЕМ рабочие inline стили
             if (hero.name.length > 15) {
                 nameElement.style.fontSize = 'clamp(14px, 3vw, 20px)';
             } else if (hero.name.length > 10) {
@@ -593,6 +542,7 @@ function displayHeroes() {
             }
         }
         
+        // Set alignment
         if (alignmentElement) {
             const alignment = getHeroAlignment(hero.good_bad);
             alignmentElement.innerHTML = '';
@@ -606,6 +556,7 @@ function displayHeroes() {
             }
         }
         
+        // Set publisher logo
         if (publisherElement) {
             publisherElement.innerHTML = '';
             if (hero.logo_url) {
@@ -621,20 +572,20 @@ function displayHeroes() {
 }
 
 // Оптимизированная функция голосования
+// Оптимизированная функция голосования
 async function vote(heroNumber) {
     if (!gameActive || !currentHeroes || currentHeroes.length < 2 || 
         playerLives <= 0 || isVotingInProgress) {
         return;
     }
     
-    if (!navigationPanelHidden) {
-        hideNavigationPanel();
-    }
     isVotingInProgress = true;
 
     indicateSelection(heroNumber);
     
     const selectedHero = currentHeroes[heroNumber - 1];
+    
+    // ИСПРАВЛЕНИЕ: только одно объявление otherHero
     const otherHero = heroNumber === 1 ? currentHeroes[1] : currentHeroes[0];
     
     const votePairId = `${selectedHero.id}-${otherHero.id}`;
@@ -650,6 +601,7 @@ async function vote(heroNumber) {
     
     playHaptic('selection');
     
+    // Запускаем дым с оптимизацией
     AnimationManager.setTimeout(() => {
         if (userMadeRightChoice) {
             playSmokeAnimation(`hero${heroNumber}-blue-smoke`, "https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Sprites/BlueSMoke256.webp");
@@ -736,8 +688,10 @@ function updateLivesWithAnimation() {
     if (lifeStars.length > 0) {
         const lastLifeStar = lifeStars[lifeStars.length - 1];
         
+        // Используем CSS transitions вместо JS анимаций
         lastLifeStar.classList.remove('life-star-removing');
         
+        // Принудительный reflow только один раз
         void lastLifeStar.offsetWidth;
         
         lastLifeStar.classList.add('life-star-removing');
@@ -752,6 +706,7 @@ function updateLivesWithAnimation() {
 
 // Оптимизированная функция создания цифр из картинок
 function convertToImageBasedDigits(element, text) {
+    // Создаем DocumentFragment для батч-вставки
     const fragment = document.createDocumentFragment();
     
     for (let i = 0; i < text.length; i++) {
@@ -769,6 +724,7 @@ function convertToImageBasedDigits(element, text) {
         fragment.appendChild(digitSpan);
     }
     
+    // Один раз обновляем DOM
     element.appendChild(fragment);
 }
 
@@ -810,7 +766,7 @@ async function updateHeroStatsAsync(winnerId, loserId) {
     }
 }
 
-// Оптимизированная анимация дыма
+// Оптимизированная анимация дыма с использованием CSS анимаций
 function playSmokeAnimation(elementId, spriteUrl) {
     const el = document.getElementById(elementId);
     if (!el) return;
@@ -818,6 +774,7 @@ function playSmokeAnimation(elementId, spriteUrl) {
     const animationId = `${elementId}-${Date.now()}`;
     AnimationManager.addSmokeAnimation(animationId);
     
+    // Сбрасываем стили
     el.style.backgroundImage = 'none';
     el.style.opacity = '0';
     el.style.transform = 'translate(-50%, -50%) scale(0.65)';
@@ -864,8 +821,10 @@ function playSmokeAnimation(elementId, spriteUrl) {
             const x = -col * frameSize;
             const y = -row * frameSize;
             
+            // Используем transform для hardware acceleration
             el.style.backgroundPosition = `${x}px ${y}px`;
             
+            // Оптимизация для разных размеров экранов
             if (window.innerWidth >= 769) {
                 if (frame < 2) {
                     const scale = 0.50 + (frame * 0.03);
@@ -890,6 +849,7 @@ function playSmokeAnimation(elementId, spriteUrl) {
                 currentInterval = fastFrameTime;
             }
             
+            // Используем менеджер анимаций для предотвращения утечек
             AnimationManager.setTimeout(animateFrame, currentInterval);
         }
         
@@ -942,13 +902,59 @@ function playHaptic(type) {
             case 'correct': navigator.vibrate([50, 30, 50]); break;
             case 'wrong': navigator.vibrate(100); break;
             case 'game_over': navigator.vibrate([100, 50, 100]); break;
-            case 'win': navigator.vibrate([30, 30, 30, 30]); break;
+            case 'win': navigator.vibrate([50, 30, 50, 30, 50]); break;
         }
     }
 }
 
-// Game over
+// Функция для показа приветственного дисклеймера
+function showWelcomeDisclaimer() {
+    const hasSeenDisclaimer = localStorage.getItem('hasSeenDisclaimer');
+    
+    if (!hasSeenDisclaimer) {
+        AnimationManager.setTimeout(() => {
+            const popup = document.createElement('div');
+            popup.className = 'game-over-popup';
+            popup.innerHTML = `
+                <div class="popup-content">
+                    <h2>🎮 SUPER POWER BEAT DOWN</h2>
+                    <div style="text-align: left; margin: 15px 0;">
+                        <p><strong>Правила игры:</strong></p>
+                        <p>• Выбирайте героя с более высоким рейтингом</p>
+                        <p>• У вас есть 5 жизней</p>
+                        <p>• За правильный выбор получаете +1 очко</p>
+                        <p>• За ошибку теряете 1 жизнь</p>
+                        <p>• Играйте пока не закончатся герои или жизни!</p>
+                    </div>
+                    <button id="understand-button">ПОНЯТНО!</button>
+                </div>
+            `;
+            
+            document.body.appendChild(popup);
+            
+            document.getElementById('understand-button').addEventListener('click', function() {
+                localStorage.setItem('hasSeenDisclaimer', 'true');
+                popup.remove();
+                document.body.style.opacity = '1';
+            });
+        }, 500);
+    }
+}
+
+// Game over function
 function gameOver() {
+    gameActive = false;
+    maxScore = Math.max(maxScore, playerScore);
+    saveProgress();
+    
+    document.body.style.opacity = '0.7';
+    playHaptic('game_over');
+    AnimationManager.setTimeout(() => {
+        showGameOverPopup();
+    }, 1000);
+}
+
+function showGameOverPopup() {
     gameActive = false;
     maxScore = Math.max(maxScore, playerScore);
     saveProgress();
@@ -960,10 +966,10 @@ function gameOver() {
         popup.className = 'game-over-popup';
         popup.innerHTML = `
             <div class="popup-content">
-                <h2>💀 GAME OVER</h2>
+                <h2>GAME OVER</h2>
                 <p>Your score: <span class="score">${playerScore}</span></p>
                 <p>Best score: <span class="best">${maxScore}</span></p>
-                <button id="restart-button">🔄 Play Again</button>
+                <button id="restart-button">🔄 Try Again</button>
             </div>
         `;
         
@@ -974,60 +980,45 @@ function gameOver() {
             resetGame();
         });
     }, 1000);
-    playHaptic('game_over');
+    
+    if (tg) tg.HapticFeedback.notificationOccurred('error');
 }
 
-// Reset game
+// Reset game - ПОЛНЫЙ СБРОС ПРОГРЕССА ПРИ КАЖДОМ ЗАПУСКЕ
 function resetGame() {
-    AnimationManager.clearAll();
-    
+    // Всегда полный сброс прогресса
     playerLives = 5;
     playerScore = 0;
-    votedHeroes = new Set();
-    currentHeroes = [];
-    nextHeroes = [];
-    gameActive = true;
+    votedHeroes.clear();
     isVotingInProgress = false;
     currentVotePairId = null;
+    gameActive = true;
+    
+    // Очищаем localStorage от прогресса (но оставляем максимальный счет)
+    localStorage.removeItem('heroVoteProgress');
+    
+    // Очищаем все анимации
+    AnimationManager.clearAll();
     
     document.body.style.opacity = '1';
-    
-    hideAllOverlays();
-    hideAnimations();
-    
-    loadProgress();
+    updateUI();
     displayHeroes();
 }
 
 // DOM loaded
 document.addEventListener("DOMContentLoaded", function() {
-    const blockedPopups = document.querySelectorAll('.game-over-popup, .network-error-popup');
-    blockedPopups.forEach(popup => popup.remove());
+    initTelegram();
     
-    document.body.style.opacity = '1';
+    // ВСЕГДА сбрасываем игру при загрузке (анти-читерство)
+    resetGame();
+    loadAllHeroes();
+    initNetworkMonitoring();
+
+    AnimationManager.setTimeout(() => {
+        showWelcomeDisclaimer();
+    }, 1000);
     
-    try {
-        initTelegram();
-    } catch (e) {
-        console.log('Telegram init failed, running in browser');
-        setupBrowserExit();
-    }
-    
-    loadAllHeroes().then(() => {
-        resetGame();
-    }).catch(() => {
-        resetGame();
-    });
-    
-  
-    
-    try {
-        initNetworkMonitoring();
-        initNavigationControl();
-    } catch (e) {
-        console.log('Navigation control failed');
-    }
-    
+    // Hide unnecessary elements
     const elementsToHide = [
         'header h1',
         'header p',
@@ -1040,9 +1031,6 @@ document.addEventListener("DOMContentLoaded", function() {
         const element = document.querySelector(selector);
         if (element) element.style.display = 'none';
     });
-    
-    document.getElementById('hero1').addEventListener('click', () => vote(1));
-    document.getElementById('hero2').addEventListener('click', () => vote(2));
 });
 
 // Escape handler
@@ -1057,6 +1045,7 @@ document.addEventListener('keydown', function(e) {
         }
     }
     
+    // F5 для перезагрузки с полным сбросом
     if (e.key === 'F5' || (e.ctrlKey && e.key === 'r')) {
         e.preventDefault();
         resetGame();
