@@ -97,33 +97,65 @@ function getLaunchMode() {
 }
 
 // Initialize Telegram Web App
+// Initialize Telegram Web App
 function initTelegram() {
     if (typeof Telegram !== 'undefined' && Telegram.WebApp) {
         tg = Telegram.WebApp;
         
-        // ВСЕГДА расширяем на полный экран
+        // Сначала скрываем верхнюю панель
+        tg.disableVerticalSwipes = true;
+        
+        // Пытаемся скрыть верхнюю панель (работает не всегда)
+        if (tg.setHeaderColor) {
+            tg.setHeaderColor('secondary_bg_color');
+            tg.setBackgroundColor('secondary_bg_color');
+        }
+        
+        // Основное расширение
         tg.expand();
         
-        // Даем время на расширение
-        setTimeout(() => {
-            if (!tg.isExpanded) {
-                tg.expand();
-            }
-        }, 100);
+        // Множественные попытки расширения
+        const expandAttempts = [100, 300, 500, 1000, 2000];
+        expandAttempts.forEach(delay => {
+            setTimeout(() => {
+                if (!tg.isExpanded) {
+                    tg.expand();
+                }
+            }, delay);
+        });
         
-        tg.enableClosingConfirmation();
-        tg.setHeaderColor('#1a1a2e');
-        tg.setBackgroundColor('#1a1a2e');
+        // Скрываем кнопку назад
         tg.BackButton.hide();
         
+        // Включаем подтверждение закрытия
+        tg.enableClosingConfirmation();
+        
+        // Обработчик изменения размера
         tg.onEvent('viewportChanged', (data) => {
+            console.log('Viewport changed:', data);
             if (data && data.isStateStable && !data.isExpanded) {
-                // Автоматически расширяемся обратно
                 setTimeout(() => {
                     tg.expand();
-                }, 50);
+                }, 100);
             }
         });
+        
+        // Дополнительные настройки для полноэкранного режима
+        setTimeout(() => {
+            // Пытаемся применить дополнительные настройки
+            try {
+                if (tg.isExpanded) {
+                    console.log('Successfully expanded to fullscreen');
+                } else {
+                    console.log('Failed to expand to fullscreen');
+                    // Альтернативная попытка
+                    tg.MainButton.hide();
+                }
+            } catch (e) {
+                console.log('Error in fullscreen setup:', e);
+            }
+        }, 1500);
+        
     } else {
         setupBrowserExit();
     }
