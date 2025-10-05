@@ -63,7 +63,6 @@ let tg = null;
 let isVotingInProgress = false;
 let currentVotePairId = null;
 let networkErrorShown = false;
-let isTelegramWebView = false;
 // Game variables
 let playerLives = 5;
 let playerScore = 0;
@@ -80,58 +79,22 @@ const PUBLISHER_LOGOS = {
     'dark_horse': 'https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Owner/dark_horse.webp'
 };
 
-// Проверка совместимости Web Apps
-function checkTelegramCompatibility() {
-    if (typeof Telegram === 'undefined' || !Telegram.WebApp) {
-        console.error('Telegram Web App API not available');
-        return false;
-    }
-    
-    const tg = Telegram.WebApp;
-    
-    // Проверяем основные методы
-    if (!tg.initData || !tg.initDataUnsafe || !tg.platform) {
-        console.error('Incomplete Telegram Web App API');
-        return false;
-    }
-    
-    return true;
-}
-
 // Initialize Telegram Web App
-// Обновленная функция инициализации Telegram
 function initTelegram() {
-    if (!checkTelegramCompatibility()) {
-        console.warn('Telegram Web App not available, running in browser mode');
-        setupBrowserExit();
-        return;
-    }
-    
-    tg = Telegram.WebApp;
-    
-    // Более безопасная инициализация
-    try {
+    if (typeof Telegram !== 'undefined' && Telegram.WebApp) {
+        tg = Telegram.WebApp;
         tg.expand();
         tg.enableClosingConfirmation();
         tg.setHeaderColor('#1a1a2e');
         tg.setBackgroundColor('#1a1a2e');
+        tg.BackButton.hide();
         
-        // Скрываем кнопку "назад" если она есть
-        if (tg.BackButton) {
-            tg.BackButton.hide();
-        }
-        
-        // Обработчик изменения размера окна
         tg.onEvent('viewportChanged', (data) => {
             if (data && data.isStateStable && !data.isExpanded) {
                 tg.close();
             }
         });
-        
-        console.log('Telegram Web App initialized successfully');
-        
-    } catch (error) {
-        console.error('Error initializing Telegram Web App:', error);
+    } else {
         setupBrowserExit();
     }
 }
@@ -162,62 +125,6 @@ function initNetworkMonitoring() {
             checkNetworkWithTimeout();
         }
     }, 30000); // 1 раз в 30 секунд
-}
-
-// Обработка разных сценариев запуска
-function handleStartParameters() {
-    const tg = window.Telegram?.WebApp;
-    if (!tg) return;
-    
-    const startParam = tg.initDataUnsafe.start_param;
-    
-    switch(startParam) {
-        case 'restart':
-            resetGame();
-            break;
-        case 'continue':
-            loadProgress();
-            break;
-        default:
-            // Обычный запуск
-            resetGame();
-    }
-    
-    // Закрываем загрузочный экран если есть
-    const loadingScreen = document.getElementById('loading-screen');
-    if (loadingScreen) {
-        loadingScreen.style.display = 'none';
-    }
-}
-
-// Добавьте в начало app.js
-function handleTelegramLaunch() {
-    const tg = window.Telegram?.WebApp;
-    
-    if (!tg) {
-        console.warn('Telegram Web App not available');
-        return;
-    }
-    
-    // Проверяем параметры запуска
-    const initData = tg.initData;
-    const startParam = tg.initDataUnsafe.start_param;
-    
-    console.log('Launch params:', { initData, startParam });
-    
-    // Если запуск через команду /start или кнопку
-    if (initData || startParam) {
-        // Показываем загрузку
-        document.body.style.opacity = '1';
-        
-        // Инициализируем игру
-        initTelegram();
-        resetGame();
-        loadAllHeroes();
-        
-        // Скрываем ненужные элементы
-        hideUnnecessaryElements();
-    }
 }
 
 // Обработчик появления сети
@@ -1098,53 +1005,23 @@ function resetGame() {
     displayHeroes();
 }
 
-// Временное решение - принудительный запуск при любом сценарии
-function forceGameStart() {
-    console.log('Force starting game...');
-    
-    // Всегда показываем игру независимо от способа запуска
-    document.body.style.opacity = '1';
-    
-    // Инициализируем Telegram если доступен
-    if (window.Telegram?.WebApp) {
-        const tg = Telegram.WebApp;
-        try {
-            tg.expand();
-            tg.enableClosingConfirmation();
-        } catch (e) {
-            console.warn('Telegram API limited, running in fallback mode');
-        }
-    }
-    
-    // Запускаем игру
-    resetGame();
-    loadAllHeroes();
-    hideUnnecessaryElements();
-}
-
 // DOM loaded
 document.addEventListener("DOMContentLoaded", function() {
-    // Основная логика
-    if (window.Telegram?.WebApp) {
-        handleTelegramLaunch();
-    } else {
-        setupBrowserExit();
-        forceGameStart();
-    }
+    initTelegram();
     
-    // На всякий случай - принудительный запуск через 2 секунды
-    AnimationManager.setTimeout(() => {
-        if (document.body.style.opacity === '0') {
-            console.log('Fallback: forcing game start after timeout');
-            forceGameStart();
-        }
-    }, 2000);
-});
+    // ВСЕГДА сбрасываем игру при загрузке (анти-читерство)
+    resetGame();
+    loadAllHeroes();
+    initNetworkMonitoring();
 
-function hideUnnecessaryElements() {
+    AnimationManager.setTimeout(() => {
+        showWelcomeDisclaimer();
+    }, 1000);
+    
+    // Hide unnecessary elements
     const elementsToHide = [
         'header h1',
-        'header p', 
+        'header p',
         '.progress-container',
         '.rating-notice',
         'footer'
@@ -1154,62 +1031,7 @@ function hideUnnecessaryElements() {
         const element = document.querySelector(selector);
         if (element) element.style.display = 'none';
     });
-}
-
-// Добавьте эту функцию для обработки старых клиентов
-function setupLegacyTelegramSupport() {
-    if (!window.Telegram || !window.Telegram.WebApp) {
-        // Пытаемся определить WebView по user agent
-        const userAgent = navigator.userAgent.toLowerCase();
-        if (userAgent.includes('telegram') || userAgent.includes('webview')) {
-            // Создаем минимальную эмуляцию API для старых версий
-            window.Telegram = {
-                WebApp: {
-                    initData: '',
-                    initDataUnsafe: {},
-                    platform: 'unknown',
-                    version: '1.0',
-                    expand: function() { console.log('expand called'); },
-                    enableClosingConfirmation: function() { console.log('closing confirmation enabled'); },
-                    setHeaderColor: function(color) { console.log('header color set to', color); },
-                    setBackgroundColor: function(color) { 
-                        console.log('background color set to', color);
-                        document.body.style.backgroundColor = color;
-                    },
-                    BackButton: {
-                        hide: function() { console.log('back button hidden'); },
-                        show: function() { console.log('back button shown'); }
-                    },
-                    onEvent: function(event, callback) { 
-                        console.log('event listener added for', event);
-                    },
-                    close: function() { 
-                        if (window.history.length > 1) {
-                            window.history.back();
-                        } else {
-                            window.close();
-                        }
-                    },
-                    HapticFeedback: {
-                        impactOccurred: function(style) { 
-                            console.log('haptic feedback:', style);
-                            if (navigator.vibrate) {
-                                navigator.vibrate(50);
-                            }
-                        },
-                        notificationOccurred: function(type) {
-                            console.log('haptic notification:', type);
-                            if (navigator.vibrate) {
-                                navigator.vibrate(100);
-                            }
-                        }
-                    }
-                }
-            };
-            console.log('Legacy Telegram Web App support initialized');
-        }
-    }
-}
+});
 
 // Escape handler
 document.addEventListener('keydown', function(e) {
