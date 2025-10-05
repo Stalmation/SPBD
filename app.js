@@ -96,90 +96,40 @@ function getLaunchMode() {
     return 'browser';
 }
 
-// Умная инициализация с адаптацией под оба режима
+// Initialize Telegram Web App
 function initTelegram() {
     if (typeof Telegram !== 'undefined' && Telegram.WebApp) {
         tg = Telegram.WebApp;
         
-        // Пытаемся расшириться, но не настаиваем
+        // ВСЕГДА расширяем на полный экран
         tg.expand();
         
-        // Определяем текущий режим
-        const isFullscreen = tg.isExpanded;
-        console.log('Current mode:', isFullscreen ? 'Fullscreen' : 'Windowed');
+        // Даем время на расширение
+        setTimeout(() => {
+            if (!tg.isExpanded) {
+                tg.expand();
+            }
+        }, 100);
         
-        // Адаптируем интерфейс под режим
-        adaptLayoutToMode(isFullscreen);
-        
-        // Показываем подсказку для оконного режима
-        if (!isFullscreen) {
-            showFullscreenHint();
-        }
-        
-        // Базовые настройки
         tg.enableClosingConfirmation();
+        tg.setHeaderColor('#1a1a2e');
+        tg.setBackgroundColor('#1a1a2e');
         tg.BackButton.hide();
         
+        tg.onEvent('viewportChanged', (data) => {
+            if (data && data.isStateStable && !data.isExpanded) {
+                // Автоматически расширяемся обратно
+                setTimeout(() => {
+                    tg.expand();
+                }, 50);
+            }
+        });
     } else {
         setupBrowserExit();
     }
 }
 
-// Адаптация layout под режим
-function adaptLayoutToMode(isFullscreen) {
-    const container = document.querySelector('.container');
-    const battleArea = document.querySelector('.battle-area');
-    
-    if (!isFullscreen) {
-        // Оптимизация для оконного режима
-        container.style.padding = '5px';
-        container.style.gap = '5px';
-        
-        // Уменьшаем размеры для компактности
-        battleArea.style.maxHeight = '85vh';
-        battleArea.style.gap = '8px';
-        
-        // Можно добавить специальные стили
-        document.body.classList.add('windowed-mode');
-    } else {
-        // Полноэкранный режим - стандартные настройки
-        document.body.classList.add('fullscreen-mode');
-    }
-}
 
-// Показываем подсказку как перейти в полноэкранный режим
-function showFullscreenHint() {
-    setTimeout(() => {
-        if (!tg.isExpanded) {
-            const hint = document.createElement('div');
-            hint.className = 'fullscreen-hint';
-            hint.innerHTML = `
-                <div class="hint-content">
-                    <p>💡 Для лучшего опыта перейдите в полноэкранный режим</p>
-                    <button onclick="requestFullscreen()">📱 На весь экран</button>
-                </div>
-            `;
-            document.body.appendChild(hint);
-            
-            // Авто-скрытие через 5 секунд
-            setTimeout(() => {
-                if (hint.parentNode) {
-                    hint.remove();
-                }
-            }, 5000);
-        }
-    }, 2000);
-}
-
-// Запрос полноэкранного режима по действию пользователя
-function requestFullscreen() {
-    if (tg) {
-        tg.expand();
-        // Скрываем подсказку после запроса
-        const hint = document.querySelector('.fullscreen-hint');
-        if (hint) hint.remove();
-    }
-}
 
 function setupBrowserExit() {
     document.addEventListener('keydown', function(e) {
