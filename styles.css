@@ -8,84 +8,82 @@
 
 body {
     font-family: 'Arial', 'Helvetica', sans-serif;
-    background: radial-gradient(circle at center, #ff8f00 0%, #ff5f00 100%);
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
     color: white;
     min-height: 100vh;
-    padding: 0;
+    padding: 15px;
     overflow: hidden;
-    transition: opacity 0.5s ease;
-    position: relative;
-}
-
-.comic-dots-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-image: radial-gradient(circle, rgba(255, 64, 0, 0.632) 55%, transparent 16%);
-    background-size: 5px 5px;
-    background-repeat: repeat;
-    pointer-events: none;
-    z-index: -1;
-    mask: radial-gradient(circle at center, transparent 40%, black 70%);
-    -webkit-mask: radial-gradient(circle at center, transparent 40%, black 100%);
 }
 
 .container {
-    width: 100%;
+    max-width: 100%;
     height: 100vh;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: space-between;
-    gap: 0;
-    padding: 10px;
-    position: relative;
-    overflow: hidden;
-    z-index: 1;
+    gap: 8px;
 }
 
-.player-stats {
-    position: relative;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+header {
+    text-align: center;
+    padding-top: 5px;
     width: 100%;
-    max-width: 760px;
-    margin: 30px auto 0;
-    height: 70px;
-    background: transparent !important;
-    font-family: 'Comic Sans MS', sans-serif;
 }
 
-.lives-stats {
-    display: flex;
-    align-items: center;
-    justify-content: flex-start;
-}
-
-.score-stats {
-    position: absolute;
-    left: 50%;
-    top: 50%;
-    transform: translate(-50%, -50%);
-    font-size: 78px;
-    line-height: 1;
-    font-weight: normal;
-}
-
-.right-stats {
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-}
-
-#player-lives {
+header h1 {
+    font-size: 22px;
+    margin-bottom: 3px;
     color: #ffd700;
-    font-size: 20px;
-    text-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
-    letter-spacing: 2px;
+    text-shadow: 0 0 8px rgba(255, 215, 0, 0.3);
+    font-weight: bold;
+}
+
+header p {
+    font-size: 14px;
+    opacity: 0.8;
+    margin-bottom: 8px;
+}
+
+.rating-notice {
+    text-align: center;
+    margin: -8px 0 8px 0;
+}
+
+.rating-notice p {
+    font-size: 14px;
+    color: #4cc9f0;
+    font-weight: bold;
+    text-shadow: 0 0 8px rgba(76, 201, 240, 0.3);
+}
+
+.progress-container {
+    width: 90%;
+    max-width: 250px;
+    margin: 0 auto;
+}
+
+.progress-bar {
+    width: 100%;
+    height: 6px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    overflow: hidden;
+    margin-bottom: 4px;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #4cc9f0, #ffd700);
+    border-radius: 8px;
+    transition: width 0.3s ease;
+    width: 0%;
+}
+
+.progress-text {
+    font-size: 11px;
+    opacity: 0.7;
+    text-align: center;
 }
 
 .battle-area {
@@ -96,103 +94,59 @@ body {
     align-items: center;
     flex-grow: 1;
     justify-content: center;
-    padding: 0;
-    position: relative;
-    z-index: 2;
-}
-
-.hero-complete-container {
-    position: relative;
-    width: calc(100% - 20px);
-    max-width: 760px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
+    padding: 5px 0;
 }
 
 .hero-card {
     position: relative;
-    width: 100%;
-    height: auto;
-    aspect-ratio: 16/9;
-    background: #000;
-    border: 4px solid #000;
-    border-radius: 4px;
-    overflow: visible;
+    width: 90%;
+    max-width: 280px;
+    height: 180px;
+    background: linear-gradient(145deg, #2a2a4a, #1c1c34);
+    border: 2px solid #4cc9f0;
+    border-radius: 15px;
+    overflow: hidden;
     cursor: pointer;
     transition: all 0.3s ease;
-    box-shadow: -2px 2px 10px rgba(0, 0, 0, 0.5);
-    box-sizing: border-box;
-    position: relative;
-    z-index: 3;
+    box-shadow: 0 6px 20px rgba(76, 201, 240, 0.15);
 }
 
 .hero-card:active {
-    transform: scale(1);
+    transform: scale(0.95);
+    box-shadow: 0 3px 12px rgba(76, 201, 240, 0.3);
 }
 
 .hero-image {
     width: 100%;
     height: 100%;
     object-fit: cover;
+    transition: transform 0.3s ease;
 }
 
-.hero-name-container {
-    position: relative;
-    margin-top: -40px;
-    width: 65%;
-    height: auto;
-    aspect-ratio: 95 / 15;
-    background: linear-gradient(to bottom, #fafafa 0%, #7c92a4 100%);
-    border: 3px solid #000;
-    box-shadow: -2px 2px 10px rgba(0, 0, 0, 0.5);
-    border-radius: 3px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 15;
-    padding: 0.0vw;
-    min-width: 150px;
-    max-width: 950px;
-}
-
-.hero-name-text {
-    font-family: 'Comic Sans MS', sans-serif;
-    color: #000000;
-    font-weight: 400;
-    text-align: center;
-    width: 100%;
-    height: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    line-height: 1.1;
-    margin-top: -10px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    font-size: min(4vw, 28px);
-    padding: 2px 5px;
-    box-sizing: border-box;
-}
-
-.hero-name-text.long-name {
-    font-size: clamp(10px, 2vw, 20px);
-}
-
-.hero-name-text.very-long-name {
-    font-size: clamp(8px, 1.5vw, 16px);
-    white-space: normal;
-    line-height: 1.1;
-}
-
-/* НОВЫЕ СТИЛИ ДЛЯ УНИФИЦИРОВАННОГО РЕЗУЛЬТАТА */
-/* Оверлеи теперь позиционируются относительно hero-complete-container */
-.hero-result-overlay {
+.hero-info {
     position: absolute;
-    top: 40% !important;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(transparent, rgba(0, 0, 0, 0.9));
+    padding: 10px 8px 8px;
+    text-align: center;
+}
+
+.hero-name {
+    font-size: 18px;
+    font-weight: bold;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+}
+
+/* Стили для WIN/LOSE оверлеев */
+.hero-win-overlay,
+.hero-lose-overlay {
+    position: absolute;
+    top: 45%;
     left: 50%;
     transform: translate(-50%, -50%) scale(0);
+    text-transform: uppercase;
     z-index: 20;
     opacity: 0;
     transition: all 0.3s ease;
@@ -201,182 +155,130 @@ body {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    pointer-events: none;
 }
 
-.hero-result-overlay.show {
-    opacity: 1;
-    transform: translate(-50%, -50%) scale(1);
+.win-lose-text {
+    font-size: 52px;
+    font-weight: bold;
+    text-shadow: 3px 3px 0 #000, 
+                -1px -1px 0 #000, 
+                1px -1px 0 #000, 
+                -1px 1px 0 #000, 
+                1px 1px 0 #000;
+    margin-bottom: 2px;
 }
 
-.result-sprite {
-    width: 200px;
-    height: 100px;
-    background-size: contain;
-    background-repeat: no-repeat;
-    background-position: center;
-    margin-bottom: 10px;
-}
-
-.result-rating-percent {
-    font-size: 32px;
+.rating-percent {
+    font-size: 36px;
     font-weight: bold;
     text-shadow: 2px 2px 0 #000, 
                 -1px -1px 0 #000, 
                 1px -1px 0 #000, 
                 -1px 1px 0 #000, 
                 1px 1px 0 #000;
-    color: #ffd700;
 }
 
-.hero-result-overlay.win .result-rating-percent {
+.hero-win-overlay {
+    color: #fff;
+}
+
+.hero-win-overlay .win-lose-text {
     color: #4cc9f0;
 }
 
-.hero-result-overlay.lose .result-rating-percent {
+.hero-win-overlay .rating-percent {
+    color: #ffd700;
+}
+
+.hero-lose-overlay {
+    color: #fff;
+}
+
+.hero-lose-overlay .win-lose-text {
     color: #ff6b6b;
 }
 
-/* Smoke effects */
-.smoke-effect {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%) scale(0.75);
-    width: 256px;
-    height: 256px;
-    background-size: 1280px 1280px;
-    background-repeat: no-repeat;
-    image-rendering: pixelated;
-    opacity: 0;
-    z-index: 35;
-    pointer-events: none;
-    transition: opacity 0.3s ease;
+.hero-lose-overlay .rating-percent {
+    color: #ffd700;
 }
 
-.smoke-effect.show {
+.hero-win-overlay.show,
+.hero-lose-overlay.show {
     opacity: 1;
-    transform: translate(-50%, -50%) scale(0.65);
+    transform: translate(-50%, -50%) scale(1);
 }
 
-.vs-container {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin: 5px 0;
-    z-index: 5;
-    width: 100%;
-    max-width: 760px;
-}
-
-.vs-image {
-    width: 15%;
-    max-width: 230px;
-    height: auto;
-    object-fit: contain;
-}
-
-.hero-publisher {
-    position: absolute;
-    top: 20px;
-    left: 25px;
-    z-index: 10;
+.vs {
+    font-size: 24px;
+    font-weight: bold;
+    color: #ffd700;
+    text-shadow: 0 0 12px rgba(255, 215, 0, 0.5);
+    padding: 8px 18px;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 40px;
 }
 
 .publisher-logo {
-    width: 60%;
-    height: 60%;
-    object-fit: contain;
-}
-
-.alignment-image {
-    width: clamp(40px, 12vw, 75%);
+    width: 15%;
     height: auto;
+    max-width: 50px;
+    max-height: 50px;
     object-fit: contain;
-    display: block;
-}
-
-.hero-alignment {
     position: absolute;
-    top: 4%;
-    right: 0%;
-    background: transparent;
-    padding: 0;
+    top: 10px;
+    right: 10px;
     z-index: 10;
-    border-radius: 3px;
-    max-width: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    text-shadow: none;
+    filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.8));
 }
 
-/* Адаптация для мобильных */
-@media (max-width: 768px) {
-    .vs-container {
-        margin: 0px 0;
-    }
-    
-    .vs-image {
-        width: 30%;
-        max-width: 150px;
-    }
-    
-    .alignment-image {
-        width: clamp(30px, 10vw, 60px);
-    }
+footer {
+    text-align: center;
+    padding: 8px 10px 5px 10px;
+    opacity: 0.7;
+    font-size: 12px;
+    margin-top: -5px;
 }
 
-@media (max-width: 480px) {
-    .vs-image {
-        width: 35%;
-        max-width: 120px;
-    }
-    
-    .alignment-image {
-        width: clamp(25px, 8vw, 50px);
-    }
-}
-
+/* Адаптация для очень маленьких экранов */
 @media (max-height: 600px) {
     .hero-card {
-        width: 100%;
-        aspect-ratio: 760/427;
+        height: 150px;
+        max-width: 250px;
     }
     
-    .hero-complete-container {
-        width: calc(100% - 15px);
-    }
-    
-    .player-stats {
+    .hero-name {
         font-size: 16px;
     }
     
-    #player-lives {
-        font-size: 18px;
+    .win-lose-text {
+        font-size: 42px;
     }
     
-    .vs-container {
-        margin: 0px 0;
+    .rating-percent {
+        font-size: 28px;
     }
     
-    .vs-image {
-        width: 25%;
-        max-width: 100px;
+    .publisher-logo {
+        width: 12%;
+        top: 8px;
+        right: 8px;
     }
     
-    .hero-name-container {
-        margin-top: -12px;
-        width: 70%;
+    .vs {
+        font-size: 20px;
+        padding: 6px 15px;
     }
     
-    .result-sprite {
-        width: 150px;
-        height: 75px;
+    header h1 {
+        font-size: 20px;
     }
     
-    .result-rating-percent {
-        font-size: 24px;
+    .rating-notice {
+        margin: -5px 0 5px 0;
+    }
+    
+    .rating-notice p {
+        font-size: 13px;
     }
 }
 
@@ -390,11 +292,11 @@ body {
     animation: fadeIn 0.4s ease-out;
 }
 
-.hero-complete-container:nth-child(1) {
+.hero-card:nth-child(1) {
     animation-delay: 0.1s;
 }
 
-.hero-complete-container:nth-child(3) {
+.hero-card:nth-child(2) {
     animation-delay: 0.2s;
 }
 
@@ -404,7 +306,7 @@ body {
     100% { transform: translate(-50%, -50%) scale(1); }
 }
 
-.hero-result-overlay.win.show {
+.hero-win-overlay.show {
     animation: pulse 0.5s ease-in-out;
 }
 
@@ -414,360 +316,6 @@ body {
     75% { transform: translate(-50%, -50%) scale(1) rotate(5deg); }
 }
 
-.hero-result-overlay.lose.show {
+.hero-lose-overlay.show {
     animation: shake 0.3s ease-in-out;
-}
-
-.game-over-popup {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.9);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 1000;
-}
-
-.popup-content {
-    background: linear-gradient(145deg, #2a2a4a, #1c1c34);
-    padding: 25px;
-    border-radius: 15px;
-    border: 2px solid #ffd700;
-    text-align: center;
-    box-shadow: 0 0 20px rgba(255, 215, 0, 0.4);
-    max-width: 90%;
-}
-
-.popup-content h2 {
-    color: #ff6b6b;
-    margin-bottom: 15px;
-    font-size: 24px;
-}
-
-.popup-content p {
-    margin: 8px 0;
-    font-size: 16px;
-}
-
-#restart-button, #complete-restart-button {
-    background: linear-gradient(145deg, #4cc9f0, #3aa8d9);
-    color: white;
-    border: none;
-    padding: 12px 25px;
-    border-radius: 40px;
-    font-size: 16px;
-    font-weight: bold;
-    margin-top: 15px;
-    cursor: pointer;
-    transition: transform 0.2s;
-}
-
-#restart-button:active, #complete-restart-button:active {
-    transform: scale(0.95);
-}
-
-.hero-name-container .hero-name-text {
-    font-size: clamp(20px, 4vw, 56px) !important;
-    font-weight: normal;
-    font-weight: 400 !important;
-    color: #000000 !important;
-}
-
-.lives-stats {
-    display: flex;
-    align-items: center;
-    justify-content: flex-start;
-    width: 100%;
-}
-
-#global-lives {
-    display: flex;
-    align-items: center;
-    justify-content: flex-start;
-    gap: 0px;
-}
-
-.life-star {
-    width: 52px;
-    height: 52px;
-    background-image: url('https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Images/LifeStar.webp');
-    background-size: contain;
-    background-repeat: no-repeat;
-    background-position: center;
-}
-
-@media (max-width: 768px) {
-    .player-stats {
-        max-width: calc(100% - 20px);
-        padding: 0 5px !important;
-        transform: none;
-        top: auto;
-    }
-    
-    .lives-stats {
-        gap: 0px;
-        padding: 6px 0;
-        font-size: 14px;
-    }
-    
-    .life-star {
-        width: 22px;
-        height: 22px;
-    }
-    
-    .hero-name-container {
-        margin-top: -10px;
-        width: 70%;
-    }
-}
-
-/* ДОБАВИТЬ В КОНЕЦ CSS */
-.hero-result-overlay {
-    position: absolute;
-    top: 40% !important; /* Сдвигаем немного выше */
-    left: 50%;
-    transform: translate(-50%, -50%) scale(0);
-    z-index: 20;
-    opacity: 0;
-    transition: all 0.3s ease;
-    text-align: center;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    pointer-events: none;
-}
-
-.hero-result-overlay.show {
-    opacity: 1;
-    transform: translate(-50%, -50%) scale(1);
-}
-
-/* Увеличиваем Win/Lose на 50% */
-.result-sprite {
-    width: 300px; /* Было 200px - увеличение на 50% */
-    height: 150px; /* Было 100px - увеличение на 50% */
-    background-size: contain;
-    background-repeat: no-repeat;
-    background-position: center;
-    margin-bottom: 5px;
-}
-
-/* Адаптация для мобильных */
-@media (max-height: 600px) {
-    .result-sprite {
-        width: 225px; /* Было 150px - увеличение на 50% */
-        height: 112px; /* Было 75px - увеличение на 50% */
-        margin-bottom: 2px;
-    }
-}
-
-/* Добавляем стили для значка процента */
-.star-rating-percent .digit.percent {
-    width: 30px; /* Размер для знака % */
-    height: 45px; /* Высота как у цифр */
-    align-self: center;
-    margin-bottom: 0;
-}
-
-/* Адаптация для мобильных */
-@media (max-height: 600px) {
-    .star-rating-percent .digit.percent {
-        width: 20px;
-        height: 30px;
-    }
-}
-
-@media (max-width: 480px) {
-    .star-rating-percent .digit.percent {
-        width: 18px;
-        height: 27px;
-    }
-}
-
-/* Стили для контейнера звезды с рейтингом */
-.star-rating-container {
-    position: absolute;
-    top: 67%;
-    left: 50%;
-    transform: translate(-50%, -50%) scale(0);
-    z-index: 55;
-    opacity: 0;
-    transition: all 0.3s ease;
-    text-align: center;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    pointer-events: none;
-    width: 300px;
-    height: 300px;
-}
-
-.star-rating-container.show {
-    opacity: 1;
-    transform: translate(-50%, -50%) scale(1);
-}
-
-.rating-star {
-    width: 300px; /* В 2 раза больше */
-    height: 300px; /* В 2 раза больше */
-    object-fit: contain;
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    z-index: 15;
-    transform: translate(-50%, -50%);
-    
-}
-
-.star-rating-percent {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    font-size: 0; /* Скрываем текстовые проценты */
-    width: 100%;
-    height: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 15;
-    gap: -4; /* Убираем пробелы между цифрами */
-}
-
-/* Стили для цифр-картинок */
-.star-rating-percent .digit {
-    width: 50px; /* Увеличиваем пропорционально */
-    height: 65px; /* Увеличиваем пропорционально */
-    background-size: contain;
-    background-repeat: no-repeat;
-    background-position: center;
-    display: inline-block;
-    vertical-align: middle;
-    z-index: 35;
-    padding-left: -115px;
-}
-
-/* Специальные стили для запятой - меньше и выровнена по низу */
-.star-rating-percent .digit.comma {
-    width: 10%;
-    height: 10%;
-    align-self: flex-end; /* Выравниваем по низу */
-    margin-bottom: 110px; /* Опускаем ниже */
-    gap: 30px;
-}
-
-/* Анимация вылета звезды БЕЗ поворота */
-@keyframes starPop {
-    0% { 
-        transform: translate(-50%, -50%) scale(0);
-        opacity: 0;
-    }
-    70% { 
-        transform: translate(-50%, -50%) scale(1.1);
-        opacity: 1;
-    }
-    100% { 
-        transform: translate(-50%, -50%) scale(1);
-        opacity: 1;
-    }
-}
-
-.star-rating-container.show {
-    animation: starPop 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
-}
-
-/* Убираем старые проценты в Win/Lose оверлеях */
-.hero-result-overlay .result-rating-percent {
-    display: show !important;
-}
-
-/* Адаптация для мобильных */
-@media (max-height: 600px) {
-    .star-rating-container {
-        top: 65%;
-        width: 200px;
-        height: 200px;
-    }
-    
-    .rating-star {
-        width: 180px;
-        height: 180px;
-    }
-    
-    .star-rating-percent .digit {
-        width: 28px;
-        height: 42px;
-    }
-    
-    .star-rating-percent .digit.comma {
-        width: 10px;
-        height: 16px;
-        margin-bottom: 6px;
-    }
-}
-
-@media (max-width: 480px) {
-    .star-rating-container {
-        width: 180px;
-        height: 180px;
-    }
-    
-    .rating-star {
-        width: 160px;
-        height: 160px;
-    }
-    
-    .star-rating-percent .digit {
-        width: 24px;
-        height: 36px;
-    }
-    
-    .star-rating-percent .digit.comma {
-        width: 8px;
-        height: 14px;
-        margin-bottom: 5px;
-    }
-}
-
-.result-rating-percent {
-    font-size: 280px; /* Немного уменьшаем размер */
-    font-weight: bold;
-    text-shadow: 2px 2px 0 #000, 
-                -1px -1px 0 #000, 
-                1px -1px 0 #000, 
-                -1px 1px 0 #000, 
-                1px 1px 0 #000;
-    color: #ffd700;
-    margin-top: -5px; /* Поднимаем ближе к картинке */
-}
-
-.hero-result-overlay.win .result-rating-percent {
-    color: #4cc9f0;
-}
-
-.hero-result-overlay.lose .result-rating-percent {
-    color: #ff6b6b;
-}
-
-/* Адаптация для мобильных */
-@media (max-height: 600px) {
-    .hero-result-overlay {
-        top: 35% !important; /* Еще выше на маленьких экранах */
-    }
-    
-    .result-sprite {
-        width: 150px;
-        height: 75px;
-        margin-bottom: 2px;
-    }
-    
-    .result-rating-percent {
-        font-size: 22px;
-        margin-top: -3px;
-    }
 }

@@ -1,188 +1,173 @@
 // app.js
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
 
+// Публичные данные для подключения (безопасно для браузера)
 const SUPABASE_URL = "https://xwtcasfvetisjaiijtsj.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh3dGNhc2Z2ZXRpc2phaWlqdHNqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgyMTA5OTMsImV4cCI6MjA3Mzc4Njk5M30.b8ScpPxBx6K0HmWynqppBLSxxuENNmOJR7Kcl6hIo2s";
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// Global variables
+// Глобальные переменные
 let allHeroes = [];
 let currentHeroes = [];
 let nextHeroes = [];
 let votedHeroes = new Set();
 let tg = null;
-let isVotingInProgress = false;
-let currentVotePairId = null;
 
-// Game variables
-let playerLives = 5;
-let playerScore = 0;
-let maxScore = 0;
-let gameActive = true;
-
-// Publisher logo mapping
-const PUBLISHER_LOGOS = {
-    'dc': 'https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Owner/dc.webp',
-    'marvel': 'https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Owner/marvel.webp',
-    'valiant': 'https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Owner/valiant.webp',
-    'rebellion': 'https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Owner/rebellion.webp',
-    'dark horse': 'https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Owner/dark_horse.webp',
-    'dark_horse': 'https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Owner/dark_horse.webp'
-};
-
-// Initialize Telegram Web App
+// Инициализация Telegram Web App
 function initTelegram() {
     if (typeof Telegram !== 'undefined' && Telegram.WebApp) {
         tg = Telegram.WebApp;
-        tg.expand();
-        tg.enableClosingConfirmation();
-        tg.setHeaderColor('#1a1a2e');
+        
+        // Меняем цвет фона Telegram
         tg.setBackgroundColor('#1a1a2e');
+        
+        // Скрываем кнопку назад если нужно
         tg.BackButton.hide();
         
-        tg.onEvent('viewportChanged', (data) => {
-            if (data && data.isStateStable && !data.isExpanded) {
-                tg.close();
-            }
-        });
+        console.log("Telegram Web App инициализирован");
     } else {
-        console.log("Running in browser (not Telegram)");
-        setupBrowserExit();
+        console.log("Запуск в браузере (не в Telegram)");
     }
 }
 
-function setupBrowserExit() {
-    document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape') {
-            if (confirm('Exit the game?')) {
-                window.history.back();
-            }
-        }
-    });
-}
-
-// Load progress
+// Загрузка прогресса
 function loadProgress() {
     try {
         const savedProgress = localStorage.getItem('heroVoteProgress');
-        const savedStats = localStorage.getItem('heroGameStats');
-        
         if (savedProgress) {
             const parsedProgress = JSON.parse(savedProgress);
-            if (Array.isArray(parsedProgress)) {
+            
+            // Multiple validation checks
+            if (Array.isArray(parsedProgress) && 
+                parsedProgress.every(item => typeof item === 'number' || typeof item === 'string')) {
                 votedHeroes = new Set(parsedProgress);
+            } else {
+                console.warn("Invalid progress data format, resetting...");
+                votedHeroes = new Set();
+                localStorage.removeItem('heroVoteProgress');
             }
+        } else {
+            votedHeroes = new Set();
         }
-        
-        if (savedStats) {
-            const stats = JSON.parse(savedStats);
-            playerLives = stats.lives || 5;
-            playerScore = stats.score || 0;
-            maxScore = stats.maxScore || 0;
-        }
-        
-        updateUI();
+        updateProgressBar();
     } catch (error) {
         console.error("Error loading progress:", error);
         votedHeroes = new Set();
-        playerLives = 5;
-        playerScore = 0;
+        localStorage.removeItem('heroVoteProgress');
+        updateProgressBar();
     }
 }
 
-// Save progress
+// Сохранение прогресса
 function saveProgress() {
     try {
         localStorage.setItem('heroVoteProgress', JSON.stringify(Array.from(votedHeroes)));
-        localStorage.setItem('heroGameStats', JSON.stringify({
-            lives: playerLives,
-            score: playerScore,
-            maxScore: Math.max(maxScore, playerScore)
-        }));
-        updateUI();
+        updateProgressBar();
     } catch (error) {
         console.error("Error saving progress:", error);
     }
 }
 
-// Update UI
-function updateUI() {
-    const scoreElement = document.getElementById('player-score');
-    const maxScoreElement = document.getElementById('max-score');
+// Обновление прогрессбара
+function updateProgressBar() {
+    const progressFill = document.getElementById('progress-fill');
+    const progressText = document.getElementById('progress-text');
     
-    if (scoreElement) scoreElement.textContent = playerScore;
-    if (maxScoreElement) maxScoreElement.textContent = maxScore;
-    
-    updateLivesDisplay();
+    const progress = (votedHeroes.size / allHeroes.length) * 100;
+    progressFill.style.width = `${progress}%`;
+    progressText.textContent = `${votedHeroes.size}/${allHeroes.length}`;
 }
 
-function updateLivesDisplay() {
-    const globalLives = document.getElementById('global-lives');
-    
-    if (globalLives) {
-        globalLives.innerHTML = '';
-        
-        for (let i = 0; i < playerLives; i++) {
-            const star = document.createElement('div');
-            star.className = 'life-star';
-            globalLives.appendChild(star);
-        }
-    }
-}
-
-// Get publisher logo URL
-function getPublisherLogoUrl(publisherName) {
-    if (!publisherName) return null;
-    
-    const lowerName = publisherName.toLowerCase().trim();
-    return PUBLISHER_LOGOS[lowerName] || null;
-}
-
-// Load all heroes
+// Загрузка всех героев из базы данных
 async function loadAllHeroes() {
+    console.log("Подключаемся к Supabase...");
+
     try {
         let { data, error } = await supabase
             .from("Heroes_Table")
-            .select("id, name, image_url, wins, loses, viewers, rating, good_bad, publisher")
-            .order('rating', { ascending: false });
+            .select("id, name, image_url, wins, viewers, publisher, owner")
+            .order('id');
 
-        if (error) throw error;
-        if (!data || data.length === 0) return;
+        if (error) {
+            console.error("Ошибка запроса:", error.message);
+            return;
+        }
 
-        allHeroes = data.map(hero => ({
-            ...hero,
-            logo_url: getPublisherLogoUrl(hero.publisher)
-        }));
+        if (!data || data.length === 0) {
+            console.error("База данных пустая или нет записей!");
+            return;
+        }
+
+        console.log("Загружено героев:", data.length);
+        allHeroes = data;
         
+        // Загружаем прогресс из localStorage
         loadProgress();
+        
+        // Начинаем игру
         startGame();
         
     } catch (error) {
-        console.error("Error loading heroes:", error);
+        console.error("Ошибка при загрузке героев:", error);
     }
 }
 
-// Start game
-function startGame() {
-    gameActive = true;
-    displayHeroes();
-    updateUI();
+// Предзагрузка изображений для следующей пары
+function preloadNextPair() {
+    const nextPair = getRandomHeroes();
+    if (!nextPair) return;
+    
+    nextHeroes = nextPair;
+    
+    // Предзагружаем изображения для следующей пары
+    nextPair.forEach(hero => {
+        if (hero.image_url) {
+            const img = new Image();
+            img.src = hero.image_url;
+        }
+        if (hero.owner) {
+            const logoImg = new Image();
+            logoImg.src = hero.owner;
+        }
+    });
 }
 
-// Get random heroes
+// Расчет рейтинга в процентах
+function calculateRating(hero) {
+    if (!hero.viewers || hero.viewers === 0) return 50;
+    return (hero.wins / hero.viewers) * 100;
+}
+
+// Форматирование рейтинга
+function formatRating(percent) {
+    return percent.toFixed(1) + '%';
+}
+
+// Выбор случайных героев
 function getRandomHeroes() {
     if (allHeroes.length < 2) return null;
     
+    // Фильтруем героев, которых еще не голосовали
     const availableHeroes = allHeroes.filter(hero => !votedHeroes.has(hero.id));
     
     if (availableHeroes.length < 2) {
-        showCompletionScreen();
-        return null;
+        // Если осталось меньше 2 героев, начинаем заново
+        votedHeroes.clear();
+        saveProgress();
+        
+        // Вибрация в Telegram при завершении
+        if (tg) {
+            tg.HapticFeedback.notificationOccurred('success');
+        }
+        
+        return getRandomHeroes();
     }
     
+    // Выбираем двух случайных героев
     const randomIndex1 = Math.floor(Math.random() * availableHeroes.length);
     let randomIndex2;
+    
     do {
         randomIndex2 = Math.floor(Math.random() * availableHeroes.length);
     } while (randomIndex1 === randomIndex2);
@@ -190,157 +175,20 @@ function getRandomHeroes() {
     return [availableHeroes[randomIndex1], availableHeroes[randomIndex2]];
 }
 
-// Completion screen
-function showCompletionScreen() {
-    gameActive = false;
-    maxScore = Math.max(maxScore, playerScore);
-    saveProgress();
-    
-    document.body.style.opacity = '0.7';
-    
-    setTimeout(() => {
-        const popup = document.createElement('div');
-        popup.className = 'game-over-popup';
-        popup.innerHTML = `
-            <div class="popup-content">
-                <h2>🎉 CONGRATULATIONS!</h2>
-                <p>You've rated all ${allHeroes.length} heroes!</p>
-                <p>Your final score: <span class="score">${playerScore}</span></p>
-                <p>Best score: <span class="best">${maxScore}</span></p>
-                <button id="complete-restart-button">🔄 Play Again</button>
-            </div>
-        `;
-        
-        document.body.appendChild(popup);
-        
-        document.getElementById('complete-restart-button').addEventListener('click', function() {
-            popup.remove();
-            resetGameProgress();
-            resetGame();
-        });
-    }, 1000);
-}
-
-// Preload next pair
-function preloadNextPair() {
-    const nextPair = getRandomHeroes();
-    if (!nextPair) return;
-    nextHeroes = nextPair;
-    nextPair.forEach(hero => {
-        if (hero.image_url) new Image().src = hero.image_url;
-        if (hero.logo_url) new Image().src = hero.logo_url;
-    });
-}
-
-// Hide all overlays - ТЕПЕРЬ СКРЫВАЕТ ТОЛЬКО ПРИ СМЕНЕ ПАРЫ
+// Скрыть все оверлеи WIN/LOSE
 function hideAllOverlays() {
-    const overlays = document.querySelectorAll('.hero-result-overlay');
-    const starContainers = document.querySelectorAll('.star-rating-container');
-    
+    const overlays = document.querySelectorAll('.hero-win-overlay, .hero-lose-overlay');
     overlays.forEach(overlay => {
-        overlay.classList.remove('show', 'win', 'lose');
-        const percentElement = overlay.querySelector('.result-rating-percent');
-        if (percentElement) percentElement.textContent = '';
-        const sprite = overlay.querySelector('.result-sprite');
-        if (sprite) sprite.style.backgroundImage = '';
+        overlay.classList.remove('show');
     });
-    
-    starContainers.forEach(container => {
-        container.classList.remove('show');
-        const percentElement = container.querySelector('.star-rating-percent');
-        if (percentElement) {
-            percentElement.textContent = '';
-            percentElement.innerHTML = '';
-        }
-    });
-    
-    const smokeEffects = document.querySelectorAll('.smoke-effect');
-    smokeEffects.forEach(smoke => smoke.classList.remove('show'));
 }
 
-// Обновляем функцию showVoteResult - УБИРАЕМ старые проценты
-function showVoteResult(heroNumber, userWon, selectedRating, otherRating) {
-    const selectedHero = heroNumber;
-    const otherHero = heroNumber === 1 ? 2 : 1;
-    
-    const selectedResult = document.getElementById(`hero${selectedHero}-result`);
-    const otherResult = document.getElementById(`hero${otherHero}-result`);
-    
-    if (userWon) {
-        showResultImage(selectedResult, 'win'); // Убираем проценты
-        showResultImage(otherResult, 'lose');   // Убираем проценты
-        
-        // Показываем звезды с новыми процентами
-        showStarRating(selectedHero, selectedRating, true);
-        showStarRating(otherHero, otherRating, false);
-    } else {
-        showResultImage(selectedResult, 'lose'); // Убираем проценты
-        showResultImage(otherResult, 'win');     // Убираем проценты
-        
-        // Показываем звезды с новыми процентами
-        showStarRating(selectedHero, selectedRating, false);
-        showStarRating(otherHero, otherRating, true);
-    }
-}
-
-
-// Function to show result image with percentage - БЕЗ АВТОМАТИЧЕСКОГО СКРЫТИЯ
-function showResultImage(element, type) {
-    if (!element) return;
-    
-    const sprite = element.querySelector('.result-sprite');
-    const percentElement = element.querySelector('.result-rating-percent');
-    
-    if (!sprite) return;
-    
-    // Set the image
-    if (type === 'win') {
-        sprite.style.backgroundImage = "url('https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Images/Win.webp')";
-    } else {
-        sprite.style.backgroundImage = "url('https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Images/Lose.webp')";
-    }
-    
-    // Очищаем старые проценты
-    if (percentElement) {
-        percentElement.textContent = '';
-    }
-    
-    // Show the overlay with animation
-    element.className = `hero-result-overlay show ${type}`;
-}
-
-// Get hero alignment
-function getHeroAlignment(goodBad) {
-    switch(goodBad) {
-        case 1: return { 
-            imageUrl: 'https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Images/hero.webp',
-            alt: 'HERO'
-        };
-        case 2: return { 
-            imageUrl: 'https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Images/evil.webp',
-            alt: 'EVIL'
-        };
-        case 3: return { 
-            imageUrl: 'https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Images/anti_hero.webp',
-            alt: 'ANTI HERO'
-        };
-        default: return { 
-            imageUrl: null,
-            alt: 'UNKNOWN'
-        };
-    }
-}
-
-// Display heroes - ТЕПЕРЬ СКРЫВАЕТ ПРЕДЫДУЩИЕ ОВЕРЛЕИ ПЕРЕД ПОКАЗОМ НОВЫХ
+// Отображение героев
 function displayHeroes() {
-    if (!gameActive) return;
-    
-    isVotingInProgress = false;
-    currentVotePairId = null;
-    
-    // Скрываем оверлеи предыдущей пары ПЕРЕД показом новых героев
+    // Скрываем все оверлеи
     hideAllOverlays();
     
+    // Используем предзагруженную пару если есть, иначе создаем новую
     if (nextHeroes.length === 2) {
         currentHeroes = nextHeroes;
         nextHeroes = [];
@@ -348,359 +196,137 @@ function displayHeroes() {
         currentHeroes = getRandomHeroes();
     }
     
-    if (!currentHeroes) return;
-    
+    // Предзагружаем следующую пару
     preloadNextPair();
     
-    currentHeroes.forEach((hero, index) => {
-        const heroNum = index + 1;
-        const imgElement = document.getElementById(`hero${heroNum}-img`);
-        const nameElement = document.getElementById(`hero${heroNum}-name`);
-        const publisherElement = document.getElementById(`hero${heroNum}-publisher`);
-        const alignmentElement = document.getElementById(`hero${heroNum}-alignment`);
-        
-        // Set hero image
-        imgElement.src = hero.image_url;
-        
-        // Set hero name with auto-sizing
-        nameElement.textContent = hero.name;
-        if (hero.name.length > 12) {
-            nameElement.style.fontSize = '6px';
-        } else if (hero.name.length > 8) {
-            nameElement.style.fontSize = '7px';
-        } else {
-            nameElement.style.fontSize = '8px';
-        }
-        
-        // Set alignment
-        const alignment = getHeroAlignment(hero.good_bad);
-        alignmentElement.innerHTML = '';
-        if (alignment.imageUrl) {
-            const alignmentImg = document.createElement('img');
-            alignmentImg.src = alignment.imageUrl;
-            alignmentImg.alt = alignment.alt;
-            alignmentImg.className = 'alignment-image';
-            alignmentImg.loading = 'lazy';
-            alignmentElement.appendChild(alignmentImg);
-        } else {
-            alignmentElement.textContent = alignment.alt;
-        }
-        
-        // Set publisher logo
-        publisherElement.innerHTML = '';
-        if (hero.logo_url) {
-            const logoImg = document.createElement('img');
-            logoImg.src = hero.logo_url;
-            logoImg.alt = hero.publisher || 'Publisher';
-            logoImg.className = 'publisher-logo';
-            logoImg.loading = 'lazy';
-            publisherElement.appendChild(logoImg);
-        }
-    });
-}
-
-// Vote function - УВЕЛИЧИВАЕМ ЗАДЕРЖКУ ДО СМЕНЫ ПАРЫ
-async function vote(heroNumber) {
-    if (!gameActive || !currentHeroes || currentHeroes.length < 2 || 
-        playerLives <= 0 || isVotingInProgress) {
+    if (!currentHeroes) {
         return;
     }
     
-    isVotingInProgress = true;
+    // Сбрасываем проценты в оверлеях
+    document.getElementById('hero1-win-percent').textContent = '';
+    document.getElementById('hero1-lose-percent').textContent = '';
+    document.getElementById('hero2-win-percent').textContent = '';
+    document.getElementById('hero2-lose-percent').textContent = '';
+    
+    // Отображаем первого героя
+    document.getElementById('hero1-img').src = currentHeroes[0].image_url;
+    document.getElementById('hero1-name').textContent = currentHeroes[0].name;
+    
+    // Отображаем логотип издателя
+    const hero1Publisher = document.getElementById('hero1-publisher');
+    hero1Publisher.innerHTML = '';
+    if (currentHeroes[0].owner) {
+        const logoImg = document.createElement('img');
+        logoImg.src = currentHeroes[0].owner;
+        logoImg.alt = currentHeroes[0].publisher;
+        logoImg.className = 'publisher-logo';
+        hero1Publisher.appendChild(logoImg);
+    }
+    
+    // Отображаем второго героя
+    document.getElementById('hero2-img').src = currentHeroes[1].image_url;
+    document.getElementById('hero2-name').textContent = currentHeroes[1].name;
+    
+    // Отображаем логотип издателя
+    const hero2Publisher = document.getElementById('hero2-publisher');
+    hero2Publisher.innerHTML = '';
+    if (currentHeroes[1].owner) {
+        const logoImg = document.createElement('img');
+        logoImg.src = currentHeroes[1].owner;
+        logoImg.alt = currentHeroes[1].publisher;
+        logoImg.className = 'publisher-logo';
+        hero2Publisher.appendChild(logoImg);
+    }
+}
+
+// Голосование
+async function vote(heroNumber) {
+    if (!currentHeroes || currentHeroes.length < 2) return;
     
     const selectedHero = currentHeroes[heroNumber - 1];
     const otherHero = currentHeroes[heroNumber === 1 ? 1 : 0];
     
-    const votePairId = `${selectedHero.id}-${otherHero.id}`;
+    const selectedRating = calculateRating(selectedHero);
+    const otherRating = calculateRating(otherHero);
     
-    if (currentVotePairId === votePairId) {
-        isVotingInProgress = false;
-        return;
-    }
+    // Определяем, кто на самом деле сильнее
+    const actualWinner = selectedRating > otherRating ? selectedHero : otherHero;
+    const userSelectedWinner = selectedHero === actualWinner;
     
-    currentVotePairId = votePairId;
-    
-    const userMadeRightChoice = selectedHero.rating > otherHero.rating;
-    
-    // Show instant result
-    if (userMadeRightChoice) {
-        playerScore++;
-        if (tg) tg.HapticFeedback.impactOccurred('heavy');
-        
-        playSmokeAnimation(`hero${heroNumber}-blue-smoke`, "https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Sprites/BlueSMoke256.png");
-        playSmokeAnimation(`hero${heroNumber === 1 ? 2 : 1}-gray-smoke`, "https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Sprites/RedSmoke256.png");
-    } else {
-        playerLives--;
-        if (tg) tg.HapticFeedback.impactOccurred('medium');
-        
-        playSmokeAnimation(`hero${heroNumber}-gray-smoke`, "https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Sprites/RedSmoke256.png");
-        playSmokeAnimation(`hero${heroNumber === 1 ? 2 : 1}-blue-smoke`, "https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Sprites/BlueSMoke256.png");
-    }
-    
-    showVoteResult(heroNumber, userMadeRightChoice, selectedHero.rating, otherHero.rating);
-    
+    // Добавляем в проголосованные
     votedHeroes.add(selectedHero.id);
     votedHeroes.add(otherHero.id);
     saveProgress();
     
-    updateHeroStatsAsync(selectedHero.id, otherHero.id);
-    
-    // УВЕЛИЧИВАЕМ ЗАДЕРЖКУ до 3 секунд перед сменой пары
-    setTimeout(() => {
-        isVotingInProgress = false;
-        currentVotePairId = null;
-        
-        if (playerLives <= 0) {
-            gameOver();
-        } else if (gameActive) {
-            displayHeroes(); // Здесь hideAllOverlays() скроет текущие оверлеи
+    // Вибрация в Telegram
+    if (tg) {
+        if (userSelectedWinner) {
+            tg.HapticFeedback.impactOccurred('heavy');
+        } else {
+            tg.HapticFeedback.impactOccurred('medium');
         }
-    }, 2500); // Увеличено с 2500 до 3000 мс
-}
-
-
-// Функция показа звезды с рейтингом
-function showStarRating(heroNumber, rating, isWinner) {
-    const starContainer = document.getElementById(`hero${heroNumber}-star-rating`);
-    const starImage = starContainer.querySelector('.rating-star');
-    const percentElement = starContainer.querySelector('.star-rating-percent');
+    }
     
-    if (!starContainer || !starImage || !percentElement) return;
+    // Показываем WIN/LOSE на картинках с процентами
+    const winnerPercent = formatRating(calculateRating(actualWinner));
+    const loserPercent = formatRating(calculateRating(userSelectedWinner ? otherHero : selectedHero));
     
-    // Устанавливаем цвет звезды
-    starImage.src = isWinner 
-        ? 'https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Images/StarBlue.webp'
-        : 'https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Images/StarRed.webp';
+    if (userSelectedWinner) {
+        // Пользователь выбрал победителя
+        document.getElementById(`hero${heroNumber}-win`).classList.add('show');
+        document.getElementById(`hero${heroNumber}-win-percent`).textContent = winnerPercent;
+        
+        document.getElementById(`hero${heroNumber === 1 ? 2 : 1}-lose`).classList.add('show');
+        document.getElementById(`hero${heroNumber === 1 ? 2 : 1}-lose-percent`).textContent = loserPercent;
+    } else {
+        // Пользователь выбрал проигравшего
+        document.getElementById(`hero${heroNumber}-lose`).classList.add('show');
+        document.getElementById(`hero${heroNumber}-lose-percent`).textContent = loserPercent;
+        
+        document.getElementById(`hero${heroNumber === 1 ? 2 : 1}-win`).classList.add('show');
+        document.getElementById(`hero${heroNumber === 1 ? 2 : 1}-win-percent`).textContent = winnerPercent;
+    }
     
-    // Очищаем старые цифры
-    percentElement.innerHTML = '';
+    // Обновляем статистику в базе данных
+    try {
+        // Увеличиваем wins победителю и viewers обоим
+        await supabase
+            .from('Heroes_Table')
+            .update({ 
+                wins: (actualWinner.wins || 0) + 1,
+                viewers: (actualWinner.viewers || 0) + 1
+            })
+            .eq('id', actualWinner.id);
+        
+        await supabase
+            .from('Heroes_Table')
+            .update({ 
+                viewers: (otherHero.viewers || 0) + 1
+            })
+            .eq('id', otherHero.id);
+            
+    } catch (error) {
+        console.error("Ошибка при обновлении статистики:", error);
+    }
     
-    // Форматируем рейтинг с запятой вместо точки и ДОБАВЛЯЕМ знак %
-    const ratingText = `${rating.toFixed(1)}%`.replace('.', ','); // ДОБАВЛЕН ЗНАК %
-    
-    // Всегда используем картинки для цифр
-    convertToImageBasedDigits(percentElement, ratingText);
-    
-    // Показываем звезду
-    starContainer.classList.add('show');
-    
-    // Автоматически скрываем через 2.5 секунды
+    // Ждем немного и показываем новых героев
     setTimeout(() => {
-        starContainer.classList.remove('show');
+        displayHeroes();
     }, 2500);
 }
 
-// Функция для создания цифр из картинок (fallback)
-// Функция для создания цифр из картинок (fallback)
-function convertToImageBasedDigits(element, text) {
-    for (let i = 0; i < text.length; i++) {
-        const char = text[i];
-        if (char === ',') {
-            const commaSpan = document.createElement('span');
-            commaSpan.className = 'digit comma';
-            commaSpan.style.backgroundImage = `url('https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Images/Numbers/comma.webp')`;
-            element.appendChild(commaSpan);
-        } else if (char === '%') {
-            const percentSpan = document.createElement('span'); // ДОБАВЛЕНО ДЛЯ ПРОЦЕНТОВ
-            percentSpan.className = 'digit percent';
-            percentSpan.style.backgroundImage = `url('https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Images/Numbers/percent.webp')`;
-            element.appendChild(percentSpan);
-        } else if (!isNaN(char) && char !== ' ') {
-            const digitSpan = document.createElement('span');
-            digitSpan.className = 'digit';
-            digitSpan.style.backgroundImage = `url('https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Images/Numbers/${char}.webp')`;
-            element.appendChild(digitSpan);
-        }
-    }
-}
-
-
-
-// Async stats update
-async function updateHeroStatsAsync(winnerId, loserId) {
-    try {
-        const { data: winnerData, error: winnerFetchError } = await supabase
-            .from('Heroes_Table')
-            .select('wins, viewers')
-            .eq('id', winnerId)
-            .single();
-            
-        const { data: loserData, error: loserFetchError } = await supabase
-            .from('Heroes_Table')
-            .select('loses, viewers')
-            .eq('id', loserId)
-            .single();
-        
-        if (winnerFetchError || loserFetchError) {
-            console.error("Fetch error:", winnerFetchError || loserFetchError);
-            return;
-        }
-        
-        const { error: winnerError } = await supabase
-            .from('Heroes_Table')
-            .update({ 
-                wins: (winnerData.wins || 0) + 1,
-                viewers: (winnerData.viewers || 0) + 1
-            })
-            .eq('id', winnerId);
-        
-        if (winnerError) console.error("Winner update error:", winnerError);
-        
-        const { error: loserError } = await supabase
-            .from('Heroes_Table')
-            .update({ 
-                loses: (loserData.loses || 0) + 1,
-                viewers: (loserData.viewers || 0) + 1
-            })
-            .eq('id', loserId);
-        
-        if (loserError) console.error("Loser update error:", loserError);
-            
-    } catch (error) {
-        console.error("Stats update error:", error);
-    }
-}
-
-// Smoke animation
-function playSmokeAnimation(elementId, spriteUrl) {
-    const el = document.getElementById(elementId);
-    el.style.backgroundImage = `url(${spriteUrl})`;
-    el.style.backgroundSize = '1280px 1280px';
-    el.style.backgroundRepeat = 'no-repeat';
-    el.classList.add("show");
-
-    let frame = 0;
-    const frameSize = 256;
-    const framesPerRow = 5;
-    const totalFrames = 25;
-    const slowFrames = Math.floor(totalFrames / 2);
-    const fastFrames = totalFrames - slowFrames;
-
-    let intervalSpeed = 60;
-    
-    function animateFrame() {
-        if (frame >= totalFrames) {
-            setTimeout(() => {
-                el.classList.remove("show");
-                el.style.backgroundImage = 'none';
-                el.style.backgroundPosition = "0px 0px";
-            }, 100);
-            return;
-        }
-
-        const col = frame % framesPerRow;
-        const row = Math.floor(frame / framesPerRow);
-        
-        const x = -col * frameSize;
-        const y = -row * frameSize;
-        
-        el.style.backgroundPosition = `${x}px ${y}px`;
-
-        frame++;
-        
-        if (frame === slowFrames) {
-            intervalSpeed = 30;
-        }
-        
-        setTimeout(animateFrame, intervalSpeed);
-    }
-
-    setTimeout(animateFrame, intervalSpeed);
-}
-
-// Game over
-function gameOver() {
-    gameActive = false;
-    maxScore = Math.max(maxScore, playerScore);
-    saveProgress();
-    
-    document.body.style.opacity = '0.7';
-    
-    setTimeout(() => {
-        showGameOverPopup();
-    }, 1000);
-}
-
-// Game over popup
-function showGameOverPopup() {
-    const popup = document.createElement('div');
-    popup.className = 'game-over-popup';
-    popup.innerHTML = `
-        <div class="popup-content">
-            <h2>💀 GAME OVER!</h2>
-            <p>Your score: <span class="score">${playerScore}</span></p>
-            <p>Best score: <span class="best">${maxScore}</span></p>
-            <button id="restart-button">🔄 Try Again</button>
-        </div>
-    `;
-    
-    document.body.appendChild(popup);
-    
-    document.getElementById('restart-button').addEventListener('click', function() {
-        popup.remove();
-        resetGame();
-    });
-    
-    if (tg) tg.HapticFeedback.notificationOccurred('error');
-}
-
-// Reset game
-function resetGame() {
-    playerLives = 5;
-    playerScore = 0;
-    isVotingInProgress = false;
-    currentVotePairId = null;
-    gameActive = true;
-    
-    document.body.style.opacity = '1';
-    updateUI();
+// Начало игры
+function startGame() {
     displayHeroes();
+    updateProgressBar();
 }
 
-// Reset game progress
-function resetGameProgress() {
-    playerLives = 5;
-    playerScore = 0;
-    votedHeroes.clear();
-    maxScore = 0;
-    isVotingInProgress = false;
-    currentVotePairId = null;
-    localStorage.removeItem('heroVoteProgress');
-    localStorage.removeItem('heroGameStats');
-    updateUI();
-}
-
-// DOM loaded
+// Запуск при загрузке DOM
 document.addEventListener("DOMContentLoaded", function() {
     initTelegram();
     loadAllHeroes();
-    
-    // Hide unnecessary elements
-    const elementsToHide = [
-        'header h1',
-        'header p',
-        '.progress-container',
-        '.rating-notice',
-        'footer'
-    ];
-    
-    elementsToHide.forEach(selector => {
-        const element = document.querySelector(selector);
-        if (element) element.style.display = 'none';
-    });
 });
 
-// Escape handler
-document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') {
-        if (confirm('Exit the game?')) {
-            if (tg && tg.close) {
-                tg.close();
-            } else {
-                window.history.back();
-            }
-        }
-    }
-});
-
+// Делаем функции глобальными для использования в HTML
 window.vote = vote;
