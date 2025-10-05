@@ -10,6 +10,7 @@ const SMOKE_ANIMATION_DURATION = 1250;
 // Добавьте после констант в начале файла (после SMOKE_ANIMATION_DURATION)
 const NETWORK_CHECK_TIMEOUT = 10000;
 
+
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // Менеджер анимаций для предотвращения утечек памяти
@@ -58,7 +59,7 @@ let allHeroes = [];
 let currentHeroes = [];
 let nextHeroes = [];
 let votedHeroes = new Set();
-let tg = null; // ИСПРАВЛЕНО: объявлена как let и инициализирована как null
+let tg = null;
 let isVotingInProgress = false;
 let currentVotePairId = null;
 let networkErrorShown = false;
@@ -67,7 +68,6 @@ let playerLives = 5;
 let playerScore = 0;
 let maxScore = 0;
 let gameActive = true;
-let navigationPanelHidden = false;
 
 // Publisher logo mapping
 const PUBLISHER_LOGOS = {
@@ -80,31 +80,20 @@ const PUBLISHER_LOGOS = {
 };
 
 // Initialize Telegram Web App
-// Initialize Telegram Web App
 function initTelegram() {
     if (typeof Telegram !== 'undefined' && Telegram.WebApp) {
         tg = Telegram.WebApp;
         tg.expand();
         tg.enableClosingConfirmation();
-        tg.setHeaderColor('#ff5f00');
-        tg.setBackgroundColor('#ff5f00');
+        tg.setHeaderColor('#1a1a2e');
+        tg.setBackgroundColor('#1a1a2e');
         tg.BackButton.hide();
-        
-        // УБИРАЕМ tg.hideTopBar() - этого метода не существует
-        tg.disableVerticalSwipes();
         
         tg.onEvent('viewportChanged', (data) => {
             if (data && data.isStateStable && !data.isExpanded) {
                 tg.close();
             }
         });
-        
-        // Дополнительно для полноэкранного режима
-        setTimeout(() => {
-            if (tg.viewportStableHeight) {
-                tg.viewportStableHeight = window.innerHeight;
-            }
-        }, 100);
     } else {
         setupBrowserExit();
     }
@@ -117,58 +106,6 @@ function setupBrowserExit() {
                 window.history.back();
             }
         }
-    });
-}
-
-// Функция для скрытия навигационной панели на Android
-function hideNavigationPanel() {
-    // Метод для полноэкранного режима
-    if (document.documentElement.requestFullscreen) {
-        document.documentElement.requestFullscreen();
-    } else if (document.documentElement.webkitRequestFullscreen) {
-        document.documentElement.webkitRequestFullscreen();
-    } else if (document.documentElement.mozRequestFullScreen) {
-        document.documentElement.mozRequestFullScreen();
-    } else if (document.documentElement.msRequestFullscreen) {
-        document.documentElement.msRequestFullscreen();
-    }
-    
-    // Дополнительные методы для мобильных браузеров
-    if (window.navigation && navigation.setAppBadge) {
-        // Современный API
-    }
-    
-    // CSS трюк для скрытия панели
-    document.body.style.height = '100vh';
-    window.scrollTo(0, 0);
-    
-    navigationPanelHidden = true;
-}
-
-// Обработчик касаний - предотвращаем появление панели
-function preventNavigationPanel(event) {
-    // Предотвращаем долгое нажатие (которое вызывает панель на некоторых устройствах)
-    if (event.touches && event.touches.length > 0) {
-        event.preventDefault();
-    }
-}
-
-// Инициализация управления навигацией
-function initNavigationControl() {
-    // Скрываем панель при загрузке
-    setTimeout(hideNavigationPanel, 100);
-    
-    // Обработчики для предотвращения появления панели
-    document.addEventListener('touchstart', preventNavigationPanel, { passive: false });
-    document.addEventListener('touchend', preventNavigationPanel, { passive: false });
-    document.addEventListener('touchmove', preventNavigationPanel, { passive: false });
-    
-    // При фокусе на странице снова скрываем панель
-    window.addEventListener('focus', hideNavigationPanel);
-    
-    // При изменении размера окна (когда панель появляется/исчезает)
-    window.addEventListener('resize', function() {
-        setTimeout(hideNavigationPanel, 50);
     });
 }
 
@@ -635,16 +572,13 @@ function displayHeroes() {
 }
 
 // Оптимизированная функция голосования
+// Оптимизированная функция голосования
 async function vote(heroNumber) {
     if (!gameActive || !currentHeroes || currentHeroes.length < 2 || 
         playerLives <= 0 || isVotingInProgress) {
         return;
     }
     
-    // Сразу скрываем навигационную панель если появилась
-    if (!navigationPanelHidden) {
-        hideNavigationPanel();
-    }
     isVotingInProgress = true;
 
     indicateSelection(heroNumber);
@@ -968,13 +902,59 @@ function playHaptic(type) {
             case 'correct': navigator.vibrate([50, 30, 50]); break;
             case 'wrong': navigator.vibrate(100); break;
             case 'game_over': navigator.vibrate([100, 50, 100]); break;
-            case 'win': navigator.vibrate([30, 30, 30, 30]); break;
+            case 'win': navigator.vibrate([50, 30, 50, 30, 50]); break;
         }
     }
 }
 
-// Game over
+// Функция для показа приветственного дисклеймера
+function showWelcomeDisclaimer() {
+    const hasSeenDisclaimer = localStorage.getItem('hasSeenDisclaimer');
+    
+    if (!hasSeenDisclaimer) {
+        AnimationManager.setTimeout(() => {
+            const popup = document.createElement('div');
+            popup.className = 'game-over-popup';
+            popup.innerHTML = `
+                <div class="popup-content">
+                    <h2>🎮 SUPER POWER BEAT DOWN</h2>
+                    <div style="text-align: left; margin: 15px 0;">
+                        <p><strong>Правила игры:</strong></p>
+                        <p>• Выбирайте героя с более высоким рейтингом</p>
+                        <p>• У вас есть 5 жизней</p>
+                        <p>• За правильный выбор получаете +1 очко</p>
+                        <p>• За ошибку теряете 1 жизнь</p>
+                        <p>• Играйте пока не закончатся герои или жизни!</p>
+                    </div>
+                    <button id="understand-button">ПОНЯТНО!</button>
+                </div>
+            `;
+            
+            document.body.appendChild(popup);
+            
+            document.getElementById('understand-button').addEventListener('click', function() {
+                localStorage.setItem('hasSeenDisclaimer', 'true');
+                popup.remove();
+                document.body.style.opacity = '1';
+            });
+        }, 500);
+    }
+}
+
+// Game over function
 function gameOver() {
+    gameActive = false;
+    maxScore = Math.max(maxScore, playerScore);
+    saveProgress();
+    
+    document.body.style.opacity = '0.7';
+    playHaptic('game_over');
+    AnimationManager.setTimeout(() => {
+        showGameOverPopup();
+    }, 1000);
+}
+
+function showGameOverPopup() {
     gameActive = false;
     maxScore = Math.max(maxScore, playerScore);
     saveProgress();
@@ -986,10 +966,10 @@ function gameOver() {
         popup.className = 'game-over-popup';
         popup.innerHTML = `
             <div class="popup-content">
-                <h2>💀 GAME OVER</h2>
+                <h2>GAME OVER</h2>
                 <p>Your score: <span class="score">${playerScore}</span></p>
                 <p>Best score: <span class="best">${maxScore}</span></p>
-                <button id="restart-button">🔄 Play Again</button>
+                <button id="restart-button">🔄 Try Again</button>
             </div>
         `;
         
@@ -1000,28 +980,28 @@ function gameOver() {
             resetGame();
         });
     }, 1000);
-    playHaptic('game_over');
+    
+    if (tg) tg.HapticFeedback.notificationOccurred('error');
 }
 
-// Reset game
+// Reset game - ПОЛНЫЙ СБРОС ПРОГРЕССА ПРИ КАЖДОМ ЗАПУСКЕ
 function resetGame() {
-    AnimationManager.clearAll();
-    
+    // Всегда полный сброс прогресса
     playerLives = 5;
     playerScore = 0;
-    votedHeroes = new Set();
-    currentHeroes = [];
-    nextHeroes = [];
-    gameActive = true;
+    votedHeroes.clear();
     isVotingInProgress = false;
     currentVotePairId = null;
+    gameActive = true;
+    
+    // Очищаем localStorage от прогресса (но оставляем максимальный счет)
+    localStorage.removeItem('heroVoteProgress');
+    
+    // Очищаем все анимации
+    AnimationManager.clearAll();
     
     document.body.style.opacity = '1';
-    
-    hideAllOverlays();
-    hideAnimations();
-    
-    loadProgress();
+    updateUI();
     displayHeroes();
 }
 
@@ -1033,7 +1013,6 @@ document.addEventListener("DOMContentLoaded", function() {
     resetGame();
     loadAllHeroes();
     initNetworkMonitoring();
-    initNavigationControl();
 
     AnimationManager.setTimeout(() => {
         showWelcomeDisclaimer();
@@ -1052,10 +1031,6 @@ document.addEventListener("DOMContentLoaded", function() {
         const element = document.querySelector(selector);
         if (element) element.style.display = 'none';
     });
-    
-    // Добавляем обработчики кликов на карточки героев
-    document.getElementById('hero1').addEventListener('click', () => vote(1));
-    document.getElementById('hero2').addEventListener('click', () => vote(2));
 });
 
 // Escape handler
