@@ -7,8 +7,8 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 // Константы для управления таймингами
 const HERO_DISPLAY_DURATION = 3000;
 const SMOKE_ANIMATION_DURATION = 1250;
-// Добавьте после констант в начале файла (после SMOKE_ANIMATION_DURATION)
 const NETWORK_CHECK_TIMEOUT = 10000;
+const LONG_PRESS_THRESHOLD = 500; // Порог длительного касания (500 мс)
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
@@ -58,7 +58,7 @@ let allHeroes = [];
 let currentHeroes = [];
 let nextHeroes = [];
 let votedHeroes = new Set();
-let tg = null; // ИСПРАВЛЕНО: объявлена как let и инициализирована как null
+let tg = null;
 let isVotingInProgress = false;
 let currentVotePairId = null;
 let networkErrorShown = false;
@@ -68,6 +68,9 @@ let playerScore = 0;
 let maxScore = 0;
 let gameActive = true;
 let navigationPanelHidden = false;
+
+// Переменная для отслеживания времени касания
+let touchStartTime = 0;
 
 // Publisher logo mapping
 const PUBLISHER_LOGOS = {
@@ -80,7 +83,6 @@ const PUBLISHER_LOGOS = {
 };
 
 // Initialize Telegram Web App
-// Initialize Telegram Web App
 function initTelegram() {
     if (typeof Telegram !== 'undefined' && Telegram.WebApp) {
         tg = Telegram.WebApp;
@@ -89,8 +91,6 @@ function initTelegram() {
         tg.setHeaderColor('#ff5f00');
         tg.setBackgroundColor('#ff5f00');
         tg.BackButton.hide();
-        
-        // УБИРАЕМ tg.hideTopBar() - этого метода не существует
         tg.disableVerticalSwipes();
         
         tg.onEvent('viewportChanged', (data) => {
@@ -98,13 +98,6 @@ function initTelegram() {
                 tg.close();
             }
         });
-        
-        // Дополнительно для полноэкранного режима
-        setTimeout(() => {
-            if (tg.viewportStableHeight) {
-                tg.viewportStableHeight = window.innerHeight;
-            }
-        }, 100);
     } else {
         setupBrowserExit();
     }
@@ -122,79 +115,99 @@ function setupBrowserExit() {
 
 // Функция для скрытия навигационной панели на Android
 function hideNavigationPanel() {
-    // Метод для полноэкранного режима
-    if (document.documentElement.requestFullscreen) {
-        document.documentElement.requestFullscreen();
-    } else if (document.documentElement.webkitRequestFullscreen) {
-        document.documentElement.webkitRequestFullscreen();
-    } else if (document.documentElement.mozRequestFullScreen) {
-        document.documentElement.mozRequestFullScreen();
-    } else if (document.documentElement.msRequestFullscreen) {
-        document.documentElement.msRequestFullscreen();
+    if (document.visibilityState === 'visible') {
+        try {
+            if (document.documentElement.requestFullscreen) {
+                // Не вызываем автоматически
+            } else if (document.documentElement.webkitRequestFullscreen) {
+                // Не вызываем автоматически
+            }
+        } catch (e) {
+            // Игнорируем ошибки полноэкранного режима
+        }
     }
     
-    // Дополнительные методы для мобильных браузеров
-    if (window.navigation && navigation.setAppBadge) {
-        // Современный API
-    }
-    
-    // CSS трюк для скрытия панели
     document.body.style.height = '100vh';
     window.scrollTo(0, 0);
     
     navigationPanelHidden = true;
 }
 
-// Обработчик касаний - предотвращаем появление панели
+// Обработчик длительных касаний
 function preventNavigationPanel(event) {
-    // Предотвращаем долгое нажатие (которое вызывает панель на некоторых устройствах)
-    if (event.touches && event.touches.length > 0) {
+    const target = event.target.closest('.hero-card, #restart-button, #complete-restart-button');
+    if (target) {
+        // Пропускаем касания на интерактивных элементах
+        return;
+    }
+    
+    // Сохраняем время начала касания
+    if (event.type === 'touchstart') {
+        touchStartTime = Date.now();
+    }
+    
+    // Проверяем длительность касания при touchend
+    if (event.type === 'touchend') {
+        const touchDuration = Date.now() - touchStartTime;
+        if (touchDuration >= LONG_PRESS_THRESHOLD) {
+            event.preventDefault(); // Блокируем контекстное меню для длительных касаний
+        }
+    }
+    
+    // Блокируем touchmove для предотвращения прокрутки
+    if (event.type === 'touchmove') {
         event.preventDefault();
     }
 }
 
 // Инициализация управления навигацией
 function initNavigationControl() {
-    // Скрываем панель при загрузке
-    setTimeout(hideNavigationPanel, 100);
+    setTimeout(() => {
+        try {
+            hideNavigationPanel();
+        } catch (e) {
+            // Игнорируем ошибки
+        }
+    }, 100);
     
-    // Обработчики для предотвращения появления панели
     document.addEventListener('touchstart', preventNavigationPanel, { passive: false });
     document.addEventListener('touchend', preventNavigationPanel, { passive: false });
     document.addEventListener('touchmove', preventNavigationPanel, { passive: false });
     
-    // При фокусе на странице снова скрываем панель
-    window.addEventListener('focus', hideNavigationPanel);
-    
-    // При изменении размера окна (когда панель появляется/исчезает)
-    window.addEventListener('resize', function() {
+    window.addEventListener('focus', () => {
         setTimeout(hideNavigationPanel, 50);
+    });
+    
+    window.addEventListener('resize', function() {
+        setTimeout(() => {
+            try {
+                hideNavigationPanel();
+            } catch (e) {
+                // Игнорируем ошибки
+            }
+        }, 50);
     });
 }
 
 // Умный мониторинг сети
 function initNetworkMonitoring() {
-    // Слушаем нативные события браузера
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
     
-    // Проверяем при взаимодействии с пользователем
     document.addEventListener('click', debouncedNetworkCheck);
     document.addEventListener('touchstart', debouncedNetworkCheck);
     
-    // Периодическая проверка только при активной сессии
     setInterval(() => {
         if (document.visibilityState === 'visible') {
             checkNetworkWithTimeout();
         }
-    }, 30000); // 1 раз в 30 секунд
+    }, 30000);
 }
 
 // Обработчик появления сети
 function handleOnline() {
     if (networkErrorShown) {
         hideNetworkError();
-        // Автоматическое восстановление
         if (gameActive && !currentHeroes.length) {
             displayHeroes();
         }
@@ -252,8 +265,6 @@ function showNetworkError() {
     `;
     
     document.body.appendChild(popup);
-    
-    
 }
 
 // Функция скрытия ошибки сети
@@ -266,11 +277,9 @@ function hideNetworkError() {
             networkErrorShown = false;
         }, 300);
     }
-    
-    
 }
 
-// Load progress - ТОЛЬКО ДЛЯ МАКСИМАЛЬНОГО СЧЕТА
+// Load progress
 function loadProgress() {
     try {
         const savedStats = localStorage.getItem('heroGameStats');
@@ -280,7 +289,6 @@ function loadProgress() {
             maxScore = stats.maxScore || 0;
         }
         
-        // ПРИ ПЕРЕЗАГРУЗКЕ ВСЕГДА СБРАСЫВАЕМ ТЕКУЩИЙ ПРОГРЕСС
         playerLives = 5;
         playerScore = 0;
         votedHeroes = new Set();
@@ -294,7 +302,7 @@ function loadProgress() {
     }
 }
 
-// Save progress - ТОЛЬКО ДЛЯ МАКСИМАЛЬНОГО СЧЕТА
+// Save progress
 function saveProgress() {
     try {
         localStorage.setItem('heroGameStats', JSON.stringify({
@@ -388,7 +396,7 @@ function getRandomHeroes() {
     return [availableHeroes[randomIndex1], availableHeroes[randomIndex2]];
 }
 
-// Обработчик для кнопки "Play Again" в Completion Screen
+// Обработчик для кнопки "Play Again"
 function showCompletionScreen() {
     gameActive = false;
     maxScore = Math.max(maxScore, playerScore);
@@ -536,46 +544,35 @@ function getHeroAlignment(goodBad) {
             alt: 'HERO'
         };
         case 2: return { 
-            imageUrl: 'https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Images/evil.webp',
-            alt: 'EVIL'
+            imageUrl: 'https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Images/antihero.webp',
+            alt: 'ANTIHERO'
         };
         case 3: return { 
-            imageUrl: 'https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Images/anti_hero.webp',
-            alt: 'ANTI HERO'
+            imageUrl: 'https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Images/villain.webp',
+            alt: 'VILLAIN'
         };
-        default: return { 
-            imageUrl: null,
-            alt: 'UNKNOWN'
-        };
+        default: return { imageUrl: '', alt: '' };
     }
 }
 
-// Оптимизированная функция отображения героев
+// Display heroes
 function displayHeroes() {
-    if (!gameActive) return;
-    
-    isVotingInProgress = false;
-    currentVotePairId = null;
-    
-    // Очищаем все анимации
-    AnimationManager.clearAll();
-    
-    // Скрываем все анимации
     hideAllOverlays();
-    hideAnimations();
     
-    if (nextHeroes.length === 2) {
-        currentHeroes = nextHeroes;
-        nextHeroes = [];
-    } else {
-        currentHeroes = getRandomHeroes();
+    if (!gameActive || playerLives <= 0) {
+        gameOver();
+        return;
     }
     
-    if (!currentHeroes) return;
+    currentHeroes = nextHeroes.length ? nextHeroes : getRandomHeroes();
+    
+    if (!currentHeroes) {
+        showCompletionScreen();
+        return;
+    }
     
     preloadNextPair();
     
-    // Используем DocumentFragment для батч-обновления DOM
     currentHeroes.forEach((hero, index) => {
         const heroNum = index + 1;
         const imgElement = document.getElementById(`hero${heroNum}-img`);
@@ -583,13 +580,10 @@ function displayHeroes() {
         const publisherElement = document.getElementById(`hero${heroNum}-publisher`);
         const alignmentElement = document.getElementById(`hero${heroNum}-alignment`);
         
-        // Set hero image
         if (imgElement) imgElement.src = hero.image_url;
         
-        // Set hero name с оптимизацией
         if (nameElement) {
             nameElement.textContent = hero.name;
-            // ВОЗВРАЩАЕМ рабочие inline стили
             if (hero.name.length > 15) {
                 nameElement.style.fontSize = 'clamp(14px, 3vw, 20px)';
             } else if (hero.name.length > 10) {
@@ -599,7 +593,6 @@ function displayHeroes() {
             }
         }
         
-        // Set alignment
         if (alignmentElement) {
             const alignment = getHeroAlignment(hero.good_bad);
             alignmentElement.innerHTML = '';
@@ -613,7 +606,6 @@ function displayHeroes() {
             }
         }
         
-        // Set publisher logo
         if (publisherElement) {
             publisherElement.innerHTML = '';
             if (hero.logo_url) {
@@ -635,7 +627,6 @@ async function vote(heroNumber) {
         return;
     }
     
-    // Сразу скрываем навигационную панель если появилась
     if (!navigationPanelHidden) {
         hideNavigationPanel();
     }
@@ -644,8 +635,6 @@ async function vote(heroNumber) {
     indicateSelection(heroNumber);
     
     const selectedHero = currentHeroes[heroNumber - 1];
-    
-    // ИСПРАВЛЕНИЕ: только одно объявление otherHero
     const otherHero = heroNumber === 1 ? currentHeroes[1] : currentHeroes[0];
     
     const votePairId = `${selectedHero.id}-${otherHero.id}`;
@@ -661,7 +650,6 @@ async function vote(heroNumber) {
     
     playHaptic('selection');
     
-    // Запускаем дым с оптимизацией
     AnimationManager.setTimeout(() => {
         if (userMadeRightChoice) {
             playSmokeAnimation(`hero${heroNumber}-blue-smoke`, "https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Sprites/BlueSMoke256.webp");
@@ -748,10 +736,8 @@ function updateLivesWithAnimation() {
     if (lifeStars.length > 0) {
         const lastLifeStar = lifeStars[lifeStars.length - 1];
         
-        // Используем CSS transitions вместо JS анимаций
         lastLifeStar.classList.remove('life-star-removing');
         
-        // Принудительный reflow только один раз
         void lastLifeStar.offsetWidth;
         
         lastLifeStar.classList.add('life-star-removing');
@@ -766,7 +752,6 @@ function updateLivesWithAnimation() {
 
 // Оптимизированная функция создания цифр из картинок
 function convertToImageBasedDigits(element, text) {
-    // Создаем DocumentFragment для батч-вставки
     const fragment = document.createDocumentFragment();
     
     for (let i = 0; i < text.length; i++) {
@@ -784,7 +769,6 @@ function convertToImageBasedDigits(element, text) {
         fragment.appendChild(digitSpan);
     }
     
-    // Один раз обновляем DOM
     element.appendChild(fragment);
 }
 
@@ -826,7 +810,7 @@ async function updateHeroStatsAsync(winnerId, loserId) {
     }
 }
 
-// Оптимизированная анимация дыма с использованием CSS анимаций
+// Оптимизированная анимация дыма
 function playSmokeAnimation(elementId, spriteUrl) {
     const el = document.getElementById(elementId);
     if (!el) return;
@@ -834,7 +818,6 @@ function playSmokeAnimation(elementId, spriteUrl) {
     const animationId = `${elementId}-${Date.now()}`;
     AnimationManager.addSmokeAnimation(animationId);
     
-    // Сбрасываем стили
     el.style.backgroundImage = 'none';
     el.style.opacity = '0';
     el.style.transform = 'translate(-50%, -50%) scale(0.65)';
@@ -881,10 +864,8 @@ function playSmokeAnimation(elementId, spriteUrl) {
             const x = -col * frameSize;
             const y = -row * frameSize;
             
-            // Используем transform для hardware acceleration
             el.style.backgroundPosition = `${x}px ${y}px`;
             
-            // Оптимизация для разных размеров экранов
             if (window.innerWidth >= 769) {
                 if (frame < 2) {
                     const scale = 0.50 + (frame * 0.03);
@@ -909,7 +890,6 @@ function playSmokeAnimation(elementId, spriteUrl) {
                 currentInterval = fastFrameTime;
             }
             
-            // Используем менеджер анимаций для предотвращения утечек
             AnimationManager.setTimeout(animateFrame, currentInterval);
         }
         
@@ -1021,19 +1001,28 @@ function resetGame() {
 
 // DOM loaded
 document.addEventListener("DOMContentLoaded", function() {
-    initTelegram();
+    const blockedPopups = document.querySelectorAll('.game-over-popup, .network-error-popup');
+    blockedPopups.forEach(popup => popup.remove());
     
-    // ВСЕГДА сбрасываем игру при загрузке (анти-читерство)
+    document.body.style.opacity = '1';
+    
+    try {
+        initTelegram();
+    } catch (e) {
+        console.log('Telegram init failed, running in browser');
+        setupBrowserExit();
+    }
+    
     resetGame();
     loadAllHeroes();
-    initNetworkMonitoring();
-    initNavigationControl();
-
-    AnimationManager.setTimeout(() => {
-        showWelcomeDisclaimer();
-    }, 1000);
     
-    // Hide unnecessary elements
+    try {
+        initNetworkMonitoring();
+        initNavigationControl();
+    } catch (e) {
+        console.log('Navigation control failed');
+    }
+    
     const elementsToHide = [
         'header h1',
         'header p',
@@ -1047,7 +1036,6 @@ document.addEventListener("DOMContentLoaded", function() {
         if (element) element.style.display = 'none';
     });
     
-    // Добавляем обработчики кликов на карточки героев
     document.getElementById('hero1').addEventListener('click', () => vote(1));
     document.getElementById('hero2').addEventListener('click', () => vote(2));
 });
@@ -1064,7 +1052,6 @@ document.addEventListener('keydown', function(e) {
         }
     }
     
-    // F5 для перезагрузки с полным сбросом
     if (e.key === 'F5' || (e.ctrlKey && e.key === 'r')) {
         e.preventDefault();
         resetGame();
