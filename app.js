@@ -193,7 +193,7 @@ function startGame() {
     updateUI();
 }
 
-// Get random heroes - ОРИГИНАЛЬНАЯ ЛОГИКА ИЗ ПЕРВОГО ФАЙЛА
+// Get random heroes
 function getRandomHeroes() {
     if (allHeroes.length < 2) return null;
     
@@ -244,7 +244,7 @@ function showCompletionScreen() {
     playHaptic('win');
 }
 
-// Preload next pair - ОРИГИНАЛЬНАЯ ЛОГИКА ИЗ ПЕРВОГО ФАЙЛА
+// Preload next pair
 function preloadNextPair() {
     const nextPair = getRandomHeroes();
     if (!nextPair) return;
@@ -252,19 +252,6 @@ function preloadNextPair() {
     nextPair.forEach(hero => {
         if (hero.image_url) new Image().src = hero.image_url;
         if (hero.logo_url) new Image().src = hero.logo_url;
-    });
-}
-
-// ОЧИСТКА АНИМАЦИЙ - НОВАЯ ОПТИМИЗАЦИЯ
-function cleanupCurrentAnimations() {
-    animationTimeouts.forEach(timeout => clearTimeout(timeout));
-    animationTimeouts = [];
-    
-    hideAllOverlays();
-    
-    document.querySelectorAll('.smoke-effect').forEach(el => {
-        el.classList.remove('show');
-        el.style.backgroundImage = 'none';
     });
 }
 
@@ -294,29 +281,6 @@ function hideAllOverlays() {
     smokeEffects.forEach(smoke => smoke.classList.remove('show'));
 }
 
-// Новая функция для скрытия анимаций с реверсом
-function hideAnimations() {
-    // Скрываем оверлеи с анимацией исчезновения
-    const overlays = document.querySelectorAll('.hero-result-overlay.show');
-    overlays.forEach(overlay => {
-        overlay.classList.remove('show');
-        overlay.classList.add('hiding');
-    });
-    
-    // Скрываем звезды с анимацией исчезновения
-    const starContainers = document.querySelectorAll('.star-rating-container.show');
-    starContainers.forEach(container => {
-        container.classList.remove('show');
-        container.classList.add('hiding');
-    });
-    
-    // Убираем класс hiding после завершения анимации
-    setTimeout(() => {
-        overlays.forEach(overlay => overlay.classList.remove('hiding'));
-        starContainers.forEach(container => container.classList.remove('hiding'));
-    }, 600);
-}
-
 // Обновляем функцию showVoteResult с синхронизированными таймингами
 function showVoteResult(heroNumber, userWon, selectedRating, otherRating) {
     const selectedHero = heroNumber;
@@ -339,6 +303,29 @@ function showVoteResult(heroNumber, userWon, selectedRating, otherRating) {
         showStarRating(otherHero, otherRating, true);
     }
     
+}
+
+// Новая функция для скрытия анимаций с реверсом
+function hideAnimations() {
+    // Скрываем оверлеи с анимацией исчезновения
+    const overlays = document.querySelectorAll('.hero-result-overlay.show');
+    overlays.forEach(overlay => {
+        overlay.classList.remove('show');
+        overlay.classList.add('hiding');
+    });
+    
+    // Скрываем звезды с анимацией исчезновения
+    const starContainers = document.querySelectorAll('.star-rating-container.show');
+    starContainers.forEach(container => {
+        container.classList.remove('show');
+        container.classList.add('hiding');
+    });
+    
+    // Убираем класс hiding после завершения анимации
+    setTimeout(() => {
+        overlays.forEach(overlay => overlay.classList.remove('hiding'));
+        starContainers.forEach(container => container.classList.remove('hiding'));
+    }, 600);
 }
 
 // Обновляем функцию showResultImage с синхронизированными таймингами
@@ -366,6 +353,8 @@ function showResultImage(element, type) {
     setTimeout(() => {
         element.classList.add('show');
     }, 50);
+    
+    
 }
 
 // Get hero alignment
@@ -390,15 +379,20 @@ function getHeroAlignment(goodBad) {
     }
 }
 
-// Display heroes - ОРИГИНАЛЬНАЯ ЛОГИКА ИЗ ПЕРВОГО ФАЙЛА
+// Display heroes - ТЕПЕРЬ СКРЫВАЕТ ПРЕДЫДУЩИЕ ОВЕРЛЕИ ПЕРЕД ПОКАЗОМ НОВЫХ
 function displayHeroes() {
     if (!gameActive) return;
     
     isVotingInProgress = false;
     currentVotePairId = null;
     
-    // Очищаем таймауты анимаций - НОВАЯ ОПТИМИЗАЦИЯ
-    cleanupCurrentAnimations();
+    // Очищаем таймауты анимаций
+    animationTimeouts.forEach(timeout => clearTimeout(timeout));
+    animationTimeouts = [];
+    
+    // Скрываем все анимации
+    hideAllOverlays();
+    hideAnimations();
     
     if (nextHeroes.length === 2) {
         currentHeroes = nextHeroes;
@@ -472,13 +466,14 @@ async function vote(heroNumber) {
     
     isVotingInProgress = true;
 
-    // Очищаем предыдущие таймауты анимаций - НОВАЯ ОПТИМИЗАЦИЯ
-    cleanupCurrentAnimations();
+    // Очищаем предыдущие таймауты анимаций
+    animationTimeouts.forEach(timeout => clearTimeout(timeout));
+    animationTimeouts = [];
 
     indicateSelection(heroNumber);
     
     const selectedHero = currentHeroes[heroNumber - 1];
-    const otherHero = currentHeroes[heroNumber === 1 ? 1 : 0]; // ОРИГИНАЛЬНАЯ ЛОГИКА
+    const otherHero = currentHeroes[heroNumber === 1 ? 1 : 0];
     
     const votePairId = `${selectedHero.id}-${otherHero.id}`;
     
@@ -489,7 +484,6 @@ async function vote(heroNumber) {
     
     currentVotePairId = votePairId;
     
-    // ОРИГИНАЛЬНАЯ ЛОГИКА СРАВНЕНИЯ РЕЙТИНГОВ
     const userMadeRightChoice = selectedHero.rating > otherHero.rating;
     
     // Виброотдача при выборе
@@ -558,6 +552,9 @@ async function vote(heroNumber) {
     }, HERO_DISPLAY_DURATION);
 }
 
+
+
+
 // Обновляем функцию showStarRating с синхронизированными таймингами
 function showStarRating(heroNumber, rating, isWinner) {
     const starContainer = document.getElementById(`hero${heroNumber}-star-rating`);
@@ -583,6 +580,7 @@ function showStarRating(heroNumber, rating, isWinner) {
     
     // УБИРАЕМ лишнее скрытие здесь - оно будет в hideAnimations()
 }
+
 
 function updateLivesWithAnimation() {
     const globalLives = document.getElementById('global-lives');
@@ -631,7 +629,9 @@ function convertToImageBasedDigits(element, text) {
     }
 }
 
-// Async stats update - ОРИГИНАЛЬНАЯ ЛОГИКА
+
+
+// Async stats update
 async function updateHeroStatsAsync(winnerId, loserId) {
     try {
         const { data: winnerData, error: winnerFetchError } = await supabase
@@ -859,6 +859,7 @@ function showWelcomeDisclaimer() {
     }
 }
 
+
 // Game over function
 function gameOver() {
     gameActive = false;
@@ -903,6 +904,7 @@ function showGameOverPopup() {
     if (tg) tg.HapticFeedback.notificationOccurred('error');
 }
 
+// Reset game
 // Reset game - ПОЛНЫЙ СБРОС ПРОГРЕССА
 function resetGame() {
     // Полностью сбрасываем весь прогресс
@@ -922,37 +924,10 @@ function resetGame() {
     displayHeroes();
 }
 
-// Защита от зажатия экрана - НОВАЯ ФУНКЦИЯ
-function setupTouchProtection() {
-    document.addEventListener('touchstart', function(e) {
-        if (e.touches.length > 1) {
-            e.preventDefault();
-        }
-    }, { passive: false });
-    
-    document.addEventListener('touchend', function(e) {
-        const now = Date.now();
-        if (now - (lastTap || 0) < 300) {
-            e.preventDefault();
-        }
-        lastTap = now;
-    }, { passive: false });
-    
-    // Запрет контекстного меню
-    document.addEventListener('contextmenu', function(e) {
-        e.preventDefault();
-    });
-}
-
-let lastTap = 0;
-
 // DOM loaded
 document.addEventListener("DOMContentLoaded", function() {
     initTelegram();
     loadAllHeroes();
-    
-    // Добавляем защиту от зажатия экрана
-    setupTouchProtection();
 
     // Добавляем вызов дисклеймера
     setTimeout(() => {
@@ -992,5 +967,39 @@ document.addEventListener('keydown', function(e) {
         resetGame(); // Сразу сбрасываем без подтверждения
     }
 });
+
+// DOM loaded
+document.addEventListener("DOMContentLoaded", function() {
+    initTelegram();
+    // Всегда сбрасываем игру при загрузке в Telegram
+    if (typeof Telegram !== 'undefined' && Telegram.WebApp) {
+        resetGame();
+    }
+    loadAllHeroes();
+    
+    // Hide unnecessary elements
+    const elementsToHide = [
+        'header h1',
+        'header p',
+        '.progress-container',
+        '.rating-notice',
+        'footer'
+    ];
+    if (e.key === 'Escape') {
+        if (confirm('Exit the game?')) {
+            if (tg && tg.close) {
+                tg.close();
+            } else {
+                window.history.back();
+            }
+        }
+    }
+    elementsToHide.forEach(selector => {
+        const element = document.querySelector(selector);
+        if (element) element.style.display = 'none';
+    });
+});
+
+
 
 window.vote = vote;
