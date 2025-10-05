@@ -79,23 +79,77 @@ const PUBLISHER_LOGOS = {
     'dark_horse': 'https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Owner/dark_horse.webp'
 };
 
-// Initialize Telegram Web App
+// Определяем тип запуска
+function getLaunchMode() {
+    if (typeof Telegram !== 'undefined' && Telegram.WebApp) {
+        const tg = Telegram.WebApp;
+        
+        // Проверяем различные параметры запуска
+        if (tg.initDataUnsafe.start_param) {
+            return 'deep_link';
+        } else if (tg.platform === 'tdesktop' || tg.platform === 'macos') {
+            return 'desktop';
+        } else {
+            return 'chat';
+        }
+    }
+    return 'browser';
+}
+
+// Обновленная инициализация
 function initTelegram() {
     if (typeof Telegram !== 'undefined' && Telegram.WebApp) {
         tg = Telegram.WebApp;
+        const launchMode = getLaunchMode();
+        
+        console.log('Launch mode:', launchMode);
+        
+        // Универсальные настройки для всех режимов
         tg.expand();
         tg.enableClosingConfirmation();
         tg.setHeaderColor('#1a1a2e');
         tg.setBackgroundColor('#1a1a2e');
         tg.BackButton.hide();
         
-        tg.onEvent('viewportChanged', (data) => {
-            if (data && data.isStateStable && !data.isExpanded) {
-                tg.close();
+        // Специальные настройки для разных режимов запуска
+        switch(launchMode) {
+            case 'deep_link':
+                // Дополнительные настройки для запуска по ссылке
+                tg.MainButton.hide();
+                break;
+            case 'desktop':
+                // Настройки для десктопной версии
+                break;
+            default:
+                // Стандартные настройки для запуска из чата
+                break;
+        }
+        
+        // Принудительное расширение
+        setTimeout(() => {
+            if (!tg.isExpanded) {
+                tg.expand();
             }
-        });
+        }, 200);
+        
+        // Обработка событий
+        tg.onEvent('viewportChanged', handleViewportChange);
+        tg.onEvent('themeChanged', handleThemeChange);
+        
     } else {
         setupBrowserExit();
+    }
+}
+
+// Обработчик изменения размера окна
+function handleViewportChange(data) {
+    if (data && data.isStateStable && !data.isExpanded) {
+        // Всегда пытаемся остаться в расширенном режиме
+        setTimeout(() => {
+            if (!tg.isExpanded) {
+                tg.expand();
+            }
+        }, 100);
     }
 }
 
@@ -1007,21 +1061,31 @@ function resetGame() {
 
 // DOM loaded
 document.addEventListener("DOMContentLoaded", function() {
-    initTelegram();
-    
-    // ВСЕГДА сбрасываем игру при загрузке (анти-читерство)
-    resetGame();
-    loadAllHeroes();
-    initNetworkMonitoring();
+    // Даем время Telegram Web App инициализироваться
+    setTimeout(() => {
+        initTelegram();
+        
+        // Всегда сбрасываем игру при загрузке
+        resetGame();
+        loadAllHeroes();
+        initNetworkMonitoring();
 
-    AnimationManager.setTimeout(() => {
-        showWelcomeDisclaimer();
-    }, 1000);
-    
-    // Hide unnecessary elements
+        // Показываем приветствие с задержкой
+        setTimeout(() => {
+            showWelcomeDisclaimer();
+        }, 1000);
+        
+        // Скрываем ненужные элементы
+        hideUnnecessaryElements();
+        
+    }, 50); // Небольшая задержка для инициализации Telegram
+});
+
+// Вынесем скрытие элементов в отдельную функцию
+function hideUnnecessaryElements() {
     const elementsToHide = [
         'header h1',
-        'header p',
+        'header p', 
         '.progress-container',
         '.rating-notice',
         'footer'
@@ -1031,7 +1095,7 @@ document.addEventListener("DOMContentLoaded", function() {
         const element = document.querySelector(selector);
         if (element) element.style.display = 'none';
     });
-});
+}
 
 // Escape handler
 document.addEventListener('keydown', function(e) {
