@@ -1297,3 +1297,205 @@ body {
         width: 100%;
     }
 }
+
+/* styles.css - добавьте эти стили */
+
+/* Индикатор загрузки */
+.telegram-loading {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(42, 42, 74, 0.95);
+    padding: 30px;
+    border-radius: 20px;
+    border: 2px solid #4cc9f0;
+    text-align: center;
+    z-index: 9999;
+    box-shadow: 0 0 30px rgba(76, 201, 240, 0.4);
+    backdrop-filter: blur(10px);
+}
+
+.loading-spinner {
+    width: 50px;
+    height: 50px;
+    border: 4px solid #3aa8d9;
+    border-top: 4px solid #4cc9f0;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 20px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.telegram-loading p {
+    color: white;
+    font-size: 16px;
+    margin: 0;
+}
+
+/* Улучшенные стили для кнопки запуска */
+.telegram-start-button {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.9);
+    background: linear-gradient(145deg, #4cc9f0, #3aa8d9);
+    color: white;
+    border: none;
+    padding: 25px 50px;
+    border-radius: 60px;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+    z-index: 1000;
+    box-shadow: 0 0 40px rgba(76, 201, 240, 0.7);
+    transition: all 0.3s ease;
+    opacity: 0;
+    animation: pulse-start 2s infinite;
+    min-width: 280px;
+}
+
+.telegram-start-button:hover {
+    transform: translate(-50%, -50%) scale(1.05);
+    box-shadow: 0 0 60px rgba(76, 201, 240, 0.9);
+}
+
+.telegram-start-button:active {
+    transform: translate(-50%, -50%) scale(0.95);
+    transition: transform 0.1s ease;
+}
+
+@keyframes pulse-start {
+    0%, 100% { 
+        box-shadow: 0 0 40px rgba(76, 201, 240, 0.7);
+    }
+    50% { 
+        box-shadow: 0 0 70px rgba(76, 201, 240, 1);
+    }
+}
+
+/* Улучшенные стили для ошибок */
+.telegram-error-popup {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.98);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10000;
+    backdrop-filter: blur(15px);
+}
+
+.telegram-error-content {
+    background: linear-gradient(145deg, #2a2a4a, #1c1c34);
+    padding: 35px;
+    border-radius: 25px;
+    border: 3px solid #ff6b6b;
+    text-align: center;
+    box-shadow: 0 0 50px rgba(255, 107, 107, 0.6);
+    max-width: 90%;
+    width: 400px;
+    animation: slideInUp 0.4s ease-out;
+}
+
+.telegram-error-content .error-icon {
+    font-size: 72px;
+    margin-bottom: 25px;
+    animation: bounce 1.5s infinite alternate;
+}
+
+@keyframes bounce {
+    from { transform: translateY(0) scale(1); }
+    to { transform: translateY(-15px) scale(1.1); }
+}
+
+.telegram-error-content h3 {
+    color: #ff6b6b;
+    margin-bottom: 20px;
+    font-size: 32px;
+    font-weight: bold;
+}
+
+.telegram-error-content p {
+    color: #e0e0e0;
+    margin-bottom: 30px;
+    font-size: 18px;
+    line-height: 1.6;
+}
+
+.error-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.error-actions button {
+    padding: 14px 28px;
+    border: none;
+    border-radius: 30px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    min-width: 140px;
+    flex: 1;
+}
+
+.error-actions button:first-child {
+    background: linear-gradient(145deg, #4cc9f0, #3aa8d9);
+    color: white;
+}
+
+.error-actions button:nth-child(2) {
+    background: linear-gradient(145deg, #ffd700, #ffa500);
+    color: black;
+}
+
+.error-actions button:last-child {
+    background: linear-gradient(145deg, #ff6b6b, #ee5a52);
+    color: white;
+}
+
+.error-actions button:active {
+    transform: scale(0.95);
+}
+
+/* Адаптация для мобильных */
+@media (max-width: 480px) {
+    .telegram-start-button {
+        padding: 22px 44px;
+        font-size: 24px;
+        min-width: 250px;
+    }
+    
+    .telegram-error-content {
+        padding: 25px;
+        max-width: 85%;
+    }
+    
+    .error-actions {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .error-actions button {
+        width: 100%;
+    }
+    
+    .telegram-loading {
+        padding: 25px;
+    }
+    
+    .loading-spinner {
+        width: 40px;
+        height: 40px;
+    }
+}
