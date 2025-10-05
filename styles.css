@@ -5,16 +5,25 @@
     box-sizing: border-box;
     -webkit-tap-highlight-color: transparent;
 }
+/* Принудительное скрытие навигационной панели */
+html, body {
+    overscroll-behavior: none; /* Предотвращает pull-to-refresh */
+    -webkit-overflow-scrolling: touch;
+}
 
 body {
     font-family: 'Arial', 'Helvetica', sans-serif;
     background: radial-gradient(circle at center, #ff8f00 0%, #ff5f00 100%);
-    color: white;
+    color: #ff8f00;
     min-height: 100vh;
     padding: 0;
     overflow: hidden;
     transition: opacity 0.5s ease;
     position: relative;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
 }
 
 
@@ -52,6 +61,8 @@ body {
     padding: 5px 10px 10px 10px; /* Уменьшаем верхний padding */
     box-sizing: border-box;
     margin-top: -30px; /* Сдвигаем весь контейнер вверх */
+    height: -webkit-fill-available;
+    padding-bottom: env(safe-area-inset-bottom); /* Учет безопасной зоны */
 }
 
 .player-stats {
@@ -397,8 +408,8 @@ body {
 
 @media (max-width: 480px) {
     .vs-image {
-        width: 10%;
-        max-width: 80px;
+        width: 35%;
+        max-width: 120px;
     }
     
     .alignment-image {
@@ -425,12 +436,12 @@ body {
     }
     
     .vs-container {
-        margin: 10px 0;
+        margin: 0px 0;
     }
     
     .vs-image {
         width: 25%;
-        max-width: 8px;
+        max-width: 100px;
     }
     
     .hero-name-container {
@@ -519,6 +530,7 @@ body {
 .popup-content p {
     margin: 8px 0;
     font-size: 16px;
+    color: white;
 }
 
 #restart-button, #complete-restart-button {
@@ -618,25 +630,6 @@ body {
     .hero-name-container {
         margin-top: -10px;
         width: 65%;
-    }
-    .vs-container {
-    position: relative;
-    margin: 0px 0 0px 0; /* Еще больше увеличиваем отступы */
-    padding: 20;
-    min-height: 10px;
-    height: auto;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    }
-
-    .vs-image {
-       
-        width: 30%; /* или нужный тебе процент */
-        max-width: 30px; /* нормальный максимальный размер */
-        height: 53px;
-        margin-top: 30px; /* Дополнительный отступ сверху */
-        object-fit: contain;
     }
 }
 
@@ -873,6 +866,22 @@ body {
         height: 180px;
     }
     
+    body {
+        /* Предотвращаем появление навигационной панели */
+        position: relative;
+        width: 100%;
+        height: 100%;
+        top: 0;
+        left: 0;
+        overflow: hidden;
+        background: radial-gradient(circle at center, #ff8f00 0%, #ff5f00 100%); /* Сохраняем градиент */
+    }
+    
+    .container {
+        height: 100%;
+        min-height: -webkit-fill-available;
+    }
+    
     .rating-star {
         width: 160px;
         height: 160px;
@@ -1013,6 +1022,23 @@ body {
         overflow: hidden;
     }
     
+    body {
+        /* Предотвращаем появление навигационной панели */
+        position: relative;
+        width: 100%;
+        height: 100%;
+        top: 0;
+        left: 0;
+        overflow: hidden;
+        background: radial-gradient(circle at center, #ff8f00 0%, #ff5f00 100%); /* Сохраняем градиент */
+        color: #ffffff;
+    }
+    
+    .container {
+        height: 100%;
+        min-height: -webkit-fill-available;
+    }
+
     .battle-area {
         max-height: 90vh; 
         height: 90vh; 
@@ -1316,129 +1342,3 @@ body {
         width: 100%;
     }
 }
-
-/* Адаптация для очень низких экранов (менее 550px) */
-@media (max-height: 550px) {
-    .container {
-        padding-top: 0px;
-        margin-top: 0;
-        justify-content: flex-start;
-        height: calc(100vh - 60px); /* Резервируем место для хидера и кнопок */
-        overflow:visible;
-    }
-    
-    .battle-area {
-       
-        max-width: 80vh;
-        height: 80vh;
-        gap: 0px;
-        padding: 0px 0;
-        justify-content: space-between;
-    }
-    
-    .hero-complete-container {
-        height: 35%;
-        max-height: 35%;
-    }
-    
-    .hero-card {
-        padding-bottom: 60%; /* Более квадратное соотношение */
-        max-height: 100%;
-        border-width: 2px;
-    }
-    
-    .hero-name-container {
-        margin-top: -6%;
-        width: 70%;
-        border-width: 2px;
-        min-height: 35px;
-    }
-    
-    .hero-name-text {
-        font-size: clamp(7px, 1vw, 11px) !important;
-        padding: 1% 1% !important;
-    }
-
-    .vs-container {
-    position: relative;
-    margin: 11px 0 5px 0; /* Еще больше увеличиваем отступы */
-    padding: 30;
-    min-height: 10px;
-    height: auto;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    }
-
-    .vs-image {
-       
-        width: 30%; /* или нужный тебе процент */
-        max-width: 30px; /* нормальный максимальный размер */
-        height: 30px;
-        margin-top: 100px; /* Дополнительный отступ сверху */
-        object-fit: contain;
-    }
-    
-    .player-stats {
-        margin: 25px auto 0;
-        height: 10%;
-        min-height: 40px;
-        font-size: clamp(24px, 8vw, 50px);
-    }
-    
-    .score-stats {
-        font-size: clamp(20px, 9vw, 45px);
-        margin-top: -11px;
-    }
-    
-    .lives-stats {
-        bottom: 10px;
-        left: -3px;
-    }
-    
-    .life-star {
-        width: 25px;
-        height: 25px;
-    }
-    
-    /* Регулируем позиции анимаций */
-    .star-rating-container {
-        top: 115% !important;
-        width: 40%;
-        max-width: 160px;
-    }
-    
-    .star-rating-percent .digit {
-        width: 35px;
-        height: 50px;
-    }
-    
-    .star-rating-percent .digit.comma {
-        width: 15px;
-        height: 20px;
-        margin-bottom: -45px;
-    }
-    
-    .hero-result-overlay {
-        top: 65% !important;
-        width: 50%;
-        max-width: 200px;
-    }
-    
-    .result-sprite {
-        width: 70%;
-        margin-bottom: 5px;
-    }
-    
-    /* Уменьшаем дым анимацию */
-    .smoke-effect {
-        transform: translate(-50%, -20%) scale(0.5);
-        margin-bottom: 2%;
-    }
-    
-    .smoke-effect.show {
-        transform: translate(-50%, 20%) scale(0.5);
-        margin-top: 55px;
-    }
-}
-
