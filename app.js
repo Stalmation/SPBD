@@ -1013,10 +1013,10 @@ document.addEventListener("DOMContentLoaded", function() {
     // Сначала загружаем героев, потом сбрасываем игру
     loadAllHeroes().then(() => {
         // Инициализируем игру после загрузки данных
-        resetGame();
+        //resetGame();
     });
 
-    initNetworkMonitoring();
+    
 
     AnimationManager.setTimeout(() => {
         showWelcomeDisclaimer();
