@@ -5,16 +5,25 @@
     box-sizing: border-box;
     -webkit-tap-highlight-color: transparent;
 }
+/* Принудительное скрытие навигационной панели */
+html, body {
+    overscroll-behavior: none; /* Предотвращает pull-to-refresh */
+    -webkit-overflow-scrolling: touch;
+}
 
 body {
     font-family: 'Arial', 'Helvetica', sans-serif;
     background: radial-gradient(circle at center, #ff8f00 0%, #ff5f00 100%);
-    color: white;
+    color: #ff8f00;
     min-height: 100vh;
     padding: 0;
     overflow: hidden;
     transition: opacity 0.5s ease;
     position: relative;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
 }
 
 
@@ -52,6 +61,8 @@ body {
     padding: 5px 10px 10px 10px; /* Уменьшаем верхний padding */
     box-sizing: border-box;
     margin-top: -30px; /* Сдвигаем весь контейнер вверх */
+    height: -webkit-fill-available;
+    padding-bottom: env(safe-area-inset-bottom); /* Учет безопасной зоны */
 }
 
 .player-stats {
@@ -268,7 +279,10 @@ body {
     background-size: 1280px 1280px; /* Полный спрайт */
     background-repeat: no-repeat;
     background-position: 0px 0px;
-    image-rendering: pixelated;
+    image-rendering: -webkit-optimize-contrast; /* Улучшение для WebKit */
+    image-rendering: crisp-edges; /* Улучшение для Firefox */
+    filter: blur(0.3px);
+    image-rendering: auto; /* Fallback */
     opacity: 0;
     z-index: 3000;
     pointer-events: none;
@@ -516,6 +530,7 @@ body {
 .popup-content p {
     margin: 8px 0;
     font-size: 16px;
+    color: white;
 }
 
 #restart-button, #complete-restart-button {
@@ -851,6 +866,22 @@ body {
         height: 180px;
     }
     
+    body {
+        /* Предотвращаем появление навигационной панели */
+        position: relative;
+        width: 100%;
+        height: 100%;
+        top: 0;
+        left: 0;
+        overflow: hidden;
+        background: radial-gradient(circle at center, #ff8f00 0%, #ff5f00 100%); /* Сохраняем градиент */
+    }
+    
+    .container {
+        height: 100%;
+        min-height: -webkit-fill-available;
+    }
+    
     .rating-star {
         width: 160px;
         height: 160px;
@@ -977,5 +1008,337 @@ body {
         padding-right: max(10px, env(safe-area-inset-right));
         padding-top: max(10px, env(safe-area-inset-top));
         padding-bottom: max(10px, env(safe-area-inset-bottom));
+    }
+}
+
+
+/* АДАПТАЦИЯ ДЛЯ ПЛАНШЕТОВ И БРАУЗЕРОВ (ширина от 769px) */
+@media (min-width: 769px) {
+    .container {
+        padding-top: 15px;
+        margin-top: 0;
+        justify-content: flex-start;
+        height: 100vh;
+        overflow: hidden;
+    }
+    
+    body {
+        /* Предотвращаем появление навигационной панели */
+        position: relative;
+        width: 100%;
+        height: 100%;
+        top: 0;
+        left: 0;
+        overflow: hidden;
+        background: radial-gradient(circle at center, #ff8f00 0%, #ff5f00 100%); /* Сохраняем градиент */
+        color: #ffffff;
+    }
+    
+    .container {
+        height: 100%;
+        min-height: -webkit-fill-available;
+    }
+
+    .battle-area {
+        max-height: 90vh; 
+        height: 90vh; 
+        width: 60vh;       /* Меняйте это значение */
+        gap: 10px;               /* Меняйте это значение */
+        padding: 10px 0; 
+        justify-content: space-between;        /* Меняйте это значение */
+    }
+    
+    .hero-complete-container {
+        min-height: auto;
+        height: 45%;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-end;
+        position: relative;        /* Меняйте это значение */
+    }
+    
+    .hero-card {
+        padding-bottom: 56.25%; /* Восстанавливаем 16:9 */
+        border: 4px solid #000; /* Черная обводка */
+        flex: 1;
+        max-height: 80%;    /* Меняйте это значение (меньше = компактнее) */
+    }
+    
+    .hero-name-container {
+        margin-top: -5%;
+        width: 65%;
+        border: 3px solid #000;
+        flex-shrink: 0;
+        background: linear-gradient(to bottom, #fafafa 0%, #7c92a4 100%) !important;
+        height: auto;
+        min-height: 30px;
+        aspect-ratio: 95 / 15;
+        padding: 0 !important;
+        position: relative;
+        z-index: 15;
+        overflow: hidden;
+    }
+    
+    .hero-name-text {
+        font-size: clamp(14px, 2.5vw, 22px) !important; /* Уменьшаем шрифт */
+        font-weight: 400;
+        color: #000000 !important;
+        line-height: 1.1;
+        padding: 2% 3% !important; /* Добавляем небольшие отступы */
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    /* Принудительно переопределяем размеры для длинных имен */
+    .hero-name-text[style*="font-size"] {
+        font-size: clamp(17px, 4vw, 35px) !important;
+        margin-bottom: 5px;
+    }
+
+    /* Логотипы издателей - уменьшаем */
+    .hero-publisher {
+        width: 18%;
+        height: 18%;
+        top: 4%;
+        left: 2%;
+    }
+    
+    .hero-publisher img {
+        max-width: 90%;
+        max-height: 90%;
+    }
+
+    /* Выравнивание */
+    .hero-alignment {
+        width: 18%;
+        top: 5%;
+        right: 2%;
+    }
+    
+    .vs-container {
+        margin: 5px 0;           /* Меняйте это значение */
+        min-height: 35px;
+        flex-shrink: 0;
+        height: 5%;        /* Меняйте это значение */
+    }
+    
+    .vs-image {
+        width: 28%;              /* Меняйте это значение */
+        max-width: 120px;        /* Меняйте это значение */
+    }
+    
+    .player-stats {
+        margin: 10px auto 0;     /* Меняйте это значение */
+        font-size: clamp(28px, 10vw, 70px); 
+        height: 8%;
+        min-height: 50px;
+        flex-shrink: 0; /* Меняйте это значение */
+    }
+    
+    .score-stats {
+        font-size: clamp(22px, 9vw, 55px); /* Меняйте это значение */
+        margin-top: -5px;
+    }
+    
+    .lives-stats {
+        bottom: 10px;            /* Меняйте это значение */
+        left: -5px;              /* Меняйте это значение */
+    }
+    
+    .life-star {
+        width: 45px;             /* Меняйте это значение */
+        height: 45px;            /* Меняйте это значение */
+    }
+    
+    .star-rating-container {
+        top: 65%; 
+        width: 50%;
+        max-width: 240px;  
+                   /* Меняйте это значение (больше = ниже) */
+    }
+    
+    .rating-star {
+        width: 100%;
+        height: 100%;
+    }
+
+    .star-rating-percent .digit {
+        width: 50px;
+        height: 67px;
+        margin-left: -2px;
+        margin-right: -2px;
+    }
+
+    .star-rating-percent .digit.comma {
+        width: 20px;
+        height: 25px;
+        margin-bottom: -60px;
+    }
+
+    .hero-result-overlay {
+        top: 38% !important;  
+        width: 70%;
+        max-width: 250px;   /* Меняйте это значение (больше = ниже) */
+        
+    }
+    
+    .result-sprite {
+        width: 75%;              /* Меняйте это значение */
+        margin-bottom: 8px;      /* Меняйте это значение */
+    }
+
+    /* Дым анимация - позиция и размер */
+    .smoke-effect {
+        position: absolute;
+        top: 70%;
+        left: 50%;
+        transform: translate(-50%, -50%) scale(0.7); /* ОБЩИЙ масштаб */
+        width: 256px; /* Размер одного кадра */
+        height: 256px;
+        
+        background-size: 1280px 1280px; /* Полный спрайт */
+        background-repeat: no-repeat;
+        background-position: 0px 0px;
+        image-rendering: -webkit-optimize-contrast; /* Улучшение для WebKit */
+        image-rendering: crisp-edges; /* Улучшение для Firefox */
+        image-rendering: auto; /* Fallback */
+        /* Добавляем легкое размытие для сглаживания пикселей */
+       
+        opacity: 0;
+        z-index: 3000;
+        pointer-events: none;
+        /* ДОБАВЛЯЕМ transform-origin для правильного масштабирования */
+        transform-origin: center center;
+    }
+    
+    
+
+
+}
+
+/* Стили для окна ошибки сети */
+.network-error-popup {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.85);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10000;
+    backdrop-filter: blur(5px);
+}
+
+.network-error-content {
+    background: linear-gradient(145deg, #2a2a4a, #1c1c34);
+    padding: 25px;
+    border-radius: 15px;
+    border: 2px solid #ff6b6b;
+    text-align: center;
+    box-shadow: 0 0 30px rgba(255, 107, 107, 0.4);
+    max-width: 85%;
+    width: 300px;
+    animation: slideInDown 0.3s ease-out;
+}
+
+@keyframes slideInDown {
+    from {
+        opacity: 0;
+        transform: translateY(-50px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideOutUp {
+    from {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    to {
+        opacity: 0;
+        transform: translateY(-50px);
+    }
+}
+
+.network-error-icon {
+    font-size: 48px;
+    margin-bottom: 15px;
+    animation: pulse_internet 2s infinite;
+}
+
+@keyframes pulse_internet {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+}
+
+.network-error-content h3 {
+    color: #ff6b6b;
+    margin-bottom: 10px;
+    font-size: 30px;
+}
+
+.network-error-content p {
+    color: #e0e0e0;
+    margin-bottom: 20px;
+    font-size: 24px;
+    line-height: 1.4;
+}
+
+.network-error-buttons {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+}
+
+.network-error-buttons button {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 25px;
+    font-size: 14px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    min-width: 100px;
+}
+
+#retry-connection {
+    background: linear-gradient(145deg, #4cc9f0, #3aa8d9);
+    color: white;
+}
+
+#close-app {
+    background: linear-gradient(145deg, #ff6b6b, #ee5a52);
+    color: white;
+}
+
+.network-error-buttons button:active {
+    transform: scale(0.95);
+}
+
+/* Адаптация для мобильных */
+@media (max-width: 480px) {
+    .network-error-content {
+        padding: 20px;
+        max-width: 90%;
+    }
+    
+    .network-error-buttons {
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    .network-error-buttons button {
+        width: 100%;
     }
 }
