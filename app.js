@@ -495,6 +495,7 @@ function getHeroAlignment(goodBad) {
 
 // Оптимизированная функция отображения героев
 function displayHeroes() {
+    preloadNextPair();
     if (!gameActive) return;
     
     isVotingInProgress = false;
