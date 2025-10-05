@@ -495,7 +495,6 @@ function getHeroAlignment(goodBad) {
 
 // Оптимизированная функция отображения героев
 function displayHeroes() {
-    preloadNextPair();
     if (!gameActive) return;
     
     isVotingInProgress = false;
@@ -600,10 +599,7 @@ async function vote(heroNumber) {
     
     const userMadeRightChoice = selectedHero.rating > otherHero.rating;
     
-    // ВИБРАЦИЯ ВЫБОРА - ДОБАВЛЯЕМ ЗАДЕРЖКУ
-    setTimeout(() => {
-        playHaptic('selection');
-    }, 50);
+    playHaptic('selection');
     
     // Запускаем дым с оптимизацией
     AnimationManager.setTimeout(() => {
@@ -875,19 +871,11 @@ function indicateSelection(heroNumber) {
 
 // Улучшенная функция вибрации
 function playHaptic(type) {
-    console.log(`Haptic triggered: ${type}`);
-    // Защита от частых вызовов
-    if (window.lastHapticTime && Date.now() - window.lastHapticTime < 100) {
-        return;
-    }
-    window.lastHapticTime = Date.now();
-    
     if (tg && tg.HapticFeedback) {
         try {
             switch(type) {
                 case 'selection': 
-                    // Используем более заметный эффект
-                    tg.HapticFeedback.impactOccurred('medium');
+                    tg.HapticFeedback.impactOccurred('light');
                     break;
                 case 'correct':
                     tg.HapticFeedback.impactOccurred('heavy');
@@ -908,24 +896,13 @@ function playHaptic(type) {
         }
     }
     
-    // Улучшенный fallback для браузера
     if (navigator.vibrate) {
         switch(type) {
-            case 'selection': 
-                navigator.vibrate([0, 50, 30]); // Пауза затем вибрация
-                break;
-            case 'correct': 
-                navigator.vibrate([0, 50, 30, 50]); 
-                break;
-            case 'wrong': 
-                navigator.vibrate(100); 
-                break;
-            case 'game_over': 
-                navigator.vibrate([0, 100, 50, 100]); 
-                break;
-            case 'win': 
-                navigator.vibrate([0, 50, 30, 50, 30, 50]); 
-                break;
+            case 'selection': navigator.vibrate(50); break;
+            case 'correct': navigator.vibrate([50, 30, 50]); break;
+            case 'wrong': navigator.vibrate(100); break;
+            case 'game_over': navigator.vibrate([100, 50, 100]); break;
+            case 'win': navigator.vibrate([50, 30, 50, 30, 50]); break;
         }
     }
 }
