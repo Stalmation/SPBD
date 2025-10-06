@@ -274,109 +274,206 @@ body {
 
 
 /* Стили для copyright дисклеймера */
-/* Стили для copyright дисклеймера */
-.copyright-popup {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    padding: 20px;
-}
+/* АДАПТИВНЫЕ СТИЛИ ДЛЯ ДИСКЛЕЙМЕРА */
 
+/* Ширина как у батл-арены или карточек героев */
 .copyright-popup .popup-content {
-    max-width: 95%;
-    width: 400px;
+    max-width: min(95vw, 800px) !important; /* Такой же максимум как у .battle-area */
+    width: min(95vw, 800px) !important; /* Ограничиваем ширину как у героев */
     max-height: 85vh;
     overflow-y: auto;
-    background: linear-gradient(145deg, #1a1a2e, #16213e);
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
     margin: 0 auto;
-    border: 2px solid #ffd700;
-    box-shadow: 0 0 20px rgba(255, 215, 0, 0.4);
+    padding: 20px 15px !important;
 }
 
-.disclaimer-text {
-    padding: 15px;
-    margin: 15px 0;
+/* Вариант 1: Затемнение с blend mode */
+.copyright-popup {
+    background: rgba(10, 4, 0, 0.75) !important;
+    backdrop-filter: blur(2px); /* Размытие фона */
+   
+}
+/* Альтернативный вариант - более плотные точки */
+.copyright-popup::after {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 102, 0, 0.55) ;
+    mix-blend-mode: multiply; 
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='15' height='15' fill='black'><circle cx='2' cy='2' r='2'/><circle cx='9' cy='9' r='2'/></svg>");
+    background-size: 15px 15px;
+    background-repeat: repeat;
+    mix-blend-mode: multiply; /* Умножение - точки будут темнее */
+    pointer-events: none;
+    z-index: -1;
+    opacity: 1;
 }
 
-.rights-notice {
-    padding: 15px;
-    margin: 15px 0;
+/* Контейнер для текста с фиксированной высотой */
+.disclaimer-content {
+    max-height: 60vh;
+    overflow-y: auto;
+    margin-bottom: 15px;
 }
 
+/* Адаптивные шрифты и отступы */
 .disclaimer-text p,
 .rights-notice p {
-    font-size: 15px;
-    line-height: 1.5;
-    margin: 12px 0; /* Увеличиваем отступы между параграфами */
-    color: #e0e0e0;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-    text-align: left; /* Выравнивание по левому краю */
-    word-wrap: break-word; /* Перенос длинных слов */
-    overflow-wrap: break-word; /* Современный перенос */
-    hyphens: auto; /* Автоматические переносы для английского */
-}
-
-/* Убираем центрирование текста */
-.disclaimer-text,
-.rights-notice {
+    line-height: 1.3 !important;
+    margin: 8px 0 !important;
+    font-size: clamp(13px, 3.5vw, 16px) !important;
     text-align: left;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    color: #e0e0e0;
 }
 
-/* Особые стили для заголовков внутри текста */
+/* УБИРАЕМ стили для strong - заголовки больше не нужны */
 .disclaimer-text strong,
 .rights-notice strong {
-    color: #ffd700;
-    display: block;
-    margin-bottom: 8px;
+    display: none;
 }
 
+/* Заголовок поп-апа */
 .popup-content h2 {
     color: #ffd700;
-    margin-bottom: 20px;
-    font-size: 24px;
+    margin-bottom: 20px !important;
+    font-size: clamp(20px, 6vw, 28px) !important;
     text-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-    font-weight: 600;
-    text-align: center; /* Только заголовок по центру */
+    text-align: center;
 }
 
+/* Кнопка в 2 РАЗА УЖЕ */
 #understand-button {
-    background: linear-gradient(145deg, #4cc9f0, #3aa8d9);
+    background: linear-gradient(to bottom, #00e200, #00ac00) !important;
     color: white;
     border: none;
-    padding: 16px 30px;
-    border-radius: 25px;
-    font-size: 18px;
+    padding: 14px 25px !important;
+    border-radius: 20px;
+    font-size: clamp(16px, 4vw, 20px) !important;
     font-weight: bold;
-    margin-top: 20px;
+    margin-top: 15px;
     cursor: pointer;
     transition: all 0.3s ease;
-    width: 100%;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    width: 50% !important;
+    margin-left: auto;
+    margin-right: auto;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+    position: relative;
+    overflow: hidden;
+    min-height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
+/* Эффект нажатия */
 #understand-button:active {
     transform: scale(0.95);
-    background: linear-gradient(145deg, #3aa8d9, #2e8cc2);
 }
 
-/* Для мобильных устройств */
+#understand-button::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+    transition: left 0.5s;
+}
+
+#understand-button:active::before {
+    left: 100%;
+}
+
+/* Убираем стандартные отступы */
+.disclaimer-text,
+.rights-notice {
+    margin: 15px 0 !important;
+    padding: 0 !important;
+}
+
+/* АДАПТАЦИЯ ДЛЯ МОБИЛЬНЫХ */
 @media (max-width: 480px) {
     .copyright-popup .popup-content {
-        width: 95%;
-        padding: 20px 15px;
+        width: min(95vw, 800px) !important; /* Такая же логика как у батл-арены */
+        max-width: min(95vw, 800px) !important;
+        padding: 15px 10px !important;
+        max-height: 90vh;
+    }
+    
+    .disclaimer-content {
+        max-height: 65vh;
     }
     
     .disclaimer-text p,
     .rights-notice p {
-        font-size: 14px;
-        line-height: 1.4;
-        margin: 10px 0;
+        font-size: clamp(16px, 3.2vw, 20px) !important;
+        line-height: 1.3 !important;
+        margin: 10px 0 !important;
     }
     
     .popup-content h2 {
-        font-size: 22px;
+        font-size: clamp(18px, 5vw, 24px) !important;
+        margin-bottom: 15px !important;
+    }
+    
+    #understand-button {
+        padding: 12px 20px !important;
+        font-size: clamp(14px, 3.8vw, 18px) !important;
+        min-height: 45px;
+        border-radius: 15px;
+        width: 60% !important;
+    }
+}
+
+/* ДЛЯ ПЛАНШЕТОВ И БРАУЗЕРОВ */
+@media (min-width: 769px) {
+    .copyright-popup .popup-content {
+        width: min(60vw, 800px) !important; /* На планшетах и ПК - 60% ширины viewport */
+        max-width: min(60vw, 800px) !important;
+    }
+    
+    .disclaimer-text p,
+    .rights-notice p {
+        font-size: clamp(20px, 1.5vw, 20px) !important; /* Меньшая зависимость от vw */
+    }
+    
+    #understand-button {
+        width: 45% !important;
+        font-size: clamp(16px, 1.8vw, 20px) !important;
+    }
+}
+
+/* ДЛЯ ОЧЕНЬ ШИРОКИХ ЭКРАНОВ */
+@media (min-width: 1200px) {
+    .copyright-popup .popup-content {
+        width: min(50vw, 800px) !important; /* На очень широких - максимум 50% */
+        max-width: min(50vw, 800px) !important;
+    }
+    .disclaimer-text p,
+    .rights-notice p {
+        font-size: clamp(20px, 1.5vw, 20px) !important; /* Меньшая зависимость от vw */
+    }
+}
+
+/* ДЛЯ ДЕСКТОПОВ */
+@media (min-width: 1025px) {
+    #understand-button {
+        width: 40% !important;
+    }
+    
+    
+    /* Ховер эффекты только для десктопов */
+    #understand-button:hover {
+        filter: brightness(1.1);
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
     }
 }
 
@@ -635,7 +732,7 @@ body {
 }
 
 .popup-content h2 {
-    color: #ff6b6b;
+    color: #fe4141;
     margin-bottom: 15px;
     font-size: 24px;
 }

@@ -949,12 +949,14 @@ function showCopyrightDisclaimer() {
             <div class="popup-content">
                 <h2>${texts.TITLE}</h2>
                 
-                <div class="disclaimer-text">
-                    ${texts.LEGAL}
-                </div>
+                <div class="disclaimer-content">
+                    <div class="disclaimer-text">
+                        ${texts.LEGAL}
+                    </div>
 
-                <div class="rights-notice">
-                    ${texts.RIGHTS_HOLDERS}
+                    <div class="rights-notice">
+                        ${texts.RIGHTS_HOLDERS}
+                    </div>
                 </div>
 
                 <button id="understand-button">${texts.BUTTON}</button>
