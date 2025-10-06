@@ -56,13 +56,13 @@ body {
     overflow: hidden;
     display: flex;
     flex-direction: column;
-    justify-content: center; /* Меняем с center на flex-start */
+    justify-content: center; /* ВАЖНО: меняем обратно на center */
     align-items: center;
-    padding: 5px 10px 10px 10px; /* Уменьшаем верхний padding */
+    padding: 5px 10px 10px 10px;
     box-sizing: border-box;
-    margin-top: -30px; /* Сдвигаем весь контейнер вверх */
+    /* УБИРАЕМ margin-top: -30px; */
     height: -webkit-fill-available;
-    padding-bottom: env(safe-area-inset-bottom); /* Учет безопасной зоны */
+    padding-bottom: env(safe-area-inset-bottom);
 }
 
 .player-stats {
@@ -120,8 +120,11 @@ body {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 10px; /* ОТСТУП МЕЖДУ ЭЛЕМЕНТАМИ */
-    padding: 5px 0; /* ВЕРТИКАЛЬНЫЕ ОТСТУПЫ */
+    gap: 10px;
+    padding: 5px 0;
+    /* ДОБАВЛЯЕМ если нужно центрирование */
+    justify-content: center;
+    flex: 1;
 }
 
 /* ЗАМЕНИТЬ стили .hero-complete-container */
@@ -268,6 +271,116 @@ body {
 .hero-result-overlay.lose .result-rating-percent {
     color: #ff6b6b;
 }
+
+
+/* Стили для copyright дисклеймера */
+/* Стили для copyright дисклеймера */
+.copyright-popup {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+}
+
+.copyright-popup .popup-content {
+    max-width: 95%;
+    width: 400px;
+    max-height: 85vh;
+    overflow-y: auto;
+    background: linear-gradient(145deg, #1a1a2e, #16213e);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    margin: 0 auto;
+    border: 2px solid #ffd700;
+    box-shadow: 0 0 20px rgba(255, 215, 0, 0.4);
+}
+
+.disclaimer-text {
+    padding: 15px;
+    margin: 15px 0;
+}
+
+.rights-notice {
+    padding: 15px;
+    margin: 15px 0;
+}
+
+.disclaimer-text p,
+.rights-notice p {
+    font-size: 15px;
+    line-height: 1.5;
+    margin: 12px 0; /* Увеличиваем отступы между параграфами */
+    color: #e0e0e0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    text-align: left; /* Выравнивание по левому краю */
+    word-wrap: break-word; /* Перенос длинных слов */
+    overflow-wrap: break-word; /* Современный перенос */
+    hyphens: auto; /* Автоматические переносы для английского */
+}
+
+/* Убираем центрирование текста */
+.disclaimer-text,
+.rights-notice {
+    text-align: left;
+}
+
+/* Особые стили для заголовков внутри текста */
+.disclaimer-text strong,
+.rights-notice strong {
+    color: #ffd700;
+    display: block;
+    margin-bottom: 8px;
+}
+
+.popup-content h2 {
+    color: #ffd700;
+    margin-bottom: 20px;
+    font-size: 24px;
+    text-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    font-weight: 600;
+    text-align: center; /* Только заголовок по центру */
+}
+
+#understand-button {
+    background: linear-gradient(145deg, #4cc9f0, #3aa8d9);
+    color: white;
+    border: none;
+    padding: 16px 30px;
+    border-radius: 25px;
+    font-size: 18px;
+    font-weight: bold;
+    margin-top: 20px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    width: 100%;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+}
+
+#understand-button:active {
+    transform: scale(0.95);
+    background: linear-gradient(145deg, #3aa8d9, #2e8cc2);
+}
+
+/* Для мобильных устройств */
+@media (max-width: 480px) {
+    .copyright-popup .popup-content {
+        width: 95%;
+        padding: 20px 15px;
+    }
+    
+    .disclaimer-text p,
+    .rights-notice p {
+        font-size: 14px;
+        line-height: 1.4;
+        margin: 10px 0;
+    }
+    
+    .popup-content h2 {
+        font-size: 22px;
+    }
+}
+
+/* Стили для copyright дисклеймера конец */
 
 .smoke-effect {
     position: absolute;

@@ -940,37 +940,34 @@ function playHaptic(type) {
 }
 
 // Функция для показа приветственного дисклеймера
-function showWelcomeDisclaimer() {
-    const hasSeenDisclaimer = localStorage.getItem('hasSeenDisclaimer');
-    
-    if (!hasSeenDisclaimer) {
-        AnimationManager.setTimeout(() => {
-            const popup = document.createElement('div');
-            popup.className = 'game-over-popup';
-            popup.innerHTML = `
-                <div class="popup-content">
-                    <h2>🎮 SUPER POWER BEAT DOWN</h2>
-                    <div style="text-align: left; margin: 15px 0;">
-                        <p><strong>Правила игры:</strong></p>
-                        <p>• Выбирайте героя с более высоким рейтингом</p>
-                        <p>• У вас есть 5 жизней</p>
-                        <p>• За правильный выбор получаете +1 очко</p>
-                        <p>• За ошибку теряете 1 жизнь</p>
-                        <p>• Играйте пока не закончатся герои или жизни!</p>
-                    </div>
-                    <button id="understand-button">ПОНЯТНО!</button>
+function showCopyrightDisclaimer() {
+    AnimationManager.setTimeout(() => {
+        const texts = getText('DISCLAIMER');
+        const popup = document.createElement('div');
+        popup.className = 'game-over-popup copyright-popup';
+        popup.innerHTML = `
+            <div class="popup-content">
+                <h2>${texts.TITLE}</h2>
+                
+                <div class="disclaimer-text">
+                    ${texts.LEGAL}
                 </div>
-            `;
-            
-            document.body.appendChild(popup);
-            
-            document.getElementById('understand-button').addEventListener('click', function() {
-                localStorage.setItem('hasSeenDisclaimer', 'true');
-                popup.remove();
-                document.body.style.opacity = '1';
-            });
-        }, 500);
-    }
+
+                <div class="rights-notice">
+                    ${texts.RIGHTS_HOLDERS}
+                </div>
+
+                <button id="understand-button">${texts.BUTTON}</button>
+            </div>
+        `;
+        
+        document.body.appendChild(popup);
+        
+        document.getElementById('understand-button').addEventListener('click', function() {
+            popup.remove();
+            document.body.style.opacity = '1';
+        });
+    }, 500);
 }
 
 // Game over function
@@ -1047,7 +1044,7 @@ document.addEventListener("DOMContentLoaded", function() {
     initNetworkMonitoring();
 
     setTimeout(() => {
-        showWelcomeDisclaimer();
+        showCopyrightDisclaimer();
     }, 1000);
     
     // Hide unnecessary elements
