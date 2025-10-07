@@ -101,72 +101,52 @@ const ScoreEmitter = {
     // Создание частицы с анимацией разлета
     createParticle(x, y, value) {
         if (!this.emitter) this.init();
-    
-    const particle = document.createElement('div');
-    particle.className = 'score-particle';
-    particle.textContent = value;
-    
-    // Позиционирование в месте клика
-    particle.style.left = x + 'px';
-    particle.style.top = y + 'px';
+        
+        const particle = document.createElement('div');
+        particle.className = 'score-particle';
+        particle.textContent = value;
+        
+        // Позиционирование в месте клика
+        particle.style.left = x + 'px';
+        particle.style.top = y + 'px';
 
-    // Адаптивные размеры в зависимости от экрана
-    const screenWidth = window.innerWidth;
-    let sizeClass = '';
-    
-    if (screenWidth <= 360) {
-        // Очень маленькие экраны - минимальные размеры
-        sizeClass = 'size-small';
-    } else if (screenWidth <= 480) {
-        // Маленькие телефоны
-        const sizes = ['size-small', '', 'size-small'];
-        sizeClass = sizes[Math.floor(Math.random() * sizes.length)];
-    } else if (screenWidth <= 768) {
-        // Телефоны и маленькие планшеты
-        const sizes = ['size-small', '', ''];
-        sizeClass = sizes[Math.floor(Math.random() * sizes.length)];
-    } else {
-        // Планшеты и десктопы
+        // Случайный размер шрифта
         const sizes = ['size-small', '', 'size-large'];
-        sizeClass = sizes[Math.floor(Math.random() * sizes.length)];
-    }
-    
-    if (sizeClass) {
-        particle.classList.add(sizeClass);
-    }
-    
-    // Адаптивное смещение в зависимости от размера экрана
-    const baseOffset = screenWidth <= 480 ? 60 : 
-                      screenWidth <= 768 ? 80 : 100;
-    
-    const offsetX = (Math.random() - 0.5) * baseOffset;
-    const offsetY = (Math.random() - 0.5) * baseOffset;
-    
-    // Случайная начальная прозрачность
-    const startOpacity = 0.7 + Math.random() * 0.3;
-    
-    // Адаптивная длительность анимации
-    const moveDuration = screenWidth <= 480 ? 1.0 : 
-                        screenWidth <= 768 ? 1.2 : 1.5;
-    
-    // Индивидуальные параметры для исчезновения
-    const fadeStartTime = (Math.random() * 0.8 + 0.4) * 1000;
-    const fadeDuration = (Math.random() * 0.5 + 0.3) * 1000;
-    const totalLifeTime = fadeStartTime + fadeDuration;
+        const randomSize = sizes[Math.floor(Math.random() * sizes.length)];
+        if (randomSize) {
+            particle.classList.add(randomSize);
+        }
+        
+        // Случайное смещение по X (-75px до +75px)
+        const offsetX = (Math.random() - 0.5) * 100;
+        
+        // Случайное смещение по Y (-50px до +50px) - и вверх и вниз
+        const offsetY = (Math.random() - 0.5) * 100;
+        
+        // Случайная начальная прозрачность (от 0.7 до 1.0)
+        const startOpacity = 0.7 + Math.random() * 0.3;
+        
+        // Случайная длительность анимации движения (от 1.2 до 1.8 секунд)
+        const moveDuration = 1.2 + Math.random() * 0.6;
+        
+        // Индивидуальные параметры для исчезновения
+        const fadeStartTime = (Math.random() * 0.8 + 0.4) * 1000;
+        const fadeDuration = (Math.random() * 0.5 + 0.3) * 1000;
+        const totalLifeTime = fadeStartTime + fadeDuration;
 
-    // Устанавливаем CSS переменные
-    particle.style.setProperty('--offset-x', offsetX);
-    particle.style.setProperty('--offset-y', offsetY);
-    particle.style.opacity = startOpacity;
-    particle.style.animationDuration = moveDuration + 's';
+        // ИСПРАВЛЕНИЕ: убрать 'px' из CSS переменных
+        particle.style.setProperty('--offset-x', offsetX);        // БЕЗ 'px'
+        particle.style.setProperty('--offset-y', offsetY);        // БЕЗ 'px'
+        particle.style.opacity = startOpacity;
+        particle.style.animationDuration = moveDuration + 's';
 
-    this.emitter.appendChild(particle);
+        this.emitter.appendChild(particle);
 
-    // Запускаем исчезновение в случайное время
-    AnimationManager.setTimeout(() => {
-        particle.style.transition = `opacity ${fadeDuration}ms ease-out`;
-        particle.style.opacity = '0';
-    }, fadeStartTime);
+        // Запускаем исчезновение в случайное время
+        AnimationManager.setTimeout(() => {
+            particle.style.transition = `opacity ${fadeDuration}ms ease-out`;
+            particle.style.opacity = '0';
+        }, fadeStartTime);
         
         // Удаление после полного исчезновения
         AnimationManager.setTimeout(() => {
