@@ -453,10 +453,17 @@ function startGame() {
     updateUI();
 }
 
-// Get random heroes
+// Заменяем функцию getRandomHeroes
 function getRandomHeroes() {
     if (allHeroes.length < 2) return null;
+
+    // ВРЕМЕННО: берем только первых 10 героев для тестирования
+    // const testHeroes = allHeroes.slice(0, 11);
+
+    // Используем тестовых героев, которые еще не были показаны
+    // const availableHeroes = testHeroes.filter(hero => !votedHeroes.has(hero.id));
     
+    // Используем всех героев, которые еще не были показаны в текущей сессии
     const availableHeroes = allHeroes.filter(hero => !votedHeroes.has(hero.id));
     
     if (availableHeroes.length < 2) {
@@ -464,13 +471,11 @@ function getRandomHeroes() {
         return null;
     }
     
-    const randomIndex1 = Math.floor(Math.random() * availableHeroes.length);
-    let randomIndex2;
-    do {
-        randomIndex2 = Math.floor(Math.random() * availableHeroes.length);
-    } while (randomIndex1 === randomIndex2);
+    // Улучшенный алгоритм выбора случайных героев
+    const shuffled = [...availableHeroes].sort(() => Math.random() - 0.5);
+    const selected = shuffled.slice(0, 2);
     
-    return [availableHeroes[randomIndex1], availableHeroes[randomIndex2]];
+    return selected;
 }
 
 // Обработчик для кнопки "Play Again" в Completion Screen
@@ -784,6 +789,21 @@ async function vote(heroNumber) {
             updateUI();
         }
         
+        votedHeroes.add(selectedHero.id);
+        votedHeroes.add(otherHero.id);
+        saveProgress();
+        
+        updateHeroStatsAsync(selectedHero.id, otherHero.id);
+    }, HERO_DISPLAY_DURATION);
+
+    // Добавляем в функцию vote после votedHeroes.add()
+    AnimationManager.setTimeout(() => {
+        if (userMadeRightChoice) {
+            playerScore++;
+            updateUI();
+        }
+        
+        // ОБЯЗАТЕЛЬНО добавляем обоих героев в votedHeroes
         votedHeroes.add(selectedHero.id);
         votedHeroes.add(otherHero.id);
         saveProgress();
