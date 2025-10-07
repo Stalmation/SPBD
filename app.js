@@ -9,6 +9,8 @@ const HERO_DISPLAY_DURATION = 3000;
 const SMOKE_ANIMATION_DURATION = 1250;
 // Добавьте после констант в начале файла (после SMOKE_ANIMATION_DURATION)
 const NETWORK_CHECK_TIMEOUT = 10000;
+// Добавьте в начало файла с другими константами
+const DISCLAIMER_SHOWN_KEY = 'disclaimerShown';
 
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -79,22 +81,122 @@ const PUBLISHER_LOGOS = {
     'dark_horse': 'https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Owner/dark_horse.webp'
 };
 
-// Определяем тип запуска
-function getLaunchMode() {
-    if (typeof Telegram !== 'undefined' && Telegram.WebApp) {
-        const tg = Telegram.WebApp;
+
+// Эмиттер цифр для анимации силы голоса
+// Эмиттер цифр для анимации силы голоса
+// Эмиттер цифр для анимации силы голоса
+const ScoreEmitter = {
+    emitter: null,
+    
+    init() {
+        this.emitter = document.getElementById('score-emitter');
+        if (!this.emitter) {
+            this.emitter = document.createElement('div');
+            this.emitter.id = 'score-emitter';
+            this.emitter.className = 'score-emitter';
+            document.body.appendChild(this.emitter);
+        }
+    },
+    
+    // Создание частицы с анимацией разлета
+    createParticle(x, y, value) {
+        if (!this.emitter) this.init();
+    
+    const particle = document.createElement('div');
+    particle.className = 'score-particle';
+    particle.textContent = value;
+    
+    // Позиционирование в месте клика
+    particle.style.left = x + 'px';
+    particle.style.top = y + 'px';
+
+    // Адаптивные размеры в зависимости от экрана
+    const screenWidth = window.innerWidth;
+    let sizeClass = '';
+    
+    if (screenWidth <= 360) {
+        // Очень маленькие экраны - минимальные размеры
+        sizeClass = 'size-small';
+    } else if (screenWidth <= 480) {
+        // Маленькие телефоны
+        const sizes = ['size-small', '', 'size-small'];
+        sizeClass = sizes[Math.floor(Math.random() * sizes.length)];
+    } else if (screenWidth <= 768) {
+        // Телефоны и маленькие планшеты
+        const sizes = ['size-small', '', ''];
+        sizeClass = sizes[Math.floor(Math.random() * sizes.length)];
+    } else {
+        // Планшеты и десктопы
+        const sizes = ['size-small', '', 'size-large'];
+        sizeClass = sizes[Math.floor(Math.random() * sizes.length)];
+    }
+    
+    if (sizeClass) {
+        particle.classList.add(sizeClass);
+    }
+    
+    // Адаптивное смещение в зависимости от размера экрана
+    const baseOffset = screenWidth <= 480 ? 60 : 
+                      screenWidth <= 768 ? 80 : 100;
+    
+    const offsetX = (Math.random() - 0.5) * baseOffset;
+    const offsetY = (Math.random() - 0.5) * baseOffset;
+    
+    // Случайная начальная прозрачность
+    const startOpacity = 0.7 + Math.random() * 0.3;
+    
+    // Адаптивная длительность анимации
+    const moveDuration = screenWidth <= 480 ? 1.0 : 
+                        screenWidth <= 768 ? 1.2 : 1.5;
+    
+    // Индивидуальные параметры для исчезновения
+    const fadeStartTime = (Math.random() * 0.8 + 0.4) * 1000;
+    const fadeDuration = (Math.random() * 0.5 + 0.3) * 1000;
+    const totalLifeTime = fadeStartTime + fadeDuration;
+
+    // Устанавливаем CSS переменные
+    particle.style.setProperty('--offset-x', offsetX);
+    particle.style.setProperty('--offset-y', offsetY);
+    particle.style.opacity = startOpacity;
+    particle.style.animationDuration = moveDuration + 's';
+
+    this.emitter.appendChild(particle);
+
+    // Запускаем исчезновение в случайное время
+    AnimationManager.setTimeout(() => {
+        particle.style.transition = `opacity ${fadeDuration}ms ease-out`;
+        particle.style.opacity = '0';
+    }, fadeStartTime);
         
-        // Проверяем различные параметры запуска
-        if (tg.initDataUnsafe.start_param) {
-            return 'deep_link';
-        } else if (tg.platform === 'tdesktop' || tg.platform === 'macos') {
-            return 'desktop';
-        } else {
-            return 'chat';
+        // Удаление после полного исчезновения
+        AnimationManager.setTimeout(() => {
+            if (particle.parentNode === this.emitter) {
+                this.emitter.removeChild(particle);
+            }
+        }, totalLifeTime);
+    },
+    
+    // Остальной код без изменений...
+    emitFromPoint(x, y, count = 4) {
+        for (let i = 0; i < count; i++) {
+            const randomDelay = Math.random() * 100;
+            
+            AnimationManager.setTimeout(() => {
+                this.createParticle(x, y, '+1');
+            }, i * 20 + randomDelay);
+        }
+    },
+    
+    clear() {
+        if (this.emitter) {
+            this.emitter.innerHTML = '';
         }
     }
-    return 'browser';
-}
+};
+
+
+
+
 
 // Initialize Telegram Web App
 function initTelegram() {
@@ -104,11 +206,19 @@ function initTelegram() {
         // ВСЕГДА расширяем на полный экран
         tg.expand();
         
-        // Даем время на расширение
+        // Добавляем класс для специфичных стилей
+        document.body.classList.add('tg-webapp');
+        
+        // Даем время на инициализацию перед расширением
         setTimeout(() => {
-            if (!tg.isExpanded) {
-                tg.expand();
-            }
+            tg.expand();
+            
+            // Дополнительное расширение через небольшой таймаут
+            setTimeout(() => {
+                if (!tg.isExpanded) {
+                    tg.expand();
+                }
+            }, 200);
         }, 100);
         
         tg.enableClosingConfirmation();
@@ -614,6 +724,8 @@ async function vote(heroNumber) {
     isVotingInProgress = true;
 
     indicateSelection(heroNumber);
+
+    
     
     const selectedHero = currentHeroes[heroNumber - 1];
     
@@ -647,6 +759,16 @@ async function vote(heroNumber) {
     }, 0);
     
     showVoteResult(heroNumber, userMadeRightChoice, selectedHero.rating, otherHero.rating);
+
+    // Анимация цифр из МЕСТА КЛИКА
+    if (event) {
+        const clickX = event.clientX || event.touches[0].clientX;
+        const clickY = event.clientY || event.touches[0].clientY;
+        
+        AnimationManager.setTimeout(() => {
+            ScoreEmitter.emitFromPoint(clickX, clickY, 5); // 4 частицы
+        }, 0);
+    }
     
     AnimationManager.setTimeout(() => {
         if (!userMadeRightChoice) {
@@ -939,8 +1061,18 @@ function playHaptic(type) {
     }
 }
 
-// Функция для показа приветственного дисклеймера
+// Обновите функцию показа дисклеймера
 function showCopyrightDisclaimer() {
+    // Проверяем, показывался ли уже дисклеймер
+    const disclaimerShown = localStorage.getItem(DISCLAIMER_SHOWN_KEY);
+    
+    if (disclaimerShown === 'true') {
+        // Если уже показывался - просто продолжаем игру
+        document.body.style.opacity = '1';
+        return;
+    }
+    
+    // Если первый запуск - показываем дисклеймер
     AnimationManager.setTimeout(() => {
         const texts = getText('DISCLAIMER');
         const popup = document.createElement('div');
@@ -966,6 +1098,8 @@ function showCopyrightDisclaimer() {
         document.body.appendChild(popup);
         
         document.getElementById('understand-button').addEventListener('click', function() {
+            // Сохраняем факт показа дисклеймера
+            localStorage.setItem(DISCLAIMER_SHOWN_KEY, 'true');
             popup.remove();
             document.body.style.opacity = '1';
         });
@@ -1030,6 +1164,9 @@ function resetGame() {
     
     // Очищаем все анимации
     AnimationManager.clearAll();
+
+    // Очищаем эмиттер цифр
+    ScoreEmitter.clear();
     
     document.body.style.opacity = '1';
     updateUI();
@@ -1049,6 +1186,8 @@ document.addEventListener("DOMContentLoaded", function() {
         showCopyrightDisclaimer();
     }, 1000);
     
+    ScoreEmitter.init();
+
     // Hide unnecessary elements
     const elementsToHide = [
         'header h1',
