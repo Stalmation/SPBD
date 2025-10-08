@@ -1,0 +1,367 @@
+/* styles_pop_up.css - ИСПРАВЛЕННЫЕ СТИЛИ */
+
+/* БАЗОВЫЕ СТИЛИ ДЛЯ ВСЕХ ПОПАПОВ */
+.universal-popup {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(10, 4, 0, 0.75) !important;
+    display: none; /* Сначала скрыты */
+    justify-content: center;
+    align-items: center;
+    z-index: 10000;
+    backdrop-filter: blur(0px);
+}
+
+.universal-popup.active {
+    display: flex; /* Показываем только активные */
+}
+
+/* ТОЧКИ НА ФОНЕ */
+.universal-popup::after {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='15' height='15' fill='black'><circle cx='2' cy='2' r='2'/><circle cx='9' cy='9' r='2'/></svg>");
+    background-size: 10px 10px;
+    background-repeat: repeat;
+    mix-blend-mode: multiply;
+    pointer-events: none;
+    z-index: -1;
+    opacity: 0.5;
+}
+
+/* ОСНОВНОЙ КОНТЕЙНЕР ПОПАПА */
+.universal-popup .popup-content {
+    background: linear-gradient(145deg, #2a2a4a, #1c1c34);
+    border: 2px solid #ffd700;
+    border-radius: 15px;
+    text-align: center;
+    box-shadow: 0 0 20px rgba(255, 215, 0, 0.4);
+    max-width: min(95vw, 800px);
+    width: min(95vw, 800px);
+    max-height: 85vh;
+    overflow-y: auto;
+    margin: 0 auto;
+    padding: 25px;
+    animation: popupSlideIn 0.3s ease-out;
+}
+
+@keyframes popupSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-50px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+
+/* ДИСКЛЕЙМЕР - красный заголовок как сейчас */
+.popup-disclaimer-content + button ~ h2,
+.universal-popup .popup-content:has(.popup-disclaimer-content) h2 {
+    color: #e4391f !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+}
+
+/* КРАСНОЕ СВЕЧЕНИЕ ДЛЯ ДИСКЛЕЙМЕРА */
+.universal-popup .popup-content:has(.popup-disclaimer-content) h2 {
+    color: #ff4444 !important;
+    text-shadow: 
+        0 0 15px rgba(255, 68, 68, 0.9), /* Красное свечение */
+        2px 2px 0 #000, 
+        -1px -1px 0 #000, 
+        1px -1px 0 #000, 
+        -1px 1px 0 #000, 
+        1px 1px 0 #000 !important;
+}
+
+
+/* УЛУЧШЕННЫЕ СТИЛИ ЗАГОЛОВКОВ */
+.universal-popup h2 {
+    color: #ffd700 !important;
+    font-family: 'Comic Sans MS', 'Comic Sans', 'Arial Rounded MT Bold', 'Arial', sans-serif !important;
+    font-size: clamp(28px, 6vw, 36px) !important; /* Увеличиваем размер */
+    font-weight: bold !important;
+    text-shadow: 
+        0 0 10px rgba(255, 215, 0, 0.8), /* Желтое свечение */
+        2px 2px 0 #000, 
+        -1px -1px 0 #000, 
+        1px -1px 0 #000, 
+        -1px 1px 0 #000, 
+        1px 1px 0 #000 !important;
+    margin-bottom: 20px !important;
+    text-align: center !important;
+}
+
+/* ТЕКСТ ДИСКЛЕЙМЕРА - КРАСНЫЙ И КОМИКСНЫЙ ШРИФТ */
+.popup-disclaimer-text p,
+.popup-rights-notice p {
+    line-height: 1.4 !important;
+    margin: 12px 0 !important;
+    font-size: clamp(16px, 4vw, 20px) !important;
+    text-align: left;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    color: #ffffff !important; /* БЕЛЫЙ ТЕКСТ */
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important; /* СИСТЕМНЫЙ ШРИФТ */
+}
+
+
+/* Правила - белый текст */
+.popup-rules-text p {
+    color: white !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+}
+
+/* УВЕЛИЧИВАЕМ РАЗМЕР ТЕКСТА В ПОПАПАХ */
+.universal-popup p {
+    margin: 12px 0 !important;
+    font-size: clamp(18px, 4.5vw, 22px) !important; /* Увеличиваем размер */
+    color: white;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    line-height: 1.5 !important; /* Улучшаем читаемость */
+}
+
+.popup-rules-text p {
+    color: white !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+}
+
+/* КОНТЕЙНЕРЫ КОНТЕНТА */
+.popup-disclaimer-content,
+.popup-rules-content,
+.popup-stats-container {
+    max-height: 60vh;
+    overflow-y: auto;
+    margin-bottom: 15px;
+    text-align: left;
+}
+
+/* ОСОБО ДЛЯ ДИСКЛЕЙМЕРА И ПРАВИЛ */
+.popup-disclaimer-text p,
+.popup-rights-notice p,
+.popup-rules-text p {
+    font-size: clamp(18px, 4.5vw, 22px) !important;
+    line-height: 1.5 !important;
+    margin: 14px 0 !important;
+}
+
+/* СТАТИСТИКА */
+.popup-stats-container {
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 10px;
+    padding: 20px;
+    margin: 20px 0;
+    border: 1px solid rgba(255, 215, 0, 0.3);
+}
+
+.popup-stat-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 15px 0 !important;
+    font-size: clamp(20px, 4.5vw, 24px) !important;
+    color: white;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.popup-stat-label {
+    color: #b0b0b0;
+    text-align: left;
+}
+
+.popup-stat-value {
+    color: #ffffff;
+    font-weight: bold;
+    text-align: right;
+}
+
+.popup-stat-value.score {
+    color: #4cc9f0;
+}
+
+.popup-stat-value.best {
+    color: #ffd700;
+}
+
+/* УНИВЕРСАЛЬНЫЕ КНОПКИ */
+.universal-popup button {
+    background: linear-gradient(to bottom, #00e200, #007400) !important;
+    color: white;
+    border: none;
+    padding: 14px 25px !important;
+    border-radius: 8px;
+    font-size: clamp(18px, 4vw, 22px) !important;
+    font-weight: bold;
+    margin-top: 15px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    width: 50% !important;
+    margin-left: auto;
+    margin-right: auto;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+    position: relative;
+    overflow: hidden;
+    min-height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Эффект нажатия */
+.universal-popup button:active {
+    transform: scale(0.95);
+}
+
+.universal-popup button::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+    transition: left 0.5s;
+}
+
+.universal-popup button:active::before {
+    left: 100%;
+}
+
+/* СПЕЦИАЛЬНЫЕ СТИЛИ ДЛЯ ПРАВИЛ */
+.popup-rules-text p {
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    margin: 8px 0 !important;
+}
+
+.popup-rules-text p:last-child {
+    border-bottom: none;
+}
+
+.popup-rules-text strong {
+    color: #ffd700;
+    display: inline !important;
+}
+
+/* ОШИБКА СЕТИ */
+.popup-network-error .popup-content {
+    border: 2px solid #ffd700;
+    box-shadow: 0 0 20px rgba(255, 215, 0, 0.4);
+}
+
+.popup-network-error-icon {
+    font-size: 48px;
+    margin-bottom: 15px;
+    animation: popupPulseNetwork 2s infinite;
+}
+
+@keyframes popupPulseNetwork {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+}
+
+.popup-network-error-buttons {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    margin-top: 20px;
+}
+
+.popup-network-error-buttons button {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    min-width: 100px;
+    width: auto !important;
+    margin-top: 0;
+}
+
+#popup-retry-connection {
+    background: linear-gradient(145deg, #4cc9f0, #3aa8d9);
+    color: white;
+}
+
+#popup-close-app {
+    background: linear-gradient(145deg, #ff6b6b, #ee5a52);
+    color: white;
+}
+
+.popup-network-error-buttons button:active {
+    transform: scale(0.95);
+}
+
+/* АДАПТАЦИЯ ДЛЯ МОБИЛЬНЫХ */
+@media (max-width: 480px) {
+    .universal-popup .popup-content {
+        width: min(95vw, 800px) !important;
+        max-width: min(95vw, 800px) !important;
+        padding: 20px 15px !important;
+        max-height: 90vh;
+    }
+    
+    .popup-disclaimer-content,
+    .popup-rules-content,
+    .popup-stats-container {
+        max-height: 65vh;
+    }
+    
+    .popup-disclaimer-text p,
+    .popup-rules-text p,
+    .popup-rights-notice p {
+        font-size: clamp(16px, 4vw, 20px) !important;
+        line-height: 1.1 !important;
+        margin: 15px 0 !important;
+    }
+
+    
+    
+    .universal-popup h2 {
+        font-size: clamp(24px, 6vw, 32px) !important;
+        margin-bottom: 15px !important;
+    }
+
+    .universal-popup p {
+        font-size: clamp(16px, 4vw, 20px) !important;
+    }
+    
+    .universal-popup button {
+        padding: 12px 20px !important;
+        font-size: clamp(18px, 4vw, 22px) !important;
+        min-height: 45px;
+        border-radius: 8px;
+        width: 60% !important;
+        padding: 14px 25px !important;
+    }
+    
+    .popup-stats-container {
+        padding: 15px;
+    }
+    
+    .popup-stat-item {
+        font-size: clamp(18px, 4vw, 22px) !important;
+    }
+    
+    .popup-network-error-buttons {
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    .popup-network-error-buttons button {
+        width: 100% !important;
+    }
+}

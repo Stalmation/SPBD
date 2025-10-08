@@ -11,7 +11,18 @@ const SMOKE_ANIMATION_DURATION = 1250;
 const NETWORK_CHECK_TIMEOUT = 10000;
 // Добавьте в начало файла с другими константами
 const DISCLAIMER_SHOWN_KEY = 'disclaimerShown';
+const RULES_SHOWN_KEY = 'rulesShown';
 
+// Константы для силы голоса
+const MAX_DAILY_BONUS = 5;
+const MAX_GAME_BONUS = 20;
+const BONUS_PER_GAME_PAIR = 10;
+
+// Переменные силы голоса
+let dailyVotePower = 1;
+let gameVotePower = 0;
+let totalVotePower = 1;
+let lastPlayDate = null;
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
@@ -177,12 +188,12 @@ const ScoreEmitter = {
     },
     
     // Остальной код без изменений...
-    emitFromPoint(x, y, count = 4) {
+    emitFromPoint(x, y, count = 4, text = '+1') { // Добавляем параметр text
         for (let i = 0; i < count; i++) {
             const randomDelay = Math.random() * 100;
             
             AnimationManager.setTimeout(() => {
-                this.createParticle(x, y, '+1');
+                this.createParticle(x, y, text); // Используем переданный текст
             }, i * 20 + randomDelay);
         }
     },
@@ -251,6 +262,66 @@ function setupBrowserExit() {
     });
 }
 
+// Функции для управления силой голоса
+function calculateVotePower() {
+    checkDailyBonus();
+    totalVotePower = dailyVotePower + gameVotePower;
+    return totalVotePower;
+}
+
+function checkDailyBonus() {
+    const today = new Date().toDateString();
+    const savedDate = localStorage.getItem('lastPlayDate');
+    
+    if (!savedDate) {
+        // Первый запуск
+        dailyVotePower = 1;
+        lastPlayDate = today;
+        localStorage.setItem('lastPlayDate', today);
+        localStorage.setItem('dailyVotePower', '1');
+        return;
+    }
+    
+    if (savedDate === today) {
+        // Уже играли сегодня - восстанавливаем силу
+        dailyVotePower = parseInt(localStorage.getItem('dailyVotePower')) || 1;
+    } else {
+        // Новый день - проверяем последовательность
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        const yesterdayString = yesterday.toDateString();
+        
+        if (savedDate === yesterdayString) {
+            // Играли вчера - увеличиваем бонус
+            dailyVotePower = Math.min((parseInt(localStorage.getItem('dailyVotePower')) || 1) + 1, MAX_DAILY_BONUS);
+        } else {
+            // Пропустили день - сбрасываем до 1
+            dailyVotePower = 1;
+        }
+        
+        lastPlayDate = today;
+        localStorage.setItem('lastPlayDate', today);
+        localStorage.setItem('dailyVotePower', dailyVotePower.toString());
+    }
+}
+
+function updateGameVotePower() {
+    // Каждые BONUS_PER_GAME_PAIR угаданных пар добавляем +1 к игровой силе
+    const pairsGuessed = playerScore;
+    const newGamePower = Math.floor(pairsGuessed / BONUS_PER_GAME_PAIR);
+    
+    if (newGamePower !== gameVotePower) {
+        gameVotePower = Math.min(newGamePower, MAX_GAME_BONUS);
+    }
+    
+    calculateVotePower();
+}
+
+function resetGameVotePower() {
+    gameVotePower = 0;
+    calculateVotePower();
+}
+
 // Умный мониторинг сети
 function initNetworkMonitoring() {
     // Слушаем нативные события браузера
@@ -311,28 +382,33 @@ function debouncedNetworkCheck() {
     }, 1000);
 }
 
-// Функция показа ошибки сети
 function showNetworkError() {
-    if (document.querySelector('.network-error-popup') || networkErrorShown) return;
+    if (document.querySelector('.universal-popup.active') || networkErrorShown) return;
     
     networkErrorShown = true;
+    const texts = getText('NETWORK_ERROR');
     
     const popup = document.createElement('div');
-    popup.className = 'network-error-popup';
+    popup.className = 'universal-popup popup-network-error active';
     popup.innerHTML = `
-        <div class="network-error-content">
-            <div class="network-error-icon">📶</div>
-            <h3>Internet Lost</h3>
-            <p>Check your connection</p>
-            <p style="font-size: 12px; margin-top: 10px; opacity: 0.8;">
-                Reconnecting automatically...
+        <div class="popup-content">
+            <div class="popup-network-error-icon">📶</div>
+            <h2>${texts.TITLE}</h2>
+            <p>${texts.DESCRIPTION}</p>
+            <p style="font-size: 14px; margin-top: 10px; opacity: 0.8;">
+                ${texts.SUBTEXT}
             </p>
+            <button id="popup-understand-network">${texts.BUTTON}</button>
         </div>
     `;
     
     document.body.appendChild(popup);
     
-    // Блокируем игровые элементы
+    document.getElementById('popup-understand-network').addEventListener('click', function() {
+        popup.remove();
+        networkErrorShown = false;
+    });
+    
     document.querySelectorAll('.hero-card').forEach(card => {
         card.style.pointerEvents = 'none';
     });
@@ -340,13 +416,10 @@ function showNetworkError() {
 
 // Функция скрытия ошибки сети
 function hideNetworkError() {
-    const popup = document.querySelector('.network-error-popup');
+    const popup = document.querySelector('.popup-network-error');
     if (popup) {
-        popup.style.animation = 'slideOutUp 0.3s ease-in forwards';
-        setTimeout(() => {
-            popup.remove();
-            networkErrorShown = false;
-        }, 300);
+        popup.remove();
+        networkErrorShown = false;
     }
     
     // Восстанавливаем игровые элементы
@@ -366,7 +439,7 @@ function loadProgress() {
         }
         
         // ПРИ ПЕРЕЗАГРУЗКЕ ВСЕГДА СБРАСЫВАЕМ ТЕКУЩИЙ ПРОГРЕСС
-        playerLives = 5;
+        playerLives = 5;  //ТУТ МЕНЯЕМ ЧИСЛО ЖИЗНЕЙ
         playerScore = 0;
         votedHeroes = new Set();
         
@@ -453,61 +526,85 @@ function startGame() {
     updateUI();
 }
 
-// Заменяем функцию getRandomHeroes
+// ЗАМЕНЯЕМ функцию getRandomHeroes
 function getRandomHeroes() {
     if (allHeroes.length < 2) return null;
 
-    // ВРЕМЕННО: берем только первых 10 героев для тестирования
-    // const testHeroes = allHeroes.slice(0, 11);
-
-    // Используем тестовых героев, которые еще не были показаны
-    // const availableHeroes = testHeroes.filter(hero => !votedHeroes.has(hero.id));
+    // ОДИН РАЗ перемешиваем массив в начале игры
+    if (!window.shuffledHeroes || window.shuffledHeroes.length < 2 || !window.initialShuffleDone) {
+        window.shuffledHeroes = [...allHeroes].sort(() => Math.random() - 0.5);
+        window.currentHeroIndex = 0;
+        window.initialShuffleDone = true;
+    }
     
-    // Используем всех героев, которые еще не были показаны в текущей сессии
-    const availableHeroes = allHeroes.filter(hero => !votedHeroes.has(hero.id));
-    
-    if (availableHeroes.length < 2) {
+    // Если дошли до конца массива - показываем экран завершения
+    if (window.currentHeroIndex >= window.shuffledHeroes.length - 1) {
         showCompletionScreen();
         return null;
     }
     
-    // Улучшенный алгоритм выбора случайных героев
-    const shuffled = [...availableHeroes].sort(() => Math.random() - 0.5);
-    const selected = shuffled.slice(0, 2);
+    // Берем последовательно пары из перемешанного массива
+    const selected = [
+        window.shuffledHeroes[window.currentHeroIndex],
+        window.shuffledHeroes[window.currentHeroIndex + 1]
+    ];
+    
+    window.currentHeroIndex += 2;
     
     return selected;
 }
 
-// Обработчик для кнопки "Play Again" в Completion Screen
 function showCompletionScreen() {
+    const texts = getText('COMPLETION');
+    
+    const totalVotes = votedHeroes.size;
+    const correctVotes = playerScore;
+    const winRate = totalVotes > 0 ? ((correctVotes / totalVotes) * 100).toFixed(1) : 0;
+    
     gameActive = false;
     maxScore = Math.max(maxScore, playerScore);
     saveProgress();
     
-    document.body.style.opacity = '0.7';
+    // УДАЛЯЕМ СТАРЫЕ ПОПАПЫ
+    document.querySelectorAll('.universal-popup').forEach(popup => popup.remove());
+    
+   
     
     AnimationManager.setTimeout(() => {
         const popup = document.createElement('div');
-        popup.className = 'game-over-popup';
+        popup.className = 'universal-popup active';
         popup.innerHTML = `
             <div class="popup-content">
-                <h2>🎉 CONGRATULATIONS!</h2>
-                <p>You've rated all ${allHeroes.length} heroes!</p>
-                <p>Your final score: <span class="score">${playerScore}</span></p>
-                <p>Best score: <span class="best">${maxScore}</span></p>
-                <button id="complete-restart-button">🔄 Play Again</button>
+                <h2>${texts.TITLE}</h2>
+                <p>${texts.DESCRIPTION}</p>
+                <div class="popup-stats-container">
+                    <div class="popup-stat-item">
+                        <span class="popup-stat-label">${texts.SCORE}:</span>
+                        <span class="popup-stat-value score">${playerScore}</span>
+                    </div>
+                    <div class="popup-stat-item">
+                        <span class="popup-stat-label">${texts.BEST}:</span>
+                        <span class="popup-stat-value best">${maxScore}</span>
+                    </div>
+                    <div class="popup-stat-item">
+                        <span class="popup-stat-label">${texts.STATS}:</span>
+                        <span class="popup-stat-value">${correctVotes}/${totalVotes} (${winRate}%)</span>
+                    </div>
+                </div>
+                <button id="popup-complete-restart">${texts.BUTTON}</button>
             </div>
         `;
         
         document.body.appendChild(popup);
         
-        document.getElementById('complete-restart-button').addEventListener('click', function() {
+        document.getElementById('popup-complete-restart').addEventListener('click', function() {
             popup.remove();
             resetGame();
         });
     }, 1000);
     playHaptic('win');
 }
+
 
 // Preload next pair
 function preloadNextPair() {
@@ -719,7 +816,6 @@ function displayHeroes() {
 }
 
 // Оптимизированная функция голосования
-// Оптимизированная функция голосования
 async function vote(heroNumber) {
     if (!gameActive || !currentHeroes || currentHeroes.length < 2 || 
         playerLives <= 0 || isVotingInProgress) {
@@ -727,14 +823,9 @@ async function vote(heroNumber) {
     }
     
     isVotingInProgress = true;
-
     indicateSelection(heroNumber);
-
-    
     
     const selectedHero = currentHeroes[heroNumber - 1];
-    
-    // ИСПРАВЛЕНИЕ: только одно объявление otherHero
     const otherHero = heroNumber === 1 ? currentHeroes[1] : currentHeroes[0];
     
     const votePairId = `${selectedHero.id}-${otherHero.id}`;
@@ -750,7 +841,11 @@ async function vote(heroNumber) {
     
     playHaptic('selection');
     
-    // Запускаем дым с оптимизацией
+    // Обновляем силу голоса перед анимацией
+    updateGameVotePower();
+    const currentPower = totalVotePower;
+    
+    // Анимация с текущей силой голоса
     AnimationManager.setTimeout(() => {
         if (userMadeRightChoice) {
             playSmokeAnimation(`hero${heroNumber}-blue-smoke`, "https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Sprites/BlueSMoke256.webp");
@@ -765,16 +860,17 @@ async function vote(heroNumber) {
     
     showVoteResult(heroNumber, userMadeRightChoice, selectedHero.rating, otherHero.rating);
 
-    // Анимация цифр из МЕСТА КЛИКА
+    // Анимация цифр с СИЛОЙ ГОЛОСА
     if (event) {
         const clickX = event.clientX || event.touches[0].clientX;
         const clickY = event.clientY || event.touches[0].clientY;
         
         AnimationManager.setTimeout(() => {
-            ScoreEmitter.emitFromPoint(clickX, clickY, 5); // 4 частицы
+            ScoreEmitter.emitFromPoint(clickX, clickY, 4, `+${currentPower}`);
         }, 0);
     }
     
+    // УБИРАЕМ ДУБЛИРОВАНИЕ - оставляем только ОДИН таймаут для обновления жизней
     AnimationManager.setTimeout(() => {
         if (!userMadeRightChoice) {
             playerLives--;
@@ -783,32 +879,22 @@ async function vote(heroNumber) {
         }
     }, HERO_DISPLAY_DURATION - 500);
 
+    // Обновляем статистику с СИЛОЙ ГОЛОСА
     AnimationManager.setTimeout(() => {
         if (userMadeRightChoice) {
-            playerScore++;
+            // ДОБАВЛЯЕМ ОЧКИ ПО СИЛЕ ГОЛОСА
+            playerScore += currentPower;
             updateUI();
+            // Обновляем игровую силу после увеличения счета
+            updateGameVotePower();
         }
         
         votedHeroes.add(selectedHero.id);
         votedHeroes.add(otherHero.id);
         saveProgress();
         
-        updateHeroStatsAsync(selectedHero.id, otherHero.id);
-    }, HERO_DISPLAY_DURATION);
-
-    // Добавляем в функцию vote после votedHeroes.add()
-    AnimationManager.setTimeout(() => {
-        if (userMadeRightChoice) {
-            playerScore++;
-            updateUI();
-        }
-        
-        // ОБЯЗАТЕЛЬНО добавляем обоих героев в votedHeroes
-        votedHeroes.add(selectedHero.id);
-        votedHeroes.add(otherHero.id);
-        saveProgress();
-        
-        updateHeroStatsAsync(selectedHero.id, otherHero.id);
+        // ОБНОВЛЯЕМ СТАТИСТИКУ В БАЗУ: ВСЕГДА записываем победу выбранному герою
+        updateHeroStatsAsync(selectedHero.id, otherHero.id, currentPower);
     }, HERO_DISPLAY_DURATION);
     
     AnimationManager.setTimeout(() => {
@@ -903,7 +989,7 @@ function convertToImageBasedDigits(element, text) {
 }
 
 // Async stats update
-async function updateHeroStatsAsync(winnerId, loserId) {
+async function updateHeroStatsAsync(winnerId, loserId, votePower = 1) {
     try {
         const { data: winnerData, error: winnerFetchError } = await supabase
             .from('Heroes_Table')
@@ -922,7 +1008,7 @@ async function updateHeroStatsAsync(winnerId, loserId) {
         const { error: winnerError } = await supabase
             .from('Heroes_Table')
             .update({ 
-                wins: (winnerData.wins || 0) + 1,
+                wins: (winnerData.wins || 0) + votePower, // Умножаем на силу голоса
                 viewers: (winnerData.viewers || 0) + 1
             })
             .eq('id', winnerId);
@@ -930,7 +1016,7 @@ async function updateHeroStatsAsync(winnerId, loserId) {
         const { error: loserError } = await supabase
             .from('Heroes_Table')
             .update({ 
-                loses: (loserData.loses || 0) + 1,
+                loses: (loserData.loses || 0) + votePower, // Умножаем на силу голоса
                 viewers: (loserData.viewers || 0) + 1
             })
             .eq('id', loserId);
@@ -1081,97 +1167,142 @@ function playHaptic(type) {
     }
 }
 
-// Обновите функцию показа дисклеймера
 function showCopyrightDisclaimer() {
-    // Проверяем, показывался ли уже дисклеймер
-    const disclaimerShown = localStorage.getItem(DISCLAIMER_SHOWN_KEY);
-    
-    if (disclaimerShown === 'true') {
-        // Если уже показывался - просто продолжаем игру
-        document.body.style.opacity = '1';
-        return;
-    }
-    
-    // Если первый запуск - показываем дисклеймер
-    AnimationManager.setTimeout(() => {
+    setTimeout(() => {
         const texts = getText('DISCLAIMER');
         const popup = document.createElement('div');
-        popup.className = 'game-over-popup copyright-popup';
+        popup.className = 'universal-popup active';
         popup.innerHTML = `
             <div class="popup-content">
                 <h2>${texts.TITLE}</h2>
                 
-                <div class="disclaimer-content">
-                    <div class="disclaimer-text">
+                <div class="popup-disclaimer-content">
+                    <div class="popup-disclaimer-text">
                         ${texts.LEGAL}
                     </div>
 
-                    <div class="rights-notice">
+                    <div class="popup-rights-notice">
                         ${texts.RIGHTS_HOLDERS}
                     </div>
                 </div>
 
-                <button id="understand-button">${texts.BUTTON}</button>
+                <button id="popup-understand-button">${texts.BUTTON}</button>
             </div>
         `;
         
         document.body.appendChild(popup);
         
-        document.getElementById('understand-button').addEventListener('click', function() {
-            // Сохраняем факт показа дисклеймера
-            localStorage.setItem(DISCLAIMER_SHOWN_KEY, 'true');
+        document.getElementById('popup-understand-button').addEventListener('click', function() {
+            popup.remove();
+            document.body.style.opacity = '1';
+            // ПОСЛЕ ДИСКЛЕЙМЕРА ПОКАЗЫВАЕМ ПРАВИЛА
+            setTimeout(() => {
+                showRulesPopup();
+            }, 0);
+        });
+    }, 0);
+}
+
+// Обновите showRulesPopup
+function showRulesPopup() {
+    // ЖДЕМ пока дисклеймер закроется
+    setTimeout(() => {
+        if (document.querySelector('.universal-popup.active')) return; // Если еще есть активный попап - ждем
+        
+        const texts = getText('RULES');
+        const popup = document.createElement('div');
+        popup.className = 'universal-popup active';
+        popup.innerHTML = `
+            <div class="popup-content">
+                <h2>${texts.TITLE}</h2>
+                
+                <div class="popup-rules-content">
+                    <div class="popup-rules-text">
+                        ${texts.RULES_LIST}
+                    </div>
+                </div>
+
+                <button id="popup-rules-button">${texts.BUTTON}</button>
+            </div>
+        `;
+        
+        document.body.appendChild(popup);
+        
+        document.getElementById('popup-rules-button').addEventListener('click', function() {
             popup.remove();
             document.body.style.opacity = '1';
         });
-    }, 500);
+    }, 50); // Задержка после закрытия дисклеймера
 }
 
-// Game over function
+// Обновите showGameOverPopup
+function showGameOverPopup() {
+    const texts = getText('GAME_OVER');
+    
+    const totalVotes = votedHeroes.size;
+    const correctVotes = playerScore;
+    const winRate = totalVotes > 0 ? ((correctVotes / totalVotes) * 100).toFixed(1) : 0;
+    
+    // УДАЛЯЕМ СТАРЫЕ ПОПАПЫ ПЕРЕД СОЗДАНИЕМ НОВОГО
+    document.querySelectorAll('.universal-popup').forEach(popup => popup.remove());
+    
+   
+    
+    AnimationManager.setTimeout(() => {
+        const popup = document.createElement('div');
+        popup.className = 'universal-popup active';
+        popup.innerHTML = `
+            <div class="popup-content">
+                <h2>${texts.TITLE}</h2>
+                <div class="popup-stats-container">
+                    <div class="popup-stat-item">
+                        <span class="popup-stat-label">${texts.SCORE}:</span>
+                        <span class="popup-stat-value score">${playerScore}</span>
+                    </div>
+                    <div class="popup-stat-item">
+                        <span class="popup-stat-label">${texts.BEST}:</span>
+                        <span class="popup-stat-value best">${maxScore}</span>
+                    </div>
+                    <div class="popup-stat-item">
+                        <span class="popup-stat-label">${texts.STATS}:</span>
+                        <span class="popup-stat-value">${correctVotes}/${totalVotes} (${winRate}%)</span>
+                    </div>
+                </div>
+                <button id="popup-restart-button">${texts.BUTTON}</button>
+            </div>
+        `;
+        
+        document.body.appendChild(popup);
+        
+        document.getElementById('popup-restart-button').addEventListener('click', function() {
+            popup.remove();
+            resetGame();
+        });
+    }, 1000);
+    
+    playHaptic('game_over');
+}
+
+// Game over function - ДОБАВЛЕНА ИЗ ВТОРОГО ФАЙЛА
 function gameOver() {
     gameActive = false;
     maxScore = Math.max(maxScore, playerScore);
     saveProgress();
     
-    document.body.style.opacity = '0.7';
+    
     playHaptic('game_over');
     AnimationManager.setTimeout(() => {
         showGameOverPopup();
     }, 1000);
 }
 
-function showGameOverPopup() {
-    gameActive = false;
-    maxScore = Math.max(maxScore, playerScore);
-    saveProgress();
-    
-    document.body.style.opacity = '0.7';
-    
-    AnimationManager.setTimeout(() => {
-        const popup = document.createElement('div');
-        popup.className = 'game-over-popup';
-        popup.innerHTML = `
-            <div class="popup-content">
-                <h2>GAME OVER</h2>
-                <p>Your score: <span class="score">${playerScore}</span></p>
-                <p>Best score: <span class="best">${maxScore}</span></p>
-                <button id="restart-button">🔄 Try Again</button>
-            </div>
-        `;
-        
-        document.body.appendChild(popup);
-        
-        document.getElementById('restart-button').addEventListener('click', function() {
-            popup.remove();
-            resetGame();
-        });
-    }, 1000);
-    
-    if (tg) tg.HapticFeedback.notificationOccurred('error');
-}
-
+// Reset game - ПОЛНЫЙ СБРОС ПРОГРЕССА ПРИ КАЖДОМ ЗАПУСКЕ
+// Reset game - ПОЛНЫЙ СБРОС ПРОГРЕССА ПРИ КАЖДОМ ЗАПУСКЕ
 // Reset game - ПОЛНЫЙ СБРОС ПРОГРЕССА ПРИ КАЖДОМ ЗАПУСКЕ
 function resetGame() {
-    // Всегда полный сброс прогресса
+    // ОЧИЩАЕМ ВСЕ ПОПАПЫ ПЕРЕД НОВОЙ ИГРОЙ
+    document.querySelectorAll('.universal-popup').forEach(popup => popup.remove());
+    
     playerLives = 5;
     playerScore = 0;
     votedHeroes.clear();
@@ -1179,23 +1310,29 @@ function resetGame() {
     currentVotePairId = null;
     gameActive = true;
     
-    // Очищаем localStorage от прогресса (но оставляем максимальный счет)
+    resetGameVotePower();
+    
+    // ФИКС: ПОЛНОСТЬЮ сбрасываем кеш перемешанных героев для новой игры
+    window.shuffledHeroes = null;
+    window.currentHeroIndex = 0;
+    window.initialShuffleDone = false; // Добавляем флаг
+    
     localStorage.removeItem('heroVoteProgress');
     
-    // Очищаем все анимации
     AnimationManager.clearAll();
-
-    // Очищаем эмиттер цифр
     ScoreEmitter.clear();
     
-    document.body.style.opacity = '1';
     updateUI();
     displayHeroes();
 }
 
-// DOM loaded
+
+// Обновите обработчик DOMContentLoaded
 document.addEventListener("DOMContentLoaded", function() {
     initTelegram();
+
+    // ИНИЦИАЛИЗИРУЕМ СИЛУ ГОЛОСА ПЕРЕД СБРОСОМ ИГРЫ
+    calculateVotePower();
     
     // ВСЕГДА сбрасываем игру при загрузке (анти-читерство)
     resetGame();
@@ -1204,6 +1341,20 @@ document.addEventListener("DOMContentLoaded", function() {
 
     setTimeout(() => {
         showCopyrightDisclaimer();
+        // После дисклеймера показываем правила
+        setTimeout(() => {
+            if (document.querySelector('.copyright-popup') === null) {
+                showRulesPopup();
+            } else {
+                // Если дисклеймер еще виден, ждем его закрытия
+                const checkPopup = setInterval(() => {
+                    if (document.querySelector('.copyright-popup') === null) {
+                        clearInterval(checkPopup);
+                        showRulesPopup();
+                    }
+                }, 100);
+            }
+        }, 600);
     }, 1000);
     
     ScoreEmitter.init();
