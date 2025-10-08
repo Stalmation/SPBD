@@ -23,6 +23,7 @@ let dailyVotePower = 1;
 let gameVotePower = 0;
 let totalVotePower = 1;
 let lastPlayDate = null;
+let pairsGuessed = 0; // ← ДОБАВИТЬ ЭТУ ПЕРЕМЕННУЮ
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
@@ -305,20 +306,20 @@ function checkDailyBonus() {
     }
 }
 
+// Функции для управления силой голоса - ЗАМЕНИТЬ функцию
 function updateGameVotePower() {
     // Каждые BONUS_PER_GAME_PAIR угаданных пар добавляем +1 к игровой силе
-    const pairsGuessed = playerScore;
     const newGamePower = Math.floor(pairsGuessed / BONUS_PER_GAME_PAIR);
     
     if (newGamePower !== gameVotePower) {
         gameVotePower = Math.min(newGamePower, MAX_GAME_BONUS);
+        calculateVotePower();
     }
-    
-    calculateVotePower();
 }
 
 function resetGameVotePower() {
     gameVotePower = 0;
+    pairsGuessed = 0; // ← ДОБАВИТЬ сброс счетчика пар
     calculateVotePower();
 }
 
@@ -441,12 +442,14 @@ function loadProgress() {
         // ПРИ ПЕРЕЗАГРУЗКЕ ВСЕГДА СБРАСЫВАЕМ ТЕКУЩИЙ ПРОГРЕСС
         playerLives = 5;  //ТУТ МЕНЯЕМ ЧИСЛО ЖИЗНЕЙ
         playerScore = 0;
+        pairsGuessed = 0; // ← ДОБАВИТЬ инициализацию
         votedHeroes = new Set();
         
         updateUI();
     } catch (error) {
         playerLives = 5;
         playerScore = 0;
+        pairsGuessed = 0; // ← ДОБАВИТЬ инициализацию
         votedHeroes = new Set();
         maxScore = 0;
     }
@@ -884,6 +887,7 @@ async function vote(heroNumber) {
         if (userMadeRightChoice) {
             // ДОБАВЛЯЕМ ОЧКИ ПО СИЛЕ ГОЛОСА
             playerScore += currentPower;
+            pairsGuessed++; // ← ДОБАВИТЬ ЭТУ СТРОКУ: увеличиваем счетчик пар
             updateUI();
             // Обновляем игровую силу после увеличения счета
             updateGameVotePower();
@@ -1305,6 +1309,7 @@ function resetGame() {
     
     playerLives = 5;
     playerScore = 0;
+    pairsGuessed = 0; // ← ДОБАВИТЬ сброс счетчика пар
     votedHeroes.clear();
     isVotingInProgress = false;
     currentVotePairId = null;
