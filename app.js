@@ -499,12 +499,13 @@ function getPublisherLogoUrl(publisherName) {
 }
 
 // Load all heroes
+// Load all heroes
 async function loadAllHeroes() {
     try {
         let { data, error } = await supabase
             .from("Heroes_Table")
-            .select("id, name, image_url, wins, loses, viewers, rating, good_bad, publisher")
-            .order('rating', { ascending: false });
+            .select("id, name, image_url, rating, good_bad, publisher");
+            
 
         if (error) throw error;
         if (!data || data.length === 0) return;
@@ -518,7 +519,7 @@ async function loadAllHeroes() {
         startGame();
         
     } catch (error) {
-        // Убраны console.log для продакшена
+       
     }
 }
 
@@ -529,6 +530,7 @@ function startGame() {
     updateUI();
 }
 
+// ЗАМЕНЯЕМ функцию getRandomHeroes
 // ЗАМЕНЯЕМ функцию getRandomHeroes
 function getRandomHeroes() {
     if (allHeroes.length < 2) return null;
@@ -1300,16 +1302,13 @@ function gameOver() {
     }, 1000);
 }
 
-// Reset game - ПОЛНЫЙ СБРОС ПРОГРЕССА ПРИ КАЖДОМ ЗАПУСКЕ
-// Reset game - ПОЛНЫЙ СБРОС ПРОГРЕССА ПРИ КАЖДОМ ЗАПУСКЕ
-// Reset game - ПОЛНЫЙ СБРОС ПРОГРЕССА ПРИ КАЖДОМ ЗАПУСКЕ
 function resetGame() {
     // ОЧИЩАЕМ ВСЕ ПОПАПЫ ПЕРЕД НОВОЙ ИГРОЙ
     document.querySelectorAll('.universal-popup').forEach(popup => popup.remove());
     
     playerLives = 5;
     playerScore = 0;
-    pairsGuessed = 0; // ← ДОБАВИТЬ сброс счетчика пар
+    pairsGuessed = 0;
     votedHeroes.clear();
     isVotingInProgress = false;
     currentVotePairId = null;
@@ -1320,7 +1319,7 @@ function resetGame() {
     // ФИКС: ПОЛНОСТЬЮ сбрасываем кеш перемешанных героев для новой игры
     window.shuffledHeroes = null;
     window.currentHeroIndex = 0;
-    window.initialShuffleDone = false; // Добавляем флаг
+    window.initialShuffleDone = false;
     
     localStorage.removeItem('heroVoteProgress');
     
