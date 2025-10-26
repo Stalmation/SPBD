@@ -18,6 +18,10 @@ const MAX_DAILY_BONUS = 5;
 const MAX_GAME_BONUS = 20;
 const BONUS_PER_GAME_PAIR = 10;
 
+// Переменные для статистики
+let gameStartTime = null;
+let sessionId = null;
+
 // Переменные силы голоса
 let dailyVotePower = 1;
 let gameVotePower = 0;
@@ -206,7 +210,123 @@ const ScoreEmitter = {
     }
 };
 
+// ==================== СТАТИСТИКА ====================
 
+
+
+// Функция генерации ID сессии
+function generateSessionId() {
+    return 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+}
+
+// Функция сохранения статистики
+async function saveGameStats(completionType) {
+    try {
+        const gameDuration = gameStartTime ? Math.floor((Date.now() - gameStartTime) / 1000) : 0;
+        
+        // Информация о устройстве и стране
+        const country = await getUserCountry();
+        const userAgent = navigator.userAgent;
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
+        
+        const gameStats = {
+            user_id: tg?.initDataUnsafe?.user?.id || null,
+            session_id: sessionId,
+            total_votes: votedHeroes.size,
+            game_duration: gameDuration,
+            user_agent: isMobile ? 'mobile' : 'desktop',
+            country_code: country
+        };
+
+        // Сохраняем сессию
+        const { error: sessionError } = await supabase
+            .from('game_sessions')
+            .insert([gameStats]);
+
+        // Сохраняем активность голосований
+        await saveVoteActivity();
+        
+        // Обновляем статистику игрока
+        await updatePlayerStats();
+        
+    } catch (error) {
+        // Тихий fail - статистика не должна ломать игру
+    }
+}
+
+// Сохраняем активность голосований
+async function saveVoteActivity() {
+    const userId = tg?.initDataUnsafe?.user?.id;
+    if (!userId) return;
+
+    try {
+        const { error } = await supabase
+            .from('vote_activity')
+            .insert([{
+                user_id: userId,
+                votes_count: votedHeroes.size,
+                created_at: new Date().toISOString().split('T')[0]
+            }]);
+    } catch (error) {
+        // Тихий fail
+    }
+}
+
+// Статистика игрока
+async function updatePlayerStats() {
+    const userId = tg?.initDataUnsafe?.user?.id;
+    if (!userId) return;
+
+    try {
+        // Проверяем существующего игрока
+        const { data: existingPlayer, error: fetchError } = await supabase
+            .from('player_sessions')
+            .select('*')
+            .eq('user_id', userId)
+            .single();
+
+        if (fetchError || !existingPlayer) {
+            // Новый игрок
+            const { error: insertError } = await supabase
+                .from('player_sessions')
+                .insert([{
+                    user_id: userId,
+                    first_seen: new Date().toISOString().split('T')[0],
+                    last_seen: new Date().toISOString().split('T')[0],
+                    total_games: 1,
+                    total_score: playerScore,
+                    best_score: playerScore
+                }]);
+        } else {
+            // Обновляем существующего
+            const { error: updateError } = await supabase
+                .from('player_sessions')
+                .update({
+                    last_seen: new Date().toISOString().split('T')[0],
+                    total_games: (existingPlayer.total_games || 0) + 1,
+                    total_score: (existingPlayer.total_score || 0) + playerScore,
+                    best_score: Math.max(existingPlayer.best_score || 0, playerScore)
+                })
+                .eq('user_id', userId);
+        }
+    } catch (error) {
+        // Тихий fail
+    }
+}
+
+// Получение страны пользователя
+async function getUserCountry() {
+    try {
+        // Для Telegram Web App
+        if (tg?.initDataUnsafe?.user?.language_code) {
+            const lang = tg.initDataUnsafe.user.language_code;
+            return lang.split('-')[1] || lang;
+        }
+        return 'unknown';
+    } catch (error) {
+        return 'unknown';
+    }
+}
 
 
 
@@ -523,9 +643,10 @@ async function loadAllHeroes() {
     }
 }
 
-// Start game
 function startGame() {
     gameActive = true;
+    gameStartTime = Date.now();
+    sessionId = generateSessionId();
     displayHeroes();
     updateUI();
 }
@@ -607,6 +728,10 @@ function showCompletionScreen() {
             resetGame();
         });
     }, 1000);
+
+    // Сохраняем статистику (ДОБАВЬ ЭТУ СТРОЧКУ)
+    saveGameStats('completion');
+    
     playHaptic('win');
 }
 
@@ -1289,12 +1414,14 @@ function showGameOverPopup() {
     playHaptic('game_over');
 }
 
-// Game over function - ДОБАВЛЕНА ИЗ ВТОРОГО ФАЙЛА
+// Обнови функцию gameOver
 function gameOver() {
     gameActive = false;
     maxScore = Math.max(maxScore, playerScore);
     saveProgress();
     
+    // Сохраняем статистику
+    saveGameStats('game_over');
     
     playHaptic('game_over');
     AnimationManager.setTimeout(() => {
