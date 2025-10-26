@@ -1,1 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Stats - Super Power Beat Down</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="stylesheet" href="admin.css">
+</head>
+<body>
+    <div class="admin-container">
+        <div class="login-form" id="loginForm">
+            <h2>🔐 Admin Access</h2>
+            <input type="text" id="adminUsername" placeholder="Username">
+            <input type="password" id="adminPassword" placeholder="Password">
+            <button onclick="checkAdminAccess()">Access Stats</button>
+            <div id="loginError" class="error-message"></div>
+        </div>
 
+        <div class="admin-panel" id="adminPanel">
+            <header class="admin-header">
+                <h1>📊 Game Statistics</h1>
+                <div class="filter-info" id="filterInfo">Period: All Time</div>
+                <div class="last-update" id="lastUpdate"></div>
+            </header>
+            
+            <!-- Фильтры по времени -->
+            <div class="time-filters">
+                <button class="filter-btn active" onclick="loadStats('all')">All Time</button>
+                <button class="filter-btn" onclick="loadStats('today')">Today</button>
+                <button class="filter-btn" onclick="loadStats('week')">Week</button>
+                <button class="filter-btn" onclick="loadStats('month')">Month</button>
+                <button class="filter-btn" onclick="loadStats('year')">Year</button>
+            </div>
+            
+            <div class="stats-grid" id="statsGrid">
+                <!-- Statistics will load here -->
+            </div>
+            
+            <div class="actions">
+                <button onclick="loadStats(currentFilter)" class="refresh-btn">🔄 Refresh</button>
+                <button onclick="exportStats()" class="export-btn">📤 Export Data</button>
+            </div>
+
+            <div class="recent-activity">
+                <h3>📈 Recent Activity</h3>
+                <div id="recentActivity"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="admin.js"></script>
+</body>
+</html>
