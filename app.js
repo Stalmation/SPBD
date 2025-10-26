@@ -21,6 +21,14 @@ const BONUS_PER_GAME_PAIR = 10;
 // Константа для количества жизней
 const INITIAL_PLAYER_LIVES = 5; // ← ДОБАВЬТЕ ЭТУ КОНСТАНТУ
 
+// Добавьте после констант в начале app.js
+const HORIZONTAL_FLIP_EXCLUSIONS = [
+    'Superman', 'Superboy', 
+    'Supergirl', 'Invisible Woman',
+    'Winter Soldier',  'Mr. Fantastic', 'Human Torch', 'Thing'
+    // Добавьте другие имена как они есть в базе
+];
+
 // Переменные для статистики
 let gameStartTime = null;
 let sessionId = null;
@@ -225,6 +233,19 @@ const ScoreEmitter = {
         }
     }
 };
+
+function shouldFlipHero(hero) {
+    // Прямое сравнение без lower case
+    for (const excludedName of HORIZONTAL_FLIP_EXCLUSIONS) {
+        if (hero.name.includes(excludedName)) {
+            return false;
+        }
+    }
+    
+    // 50% шанс для остальных
+    return Math.random() > 0.5;
+}
+
 
 // ==================== СТАТИСТИКА ====================
 
@@ -686,14 +707,18 @@ function startGame() {
     updateUI();
 }
 
-// ЗАМЕНЯЕМ функцию getRandomHeroes
-// ЗАМЕНЯЕМ функцию getRandomHeroes
 function getRandomHeroes() {
     if (allHeroes.length < 2) return null;
 
     // ОДИН РАЗ перемешиваем массив в начале игры
     if (!window.shuffledHeroes || window.shuffledHeroes.length < 2 || !window.initialShuffleDone) {
         window.shuffledHeroes = [...allHeroes].sort(() => Math.random() - 0.5);
+        
+        // ДОБАВЛЯЕМ ЗДЕСЬ: определяем отражение для каждого героя при перемешивании
+        window.shuffledHeroes.forEach(hero => {
+            hero.shouldFlip = shouldFlipHero(hero);
+        });
+        
         window.currentHeroIndex = 0;
         window.initialShuffleDone = true;
     }
@@ -925,6 +950,13 @@ function displayHeroes() {
         
         // Set hero image
         if (imgElement) imgElement.src = hero.image_url;
+
+        // Используем предопределенное значение shouldFlip
+        if (hero.shouldFlip) {
+            imgElement.style.transform = 'scaleX(-1)';
+        } else {
+            imgElement.style.transform = 'scaleX(1)';
+        }
         
         // Set hero name с оптимизацией
         if (nameElement) {
