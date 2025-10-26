@@ -31,6 +31,9 @@ const TEXTS = {
             SCORE: "Your score",
             BEST: "Best score",
             STATS: "Statistics",
+            GAME_WINRATE: "Win Rate (game)",
+            OVERALL_WINRATE: "Overall Win Rate", 
+            TOTAL_GAMES: "Total Games",
             BUTTON: "TRY AGAIN"
         },
         COMPLETION: {
@@ -38,7 +41,8 @@ const TEXTS = {
             DESCRIPTION: "You've rated all heroes!",
             SCORE: "Your final score",
             BEST: "Best score",
-            STATS: "Statistics", 
+            STATS: "Statistics",
+            GAME_WINRATE: "Win Rate (game)",
             BUTTON: "PLAY AGAIN"
         },
         NETWORK_ERROR: {
@@ -79,6 +83,9 @@ const TEXTS = {
             SCORE: "Ваш счёт",
             BEST: "Лучший счёт", 
             STATS: "Статистика",
+            GAME_WINRATE: "Винрейт (игра)",
+            OVERALL_WINRATE: "Общий винрейт",
+            TOTAL_GAMES: "Всего игр",
             BUTTON: "ПОВТОРИТЬ"
         },
         COMPLETION: {
@@ -86,7 +93,8 @@ const TEXTS = {
             DESCRIPTION: "Вы оценили всех героев!",
             SCORE: "Финальный счёт",
             BEST: "Лучший счёт",
-            STATS: "Статистика",
+            STATS: "Статистика", 
+            GAME_WINRATE: "Винрейт (игра)",
             BUTTON: "ПОВТОРИТЬ"
         },
         NETWORK_ERROR: {

@@ -18,9 +18,14 @@ const MAX_DAILY_BONUS = 5;
 const MAX_GAME_BONUS = 20;
 const BONUS_PER_GAME_PAIR = 10;
 
+// Константа для количества жизней
+const INITIAL_PLAYER_LIVES = 5; // ← ДОБАВЬТЕ ЭТУ КОНСТАНТУ
+
 // Переменные для статистики
 let gameStartTime = null;
 let sessionId = null;
+
+const FIRST_RUN_KEY = 'firstRunCompleted';
 
 // Переменные силы голоса
 let dailyVotePower = 1;
@@ -28,6 +33,14 @@ let gameVotePower = 0;
 let totalVotePower = 1;
 let lastPlayDate = null;
 let pairsGuessed = 0; // ← ДОБАВИТЬ ЭТУ ПЕРЕМЕННУЮ
+//let totalPairsShown = 0;   // ← ДОБАВИТЬ ТОЛЬКО ЭТУ: показанные пары в текущей игре
+let votePowerPairs = 0; // ← ДОБАВЬТЕ ЭТУ СТРОКУ       // ОБЩЕЕ количество показанных пар (все игры)
+let currentGamePairsShown = 0;  // ТОЛЬКО для текущей игры
+
+let totalGames = 0;
+let totalPairsGuessedOverall = 0;
+let totalPairsShownOverall = 0;
+
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
@@ -77,15 +90,18 @@ let allHeroes = [];
 let currentHeroes = [];
 let nextHeroes = [];
 let votedHeroes = new Set();
+
 let tg = null;
 let isVotingInProgress = false;
 let currentVotePairId = null;
 let networkErrorShown = false;
 // Game variables
-let playerLives = 5;
+let playerLives = INITIAL_PLAYER_LIVES;
 let playerScore = 0;
 let maxScore = 0;
 let gameActive = true;
+
+
 
 // Publisher logo mapping
 const PUBLISHER_LOGOS = {
@@ -549,31 +565,50 @@ function hideNetworkError() {
     });
 }
 
-// Load progress - ТОЛЬКО ДЛЯ МАКСИМАЛЬНОГО СЧЕТА
 function loadProgress() {
     try {
         const savedStats = localStorage.getItem('heroGameStats');
         
         if (savedStats) {
             const stats = JSON.parse(savedStats);
+            
+            // Восстанавливаем общую статистику
             maxScore = stats.maxScore || 0;
+            totalGames = stats.totalGames || 0;
+            totalPairsGuessedOverall = stats.totalPairsGuessed || 0;
+            totalPairsShownOverall = stats.totalPairsShown || 0;
+        } else {
+            // Если данных нет — инициализируем нулями
+            maxScore = 0;
+            totalGames = 0;
+            totalPairsGuessedOverall = 0;
+            totalPairsShownOverall = 0;
         }
-        
-        // ПРИ ПЕРЕЗАГРУЗКЕ ВСЕГДА СБРАСЫВАЕМ ТЕКУЩИЙ ПРОГРЕСС
-        playerLives = 5;  //ТУТ МЕНЯЕМ ЧИСЛО ЖИЗНЕЙ
+
+        // Сбрасываем только текущую игру
+        playerLives = INITIAL_PLAYER_LIVES;
         playerScore = 0;
-        pairsGuessed = 0; // ← ДОБАВИТЬ инициализацию
+        pairsGuessed = 0;
+        currentGamePairsShown = 0;
         votedHeroes = new Set();
-        
+
         updateUI();
     } catch (error) {
-        playerLives = 5;
+        console.error("Ошибка при загрузке прогресса:", error);
+
+        playerLives = INITIAL_PLAYER_LIVES;
         playerScore = 0;
-        pairsGuessed = 0; // ← ДОБАВИТЬ инициализацию
+        pairsGuessed = 0;
+        currentGamePairsShown = 0;
         votedHeroes = new Set();
+
         maxScore = 0;
+        totalGames = 0;
+        totalPairsGuessedOverall = 0;
+        totalPairsShownOverall = 0;
     }
 }
+
 
 // Save progress - ТОЛЬКО ДЛЯ МАКСИМАЛЬНОГО СЧЕТА
 function saveProgress() {
@@ -680,58 +715,46 @@ function getRandomHeroes() {
     return selected;
 }
 
+// Обновить showCompletionScreen
 function showCompletionScreen() {
     const texts = getText('COMPLETION');
     
     const totalVotes = votedHeroes.size;
     const correctVotes = playerScore;
-    const winRate = totalVotes > 0 ? ((correctVotes / totalVotes) * 100).toFixed(1) : 0;
-    
-    gameActive = false;
-    maxScore = Math.max(maxScore, playerScore);
-    saveProgress();
-    
-    // УДАЛЯЕМ СТАРЫЕ ПОПАПЫ
-    document.querySelectorAll('.universal-popup').forEach(popup => popup.remove());
-    
-   
-    
-    AnimationManager.setTimeout(() => {
-        const popup = document.createElement('div');
-        popup.className = 'universal-popup active';
-        popup.innerHTML = `
-            <div class="popup-content">
-                <h2>${texts.TITLE}</h2>
-                <p>${texts.DESCRIPTION}</p>
-                <div class="popup-stats-container">
-                    <div class="popup-stat-item">
-                        <span class="popup-stat-label">${texts.SCORE}:</span>
-                        <span class="popup-stat-value score">${playerScore}</span>
-                    </div>
-                    <div class="popup-stat-item">
-                        <span class="popup-stat-label">${texts.BEST}:</span>
-                        <span class="popup-stat-value best">${maxScore}</span>
-                    </div>
-                    <div class="popup-stat-item">
-                        <span class="popup-stat-label">${texts.STATS}:</span>
-                        <span class="popup-stat-value">${correctVotes}/${totalVotes} (${winRate}%)</span>
-                    </div>
-                </div>
-                <button id="popup-complete-restart">${texts.BUTTON}</button>
-            </div>
-        `;
-        
-        document.body.appendChild(popup);
-        
-        document.getElementById('popup-complete-restart').addEventListener('click', function() {
-            popup.remove();
-            resetGame();
-        });
-    }, 1000);
+    const gameWinRate = totalVotes > 0 ? ((correctVotes / totalVotes) * 100).toFixed(1) : 0;
 
-    // Сохраняем статистику (ДОБАВЬ ЭТУ СТРОЧКУ)
-    saveGameStats('completion');
+    const popup = document.createElement('div');
+    popup.className = 'universal-popup active';
+    popup.innerHTML = `
+        <div class="popup-content">
+            <h2>${texts.TITLE}</h2>
+            <p>${texts.DESCRIPTION}</p>
+            <div class="popup-stats-container">
+                <div class="popup-stat-item">
+                    <span class="popup-stat-label">${texts.SCORE}:</span>
+                    <span class="popup-stat-value score">${playerScore}</span>
+                </div>
+                <div class="popup-stat-item">
+                    <span class="popup-stat-label">${texts.BEST}:</span>
+                    <span class="popup-stat-value best">${maxScore}</span>
+                </div>
+                <div class="popup-stat-item">
+                    <span class="popup-stat-label">${texts.GAME_WINRATE}:</span>
+                    <span class="popup-stat-value">${correctVotes}/${totalVotes} (${gameWinRate}%)</span>
+                </div>
+            </div>
+            <button id="popup-complete-restart">${texts.BUTTON}</button>
+        </div>
+    `;
     
+    document.body.appendChild(popup);
+    
+    document.getElementById('popup-complete-restart').addEventListener('click', function() {
+        popup.remove();
+        resetGame();
+    });
+
+    saveGameStats('completion');
     playHaptic('win');
 }
 
@@ -968,6 +991,13 @@ async function vote(heroNumber) {
     currentVotePairId = votePairId;
     
     const userMadeRightChoice = selectedHero.rating > otherHero.rating;
+    
+    //totalPairsShown++;       // Общая статистика (все игры)
+    currentGamePairsShown++; // Только текущая игра
+    
+    if (userMadeRightChoice) {
+        votePowerPairs++; 
+    }
     
     playHaptic('selection');
     
@@ -1298,6 +1328,7 @@ function playHaptic(type) {
     }
 }
 
+// Обновить showCopyrightDisclaimer - убрать автоматический показ правил
 function showCopyrightDisclaimer() {
     setTimeout(() => {
         const texts = getText('DISCLAIMER');
@@ -1306,17 +1337,14 @@ function showCopyrightDisclaimer() {
         popup.innerHTML = `
             <div class="popup-content">
                 <h2>${texts.TITLE}</h2>
-                
                 <div class="popup-disclaimer-content">
                     <div class="popup-disclaimer-text">
                         ${texts.LEGAL}
                     </div>
-
                     <div class="popup-rights-notice">
                         ${texts.RIGHTS_HOLDERS}
                     </div>
                 </div>
-
                 <button id="popup-understand-button">${texts.BUTTON}</button>
             </div>
         `;
@@ -1326,7 +1354,7 @@ function showCopyrightDisclaimer() {
         document.getElementById('popup-understand-button').addEventListener('click', function() {
             popup.remove();
             document.body.style.opacity = '1';
-            // ПОСЛЕ ДИСКЛЕЙМЕРА ПОКАЗЫВАЕМ ПРАВИЛА
+            // ПОСЛЕ ДИСКЛЕЙМЕРА ПОКАЗЫВАЕМ ПРАВИЛА (только при первом запуске)
             setTimeout(() => {
                 showRulesPopup();
             }, 0);
@@ -1334,11 +1362,10 @@ function showCopyrightDisclaimer() {
     }, 0);
 }
 
-// Обновите showRulesPopup
+// Обновить showRulesPopup - убрать авто-показ
 function showRulesPopup() {
-    // ЖДЕМ пока дисклеймер закроется
     setTimeout(() => {
-        if (document.querySelector('.universal-popup.active')) return; // Если еще есть активный попап - ждем
+        if (document.querySelector('.universal-popup.active')) return;
         
         const texts = getText('RULES');
         const popup = document.createElement('div');
@@ -1346,13 +1373,11 @@ function showRulesPopup() {
         popup.innerHTML = `
             <div class="popup-content">
                 <h2>${texts.TITLE}</h2>
-                
                 <div class="popup-rules-content">
                     <div class="popup-rules-text">
                         ${texts.RULES_LIST}
                     </div>
                 </div>
-
                 <button id="popup-rules-button">${texts.BUTTON}</button>
             </div>
         `;
@@ -1363,53 +1388,76 @@ function showRulesPopup() {
             popup.remove();
             document.body.style.opacity = '1';
         });
-    }, 50); // Задержка после закрытия дисклеймера
+    }, 50);
 }
 
-// Обновите showGameOverPopup
 function showGameOverPopup() {
     const texts = getText('GAME_OVER');
     
-    const totalVotes = votedHeroes.size;
-    const correctVotes = playerScore;
-    const winRate = totalVotes > 0 ? ((correctVotes / totalVotes) * 100).toFixed(1) : 0;
+    // Текущая игра
+    const gamePairsGuessed = pairsGuessed;
+    const gamePairsTotal = currentGamePairsShown;
+    const gameWinRate = gamePairsTotal > 0 
+        ? ((gamePairsGuessed / gamePairsTotal) * 100).toFixed(1) 
+        : 0;
     
-    // УДАЛЯЕМ СТАРЫЕ ПОПАПЫ ПЕРЕД СОЗДАНИЕМ НОВОГО
-    document.querySelectorAll('.universal-popup').forEach(popup => popup.remove());
+    // Обновляем общие данные
+    totalGames += 1;
+    totalPairsGuessedOverall += gamePairsGuessed;
+    totalPairsShownOverall += gamePairsTotal;
+    maxScore = Math.max(maxScore, playerScore);
+
+    // Пересчёт общего винрейта
+    const overallWinRate = totalPairsShownOverall > 0 
+        ? ((totalPairsGuessedOverall / totalPairsShownOverall) * 100).toFixed(1) 
+        : 0;
     
-   
-    
-    AnimationManager.setTimeout(() => {
-        const popup = document.createElement('div');
-        popup.className = 'universal-popup active';
-        popup.innerHTML = `
-            <div class="popup-content">
-                <h2>${texts.TITLE}</h2>
-                <div class="popup-stats-container">
-                    <div class="popup-stat-item">
-                        <span class="popup-stat-label">${texts.SCORE}:</span>
-                        <span class="popup-stat-value score">${playerScore}</span>
-                    </div>
-                    <div class="popup-stat-item">
-                        <span class="popup-stat-label">${texts.BEST}:</span>
-                        <span class="popup-stat-value best">${maxScore}</span>
-                    </div>
-                    <div class="popup-stat-item">
-                        <span class="popup-stat-label">${texts.STATS}:</span>
-                        <span class="popup-stat-value">${correctVotes}/${totalVotes} (${winRate}%)</span>
-                    </div>
+    // Сохраняем в localStorage
+    localStorage.setItem('heroGameStats', JSON.stringify({
+        maxScore: maxScore,
+        totalGames: totalGames,
+        totalPairsGuessed: totalPairsGuessedOverall,
+        totalPairsShown: totalPairsShownOverall
+    }));
+
+    // Создание popup
+    const popup = document.createElement('div');
+    popup.className = 'universal-popup active';
+    popup.innerHTML = `
+        <div class="popup-content">
+            <h2>${texts.TITLE}</h2>
+            <div class="popup-stats-container">
+                <div class="popup-stat-item">
+                    <span class="popup-stat-label">${texts.SCORE}:</span>
+                    <span class="popup-stat-value score">${playerScore}</span>
                 </div>
-                <button id="popup-restart-button">${texts.BUTTON}</button>
+                <div class="popup-stat-item">
+                    <span class="popup-stat-label">${texts.BEST}:</span>
+                    <span class="popup-stat-value best">${maxScore}</span>
+                </div>
+                <div class="popup-stat-item">
+                    <span class="popup-stat-label">${texts.GAME_WINRATE}:</span>
+                    <span class="popup-stat-value">${gamePairsGuessed}/${gamePairsTotal} (${gameWinRate}%)</span>
+                </div>
+                <div class="popup-stat-item">
+                    <span class="popup-stat-label">${texts.OVERALL_WINRATE}:</span>
+                    <span class="popup-stat-value">${totalPairsGuessedOverall}/${totalPairsShownOverall} (${overallWinRate}%)</span>
+                </div>
+                <div class="popup-stat-item">
+                    <span class="popup-stat-label">${texts.TOTAL_GAMES}:</span>
+                    <span class="popup-stat-value">${totalGames}</span>
+                </div>
             </div>
-        `;
-        
-        document.body.appendChild(popup);
-        
-        document.getElementById('popup-restart-button').addEventListener('click', function() {
-            popup.remove();
-            resetGame();
-        });
-    }, 1000);
+            <button id="popup-restart-button">${texts.BUTTON}</button>
+        </div>
+    `;
+    
+    document.body.appendChild(popup);
+    
+    document.getElementById('popup-restart-button').addEventListener('click', function() {
+        popup.remove();
+        resetGame();
+    });
     
     playHaptic('game_over');
 }
@@ -1433,9 +1481,12 @@ function resetGame() {
     // ОЧИЩАЕМ ВСЕ ПОПАПЫ ПЕРЕД НОВОЙ ИГРОЙ
     document.querySelectorAll('.universal-popup').forEach(popup => popup.remove());
     
-    playerLives = 5;
+    playerLives = INITIAL_PLAYER_LIVES;
     playerScore = 0;
     pairsGuessed = 0;
+    votePowerPairs = 0;
+    currentGamePairsShown = 0; // ← Сбрасываем только для текущей игры!
+   
     votedHeroes.clear();
     isVotingInProgress = false;
     currentVotePairId = null;
@@ -1470,23 +1521,21 @@ document.addEventListener("DOMContentLoaded", function() {
     loadAllHeroes();
     initNetworkMonitoring();
 
+    // Проверяем первый запуск
+    const firstRunCompleted = localStorage.getItem(FIRST_RUN_KEY);
+    
     setTimeout(() => {
-        showCopyrightDisclaimer();
-        // После дисклеймера показываем правила
-        setTimeout(() => {
-            if (document.querySelector('.copyright-popup') === null) {
-                showRulesPopup();
-            } else {
-                // Если дисклеймер еще виден, ждем его закрытия
-                const checkPopup = setInterval(() => {
-                    if (document.querySelector('.copyright-popup') === null) {
-                        clearInterval(checkPopup);
-                        showRulesPopup();
-                    }
-                }, 100);
-            }
-        }, 600);
+        if (!firstRunCompleted) {
+            showCopyrightDisclaimer();
+            // Помечаем что первый запуск завершен
+            localStorage.setItem(FIRST_RUN_KEY, 'true');
+        } else {
+            // Если уже запускались - сразу показываем игру
+            document.body.style.opacity = '1';
+        }
     }, 1000);
+
+    
     
     ScoreEmitter.init();
 
