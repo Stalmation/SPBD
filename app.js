@@ -25,7 +25,7 @@ const INITIAL_PLAYER_LIVES = 5; // ← ДОБАВЬТЕ ЭТУ КОНСТАНТ�
 const HORIZONTAL_FLIP_EXCLUSIONS = [
     'Superman', 'Superboy', 
     'Supergirl', 'Invisible Woman',
-    'Winter Soldier',  'Mr. Fantastic', 'Human Torch', 'Thing', 'Amanda Waller'
+    'Winter-Soldier',  'Mr. Fantastic', 'Human Torch', 'Thing', 'Amanda Waller', 'Krypto'
     // Добавьте другие имена как они есть в базе
 ];
 
