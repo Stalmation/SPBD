@@ -1,4 +1,4 @@
-/* styles_pop_up.css - ИСПРАВЛЕННЫЕ СТИЛИ */
+/* styles_pop_up.css - ОТСОРТИРОВАННЫЕ СТИЛИ */
 
 /* БАЗОВЫЕ СТИЛИ ДЛЯ ВСЕХ ПОПАПОВ */
 .universal-popup {
@@ -8,15 +8,19 @@
     width: 100%;
     height: 100%;
     background: rgba(10, 4, 0, 0.75) !important;
-    display: none; /* Сначала скрыты */
+    display: none;
     justify-content: center;
     align-items: center;
     z-index: 10000;
     backdrop-filter: blur(0px);
+    
+    @media (max-width: 480px) {
+        /* Мобильная адаптация для попапа */
+    }
 }
 
 .universal-popup.active {
-    display: flex; /* Показываем только активные */
+    display: flex;
 }
 
 /* ТОЧКИ НА ФОНЕ */
@@ -50,6 +54,23 @@
     margin: 0 auto;
     padding: 25px;
     animation: popupSlideIn 0.3s ease-out;
+    
+    @media (max-width: 480px) {
+        width: min(95vw, 800px) !important;
+        max-width: min(95vw, 800px) !important;
+        padding: 20px 15px !important;
+        max-height: 90vh;
+    }
+    
+    @media (min-width: 769px) and (max-width: 1024px) {
+        width: min(70vw, 800px) !important;
+        max-width: min(70vw, 800px) !important;
+    }
+    
+    @media (min-width: 1025px) {
+        width: min(60vw, 800px) !important;
+        max-width: min(60vw, 800px) !important;
+    }
 }
 
 @keyframes popupSlideIn {
@@ -63,8 +84,29 @@
     }
 }
 
+/* УЛУЧШЕННЫЕ СТИЛИ ЗАГОЛОВКОВ */
+.universal-popup h2 {
+    color: #ffd700 !important;
+    font-family: 'Comic Sans MS', 'Comic Sans', 'Arial Rounded MT Bold', 'Arial', sans-serif !important;
+    font-size: clamp(28px, 6vw, 36px) !important;
+    font-weight: bold !important;
+    text-shadow: 
+        0 0 10px rgba(255, 215, 0, 0.8),
+        2px 2px 0 #000, 
+        -1px -1px 0 #000, 
+        1px -1px 0 #000, 
+        -1px 1px 0 #000, 
+        1px 1px 0 #000 !important;
+    margin-bottom: 20px !important;
+    text-align: center !important;
+    
+    @media (max-width: 480px) {
+        font-size: clamp(24px, 6vw, 32px) !important;
+        margin-bottom: 15px !important;
+    }
+}
 
-/* ДИСКЛЕЙМЕР - красный заголовок как сейчас */
+/* ДИСКЛЕЙМЕР - красный заголовок */
 .popup-disclaimer-content + button ~ h2,
 .universal-popup .popup-content:has(.popup-disclaimer-content) h2 {
     color: #e4391f !important;
@@ -75,7 +117,7 @@
 .universal-popup .popup-content:has(.popup-disclaimer-content) h2 {
     color: #ff4444 !important;
     text-shadow: 
-        0 0 15px rgba(255, 68, 68, 0.9), /* Красное свечение */
+        0 0 15px rgba(255, 68, 68, 0.9),
         2px 2px 0 #000, 
         -1px -1px 0 #000, 
         1px -1px 0 #000, 
@@ -83,25 +125,20 @@
         1px 1px 0 #000 !important;
 }
 
-
-/* УЛУЧШЕННЫЕ СТИЛИ ЗАГОЛОВКОВ */
-.universal-popup h2 {
-    color: #ffd700 !important;
-    font-family: 'Comic Sans MS', 'Comic Sans', 'Arial Rounded MT Bold', 'Arial', sans-serif !important;
-    font-size: clamp(28px, 6vw, 36px) !important; /* Увеличиваем размер */
-    font-weight: bold !important;
-    text-shadow: 
-        0 0 10px rgba(255, 215, 0, 0.8), /* Желтое свечение */
-        2px 2px 0 #000, 
-        -1px -1px 0 #000, 
-        1px -1px 0 #000, 
-        -1px 1px 0 #000, 
-        1px 1px 0 #000 !important;
-    margin-bottom: 20px !important;
-    text-align: center !important;
+/* ОБЩИЕ СТИЛИ ТЕКСТА */
+.universal-popup p {
+    margin: 12px 0 !important;
+    font-size: clamp(18px, 4.5vw, 22px) !important;
+    color: white;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    line-height: 1.5 !important;
+    
+    @media (max-width: 480px) {
+        font-size: clamp(16px, 4vw, 20px) !important;
+    }
 }
 
-/* ТЕКСТ ДИСКЛЕЙМЕРА - КРАСНЫЙ И КОМИКСНЫЙ ШРИФТ */
+/* ТЕКСТ ДИСКЛЕЙМЕРА */
 .popup-disclaimer-text p,
 .popup-rights-notice p {
     line-height: 1.4 !important;
@@ -110,29 +147,40 @@
     text-align: left;
     word-wrap: break-word;
     overflow-wrap: break-word;
-    color: #ffffff !important; /* БЕЛЫЙ ТЕКСТ */
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important; /* СИСТЕМНЫЙ ШРИФТ */
+    color: #ffffff !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+    
+    @media (max-width: 480px) {
+        font-size: clamp(16px, 4vw, 20px) !important;
+        line-height: 1.1 !important;
+        margin: 15px 0 !important;
+    }
 }
 
-
-/* Правила - белый текст */
+/* ТЕКСТ ПРАВИЛ */
 .popup-rules-text p {
     color: white !important;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    margin: 8px 0 !important;
+    font-size: clamp(18px, 4.5vw, 22px) !important;
+    line-height: 1.5 !important;
+    
+    @media (max-width: 480px) {
+        font-size: clamp(16px, 4vw, 20px) !important;
+        line-height: 1.1 !important;
+        margin: 15px 0 !important;
+    }
 }
 
-/* УВЕЛИЧИВАЕМ РАЗМЕР ТЕКСТА В ПОПАПАХ */
-.universal-popup p {
-    margin: 12px 0 !important;
-    font-size: clamp(18px, 4.5vw, 22px) !important; /* Увеличиваем размер */
-    color: white;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    line-height: 1.5 !important; /* Улучшаем читаемость */
+.popup-rules-text p:last-child {
+    border-bottom: none;
 }
 
-.popup-rules-text p {
-    color: white !important;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+.popup-rules-text strong {
+    color: #ffd700;
+    display: inline !important;
 }
 
 /* КОНТЕЙНЕРЫ КОНТЕНТА */
@@ -143,15 +191,10 @@
     overflow-y: auto;
     margin-bottom: 15px;
     text-align: left;
-}
-
-/* ОСОБО ДЛЯ ДИСКЛЕЙМЕРА И ПРАВИЛ */
-.popup-disclaimer-text p,
-.popup-rights-notice p,
-.popup-rules-text p {
-    font-size: clamp(18px, 4.5vw, 22px) !important;
-    line-height: 1.5 !important;
-    margin: 14px 0 !important;
+    
+    @media (max-width: 480px) {
+        max-height: 65vh;
+    }
 }
 
 /* СТАТИСТИКА */
@@ -161,6 +204,10 @@
     padding: 20px;
     margin: 20px 0;
     border: 1px solid rgba(255, 215, 0, 0.3);
+    
+    @media (max-width: 480px) {
+        padding: 15px;
+    }
 }
 
 .popup-stat-item {
@@ -171,6 +218,10 @@
     font-size: clamp(20px, 4.5vw, 24px) !important;
     color: white;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    
+    @media (max-width: 480px) {
+        font-size: clamp(18px, 4vw, 22px) !important;
+    }
 }
 
 .popup-stat-label {
@@ -216,9 +267,25 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    
+    @media (max-width: 480px) {
+        padding: 12px 20px !important;
+        font-size: clamp(18px, 4vw, 22px) !important;
+        min-height: 45px;
+        border-radius: 8px;
+        width: 60% !important;
+        padding: 14px 25px !important;
+    }
+    
+    @media (min-width: 769px) and (max-width: 1024px) {
+        width: 45% !important;
+    }
+    
+    @media (min-width: 1025px) {
+        width: 40% !important;
+    }
 }
 
-/* Эффект нажатия */
 .universal-popup button:active {
     transform: scale(0.95);
 }
@@ -238,20 +305,12 @@
     left: 100%;
 }
 
-/* СПЕЦИАЛЬНЫЕ СТИЛИ ДЛЯ ПРАВИЛ */
-.popup-rules-text p {
-    padding: 10px 0;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    margin: 8px 0 !important;
-}
-
-.popup-rules-text p:last-child {
-    border-bottom: none;
-}
-
-.popup-rules-text strong {
-    color: #ffd700;
-    display: inline !important;
+@media (min-width: 1025px) {
+    .universal-popup button:hover {
+        filter: brightness(1.1);
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+    }
 }
 
 /* ОШИБКА СЕТИ */
@@ -276,6 +335,11 @@
     gap: 10px;
     justify-content: center;
     margin-top: 20px;
+    
+    @media (max-width: 480px) {
+        flex-direction: column;
+        gap: 8px;
+    }
 }
 
 .popup-network-error-buttons button {
@@ -289,6 +353,10 @@
     min-width: 100px;
     width: auto !important;
     margin-top: 0;
+    
+    @media (max-width: 480px) {
+        width: 100% !important;
+    }
 }
 
 #popup-retry-connection {
@@ -303,65 +371,4 @@
 
 .popup-network-error-buttons button:active {
     transform: scale(0.95);
-}
-
-/* АДАПТАЦИЯ ДЛЯ МОБИЛЬНЫХ */
-@media (max-width: 480px) {
-    .universal-popup .popup-content {
-        width: min(95vw, 800px) !important;
-        max-width: min(95vw, 800px) !important;
-        padding: 20px 15px !important;
-        max-height: 90vh;
-    }
-    
-    .popup-disclaimer-content,
-    .popup-rules-content,
-    .popup-stats-container {
-        max-height: 65vh;
-    }
-    
-    .popup-disclaimer-text p,
-    .popup-rules-text p,
-    .popup-rights-notice p {
-        font-size: clamp(16px, 4vw, 20px) !important;
-        line-height: 1.1 !important;
-        margin: 15px 0 !important;
-    }
-
-    
-    
-    .universal-popup h2 {
-        font-size: clamp(24px, 6vw, 32px) !important;
-        margin-bottom: 15px !important;
-    }
-
-    .universal-popup p {
-        font-size: clamp(16px, 4vw, 20px) !important;
-    }
-    
-    .universal-popup button {
-        padding: 12px 20px !important;
-        font-size: clamp(18px, 4vw, 22px) !important;
-        min-height: 45px;
-        border-radius: 8px;
-        width: 60% !important;
-        padding: 14px 25px !important;
-    }
-    
-    .popup-stats-container {
-        padding: 15px;
-    }
-    
-    .popup-stat-item {
-        font-size: clamp(18px, 4vw, 22px) !important;
-    }
-    
-    .popup-network-error-buttons {
-        flex-direction: column;
-        gap: 8px;
-    }
-    
-    .popup-network-error-buttons button {
-        width: 100% !important;
-    }
 }
