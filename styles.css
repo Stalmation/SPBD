@@ -61,7 +61,7 @@ body::before {
     background: url('https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Images/tileBG.webp') repeat;
     mix-blend-mode: multiply;
     pointer-events: none;
-    opacity: 0.25;
+    opacity: 0.35;
     z-index: 0;
     background-size: 50%;
     
