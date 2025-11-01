@@ -1,3 +1,4 @@
+
 // app.js
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
 
@@ -15,19 +16,28 @@ const RULES_SHOWN_KEY = 'rulesShown';
 
 // Константы для силы голоса
 const MAX_DAILY_BONUS = 5;
-const MAX_GAME_BONUS = 20;
+const MAX_GAME_BONUS = 10; // Сила голоса максимальная за одну игру
 const BONUS_PER_GAME_PAIR = 10;
 
 // Константа для количества жизней
 const INITIAL_PLAYER_LIVES = 5; // ← ДОБАВЬТЕ ЭТУ КОНСТАНТУ
 
+// ==================== КОНСТАНТЫ ДЛЯ БУСТОВ ====================
+const MAX_VISIBLE_LIVES = 5; // Максимальное количество отображаемых жизней
+
+// ==================== ПЕРЕМЕННЫЕ ДЛЯ БУСТОВ ====================
+let extraLives = 0; // Дополнительные жизни (сверх 5)
+let powerBoost = 0; // Временный буст силы голоса для текущей игры
+
 // Добавьте после констант в начале app.js
 const HORIZONTAL_FLIP_EXCLUSIONS = [
     'Superman', 'Superboy', 
     'Supergirl', 'Invisible Woman',
-    'Winter-Soldier',  'Mr. Fantastic', 'Human Torch', 'Thing', 'Amanda Waller', 'Krypto'
+    'Winter-Soldier',  'Mr. Fantastic', 'Human Torch', 'Thing', 'Amanda Waller', 'Krypto', 'Robin', 'DOGE', 'Damian Wayne'
     // Добавьте другие имена как они есть в базе
 ];
+
+let memeImageCache = new Map(); // Кеш для рандомных изображений мемов
 
 // Переменные для статистики
 let gameStartTime = null;
@@ -48,6 +58,17 @@ let currentGamePairsShown = 0;  // ТОЛЬКО для текущей игры
 let totalGames = 0;
 let totalPairsGuessedOverall = 0;
 let totalPairsShownOverall = 0;
+
+
+// МИНИМАЛЬНАЯ ИНИЦИАЛИЗАЦИЯ:
+let memeSettings = {
+    enabled: false, // самое важное - по умолчанию мемы выключены
+    chance: 0,
+    perGame: 0, 
+    season: 'default'
+};
+let allMemes = [];
+let memeCardsToAdd = 0;
 
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -125,8 +146,6 @@ const PUBLISHER_LOGOS = {
 
 
 // Эмиттер цифр для анимации силы голоса
-// Эмиттер цифр для анимации силы голоса
-// Эмиттер цифр для анимации силы голоса
 const ScoreEmitter = {
     emitter: null,
     
@@ -143,74 +162,72 @@ const ScoreEmitter = {
     // Создание частицы с анимацией разлета
     createParticle(x, y, value) {
         if (!this.emitter) this.init();
-    
-    const particle = document.createElement('div');
-    particle.className = 'score-particle';
-    particle.textContent = value;
-    
-    // Позиционирование в месте клика
-    particle.style.left = x + 'px';
-    particle.style.top = y + 'px';
 
-    // Адаптивные размеры в зависимости от экрана
-    const screenWidth = window.innerWidth;
-    let sizeClass = '';
-    
-    if (screenWidth <= 360) {
-        // Очень маленькие экраны - минимальные размеры
-        sizeClass = 'size-small';
-    } else if (screenWidth <= 480) {
-        // Маленькие телефоны
-        const sizes = ['size-small', '', 'size-small'];
-        sizeClass = sizes[Math.floor(Math.random() * sizes.length)];
-    } else if (screenWidth <= 768) {
-        // Телефоны и маленькие планшеты
-        const sizes = ['size-small', '', ''];
-        sizeClass = sizes[Math.floor(Math.random() * sizes.length)];
-    } else {
-        // Планшеты и десктопы
-        const sizes = ['size-small', '', 'size-large'];
-        sizeClass = sizes[Math.floor(Math.random() * sizes.length)];
-    }
-    
-    if (sizeClass) {
-        particle.classList.add(sizeClass);
-    }
-    
-    // Адаптивное смещение в зависимости от размера экрана
-    const baseOffset = screenWidth <= 480 ? 60 : 
-                      screenWidth <= 768 ? 80 : 100;
-    
-    const offsetX = (Math.random() - 0.5) * baseOffset;
-    const offsetY = (Math.random() - 0.5) * baseOffset;
-    
-    // Случайная начальная прозрачность
-    const startOpacity = 0.7 + Math.random() * 0.3;
-    
-    // Адаптивная длительность анимации
-    const moveDuration = screenWidth <= 480 ? 1.0 : 
-                        screenWidth <= 768 ? 1.2 : 1.5;
-    
-    // Индивидуальные параметры для исчезновения
-    const fadeStartTime = (Math.random() * 0.8 + 0.4) * 1000;
-    const fadeDuration = (Math.random() * 0.5 + 0.3) * 1000;
-    const totalLifeTime = fadeStartTime + fadeDuration;
+        const particle = document.createElement('div');
+        particle.className = 'score-particle';
+        particle.textContent = value;
 
-    // Устанавливаем CSS переменные
-    particle.style.setProperty('--offset-x', offsetX);
-    particle.style.setProperty('--offset-y', offsetY);
-    particle.style.opacity = startOpacity;
-    particle.style.animationDuration = moveDuration + 's';
+        // Устанавливаем позицию
+        particle.style.left = x + 'px';
+        particle.style.top = y + 'px';
 
-    this.emitter.appendChild(particle);
+        // === КЛЮЧЕВОЕ ИСПРАВЛЕНИЕ: УСТАНАВЛИВАЕМ ПЕРЕМЕННЫЕ ДЛЯ АНИМАЦИИ ===
+        const baseOffset = window.innerWidth <= 480 ? 60 : 
+                        window.innerWidth <= 768 ? 80 : 100;
 
-    // Запускаем исчезновение в случайное время
-    AnimationManager.setTimeout(() => {
-        particle.style.transition = `opacity ${fadeDuration}ms ease-out`;
-        particle.style.opacity = '0';
-    }, fadeStartTime);
-        
-        // Удаление после полного исчезновения
+        const offsetX = (Math.random() - 0.5) * baseOffset;
+        const offsetY = (Math.random() - 0.5) * baseOffset;
+
+        particle.style.setProperty('--offset-x', offsetX);
+        particle.style.setProperty('--offset-y', offsetY);
+
+        // === АНИМАЦИЯ ДЛЯ БУСТОВ ===
+        if (value.includes('⭐') || value.includes('⚡')) {
+            particle.classList.add('large');
+            // НЕ ПЕРЕОПРЕДЕЛЯЕМ transform — анимация сама его меняет
+            particle.style.animation = 'bubbleFloat 2.5s ease-out forwards';
+        }
+
+        // Адаптивные размеры
+        const screenWidth = window.innerWidth;
+        let sizeClass = '';
+        if (screenWidth <= 360) {
+            sizeClass = 'size-small';
+        } else if (screenWidth <= 480) {
+            const sizes = ['size-small', '', 'size-small'];
+            sizeClass = sizes[Math.floor(Math.random() * sizes.length)];
+        } else if (screenWidth <= 768) {
+            const sizes = ['size-small', '', ''];
+            sizeClass = sizes[Math.floor(Math.random() * sizes.length)];
+        } else {
+            const sizes = ['size-small', '', 'size-large'];
+            sizeClass = sizes[Math.floor(Math.random() * sizes.length)];
+        }
+
+        if (sizeClass) {
+            particle.classList.add(sizeClass);
+        }
+
+        // Прозрачность и длительность
+        const startOpacity = 0.7 + Math.random() * 0.3;
+        const moveDuration = screenWidth <= 480 ? 1.0 : 
+                            screenWidth <= 768 ? 1.2 : 1.5;
+
+        particle.style.opacity = startOpacity;
+        particle.style.animationDuration = moveDuration + 's';
+
+        this.emitter.appendChild(particle);
+
+        // Исчезновение
+        const fadeStartTime = (Math.random() * 0.8 + 0.4) * 1000;
+        const fadeDuration = (Math.random() * 0.5 + 0.3) * 1000;
+        const totalLifeTime = fadeStartTime + fadeDuration;
+
+        AnimationManager.setTimeout(() => {
+            particle.style.transition = `opacity ${fadeDuration}ms ease-out`;
+            particle.style.opacity = '0';
+        }, fadeStartTime);
+
         AnimationManager.setTimeout(() => {
             if (particle.parentNode === this.emitter) {
                 this.emitter.removeChild(particle);
@@ -218,17 +235,30 @@ const ScoreEmitter = {
         }, totalLifeTime);
     },
     
-    // Остальной код без изменений...
-    emitFromPoint(x, y, count = 4, text = '+1') { // Добавляем параметр text
-        for (let i = 0; i < count; i++) {
-            const randomDelay = Math.random() * 100;
-            
-            AnimationManager.setTimeout(() => {
-                this.createParticle(x, y, text); // Используем переданный текст
-            }, i * 20 + randomDelay);
-        }
-    },
+    emitFromPoint(x, y, count = 4, text = '+1', options = {}) {
+    const { isBoost = false } = options;
+    const textStr = String(text);
+
+    // === ЕСЛИ ЭТО БУСТ — БЛОКИРУЕМ ВСЁ, ЧТО НЕ СОДЕРЖИТ ⭐ ИЛИ ⚡ ===
+    if (isBoost && !textStr.includes('⭐') && !textStr.includes('⚡')) {
+        return; // Блокируем +1, +5, +10 и т.д.
+    }
+
+    // === ЕСЛИ ЭТО НЕ БУСТ — БЛОКИРУЕМ ВСЁ С ⭐ ИЛИ ⚡ (на всякий случай) ===
+    if (!isBoost && (textStr.includes('⭐') || textStr.includes('⚡'))) {
+        return; // Защита от ошибок
+    }
+
+    // === Показываем только разрешённые частицы ===
+    for (let i = 0; i < count; i++) {
+        const randomDelay = Math.random() * 100;
+        AnimationManager.setTimeout(() => {
+            this.createParticle(x, y, textStr);
+        }, i * 20 + randomDelay);
+    }
+},
     
+    // Очистка всех частиц
     clear() {
         if (this.emitter) {
             this.emitter.innerHTML = '';
@@ -422,10 +452,14 @@ function setupBrowserExit() {
     });
 }
 
-// Функции для управления силой голоса
+// ==================== ОБНОВЛЕННАЯ ФУНКЦИЯ CALCULATE VOTE POWER ====================
 function calculateVotePower() {
     checkDailyBonus();
-    totalVotePower = dailyVotePower + gameVotePower;
+    
+    // ПРИМЕНЯЕМ ЛИМИТ К ОБЩЕЙ СИЛЕ ГОЛОСА (включая временный буст)
+    const totalPowerWithoutLimit = dailyVotePower + gameVotePower + powerBoost;
+    totalVotePower = Math.min(totalPowerWithoutLimit, MAX_GAME_BONUS);
+    
     return totalVotePower;
 }
 
@@ -465,20 +499,23 @@ function checkDailyBonus() {
     }
 }
 
-// Функции для управления силой голоса - ЗАМЕНИТЬ функцию
+// ==================== ОБНОВЛЕННАЯ ФУНКЦИЯ UPDATE GAME VOTE POWER ====================
 function updateGameVotePower() {
     // Каждые BONUS_PER_GAME_PAIR угаданных пар добавляем +1 к игровой силе
     const newGamePower = Math.floor(pairsGuessed / BONUS_PER_GAME_PAIR);
     
+    // ПРИМЕНЯЕМ ЛИМИТ MAX_GAME_BONUS
     if (newGamePower !== gameVotePower) {
         gameVotePower = Math.min(newGamePower, MAX_GAME_BONUS);
         calculateVotePower();
     }
 }
 
+// ==================== ОБНОВЛЕННАЯ ФУНКЦИЯ RESETGAMEVOTEPOWER ====================
 function resetGameVotePower() {
     gameVotePower = 0;
-    pairsGuessed = 0; // ← ДОБАВИТЬ сброс счетчика пар
+    powerBoost = 0; // Сбрасываем временный буст
+    pairsGuessed = 0;
     calculateVotePower();
 }
 
@@ -637,7 +674,10 @@ function loadProgress() {
 function saveProgress() {
     try {
         localStorage.setItem('heroGameStats', JSON.stringify({
-            maxScore: Math.max(maxScore, playerScore)
+            maxScore: Math.max(maxScore, playerScore),
+            totalGames: totalGames,                    // ← ДОЛЖНО сохраняться
+            totalPairsGuessed: totalPairsGuessedOverall, // ← ДОЛЖНО сохраняться  
+            totalPairsShown: totalPairsShownOverall     // ← ДОЛЖНО сохраняться
         }));
         updateUI();
     } catch (error) {
@@ -654,18 +694,119 @@ function updateUI() {
     }
 }
 
+// ==================== ОБНОВЛЕННАЯ ФУНКЦИЯ UPDATE LIVES DISPLAY ====================
 function updateLivesDisplay() {
     const globalLives = document.getElementById('global-lives');
-    
-    if (globalLives) {
-        globalLives.innerHTML = '';
+    if (!globalLives) return;
+
+    globalLives.innerHTML = '';
+
+    const visibleLives = Math.min(playerLives, MAX_VISIBLE_LIVES);
+
+    for (let i = 0; i < visibleLives; i++) {
+        const star = document.createElement('div');
+        star.className = 'life-star'; // без scale(1) и opacity:1
+        globalLives.appendChild(star);
+    }
+
+    // Индикатор доп. жизней
+    if (extraLives > 0 && playerLives >= MAX_VISIBLE_LIVES) {
+        const extraIndicator = document.createElement('div');
+        extraIndicator.className = 'extra-lives-indicator';
+        extraIndicator.textContent = `+${extraLives}`;
+        extraIndicator.classList.add('extra-indicator');
         
-        for (let i = 0; i < playerLives; i++) {
-            const star = document.createElement('div');
-            star.className = 'life-star';
-            globalLives.appendChild(star);
+        globalLives.appendChild(extraIndicator);
+    }
+}
+
+// ==================== ОБНОВЛЕННАЯ ФУНКЦИЯ ADD LIVES ====================
+function addLives(amount) {
+    if (amount <= 0) return;
+
+    const livesBefore = playerLives;
+
+    if (playerLives < MAX_VISIBLE_LIVES) {
+        const space = MAX_VISIBLE_LIVES - playerLives;
+        const toMain = Math.min(amount, space);
+        playerLives += toMain;
+        amount -= toMain;
+    }
+
+    if (amount > 0) {
+        extraLives += amount;
+    }
+
+    const addedToVisible = playerLives > livesBefore;
+    const addedCount = Math.min(playerLives - livesBefore, MAX_VISIBLE_LIVES);
+
+    if (addedToVisible && addedCount > 0) {
+        animateLifeAddition(addedCount);
+    } else {
+        updateLivesDisplay(); // только если ничего не анимируем
+    }
+}
+
+
+// ==================== ДОБАВИМ ФУНКЦИЮ ДЛЯ ПРОВЕРКИ СТРУКТУРЫ МЕМОВ ====================
+function checkMemeStructure() {
+    console.log('=== CHECKING MEME STRUCTURE ===');
+    if (allMemes.length > 0) {
+        const sampleMeme = allMemes[0];
+        console.log('Sample meme structure:', Object.keys(sampleMeme));
+        console.log('Sample meme:', sampleMeme);
+        
+        // Проверим есть ли мемы с бустами
+        const memesWithBoosts = allMemes.filter(meme => 
+            meme.extra_life !== undefined || meme.power_boost !== undefined
+        );
+        console.log('Memes with boosts:', memesWithBoosts.length);
+        if (memesWithBoosts.length > 0) {
+            console.log('First meme with boosts:', memesWithBoosts[0]);
         }
     }
+}
+
+
+
+
+// ==================== ИСПРАВЛЕННАЯ АНИМАЦИЯ ДОБАВЛЕНИЯ ЖИЗНЕЙ ====================
+function animateLifeAddition(count) {
+    const globalLives = document.getElementById('global-lives');
+    if (!globalLives || count <= 0) return;
+
+    console.log('Animating addition of', count, 'lives');
+
+    // Сначала обновляем отображение (чтобы появились все звёзды)
+    updateLivesDisplay();
+
+    // Даем DOM отрисоваться
+    AnimationManager.requestAnimationFrame(() => {
+        const lifeStars = globalLives.querySelectorAll('.life-star');
+        const startIndex = lifeStars.length - count;
+
+        for (let i = startIndex; i < lifeStars.length; i++) {
+            const star = lifeStars[i];
+
+            // Сбрасываем стили (важно: НЕ перезаписываем transform/opacity)
+            star.style.transition = 'none';
+            star.style.transform = 'scale(0)';
+            star.style.opacity = '0';
+
+            // Принудительно рефлоу
+            void star.offsetWidth;
+
+            // Добавляем класс анимации
+            star.classList.add('life-star-adding');
+
+            // Убираем transition: none и запускаем анимацию
+            AnimationManager.requestAnimationFrame(() => {
+                star.style.transition = '';
+            });
+        }
+
+        playHaptic('correct');
+    });
 }
 
 // Get publisher logo URL
@@ -701,25 +842,185 @@ async function loadAllHeroes() {
     }
 }
 
+// Функция loadMemeSettings должна инициализировать ВСЕ поля
+async function loadMemeSettings() {
+    try {
+        const { data, error } = await supabase
+            .from("meme_settings")
+            .select("setting_key, setting_value");
+            
+        if (error) throw error;
+        
+        // Инициализируем настройки значениями из базы
+        memeSettings = {
+            enabled: false,
+            chance: 0.25,
+            perGame: 1,
+            season: 'default'
+        };
+        
+        if (data) {
+            data.forEach(setting => {
+                switch(setting.setting_key) {
+                    case 'meme_enabled':
+                        memeSettings.enabled = setting.setting_value === 'true';
+                        break;
+                    case 'meme_chance_per_game':
+                        memeSettings.chance = parseFloat(setting.setting_value);
+                        break;
+                    case 'memes_per_game':
+                        memeSettings.perGame = parseInt(setting.setting_value);
+                        break;
+                    case 'season_per_game':
+                        memeSettings.season = setting.setting_value || 'default';
+                        break;
+                }
+            });
+        }
+    } catch (error) {
+        console.error("Ошибка загрузки настроек мемов:", error);
+        // В случае ошибки устанавливаем безопасные значения по умолчанию
+        memeSettings = {
+            enabled: false,
+            chance: 0.25,
+            perGame: 1,
+            season: 'default'
+        };
+    }
+}
+
+async function loadAllMemes() {
+    try {
+        if (!memeSettings.enabled) {
+            console.log('Memes disabled in settings');
+            return;
+        }
+
+        let query = supabase
+            .from("Memes_Table")
+            .select("id, name, image_url, image_urls, rating, chance, season, extra_life, power_boost");
+
+        if (memeSettings.season !== 'default') {
+            query = query.eq('season', memeSettings.season);
+        }
+
+        const { data, error } = await query;
+        if (error) throw error;
+        
+        allMemes = data || [];
+        console.log('Loaded memes:', allMemes.length);
+        
+    } catch (error) {
+        console.error("Ошибка загрузки мемов:", error);
+        allMemes = [];
+    }
+}
+
+function getRandomMemeImage(meme) {
+    // Приоритет: используем image_urls если есть и не пустой
+    if (meme.image_urls && Array.isArray(meme.image_urls) && meme.image_urls.length > 0) {
+        const randomIndex = Math.floor(Math.random() * meme.image_urls.length);
+        return meme.image_urls[randomIndex];
+    }
+    
+    // Fallback: используем старую image_url
+    return meme.image_url;
+}
+
+// Добавьте функцию для получения случайного мема по редкости
+function getRandomMemeByRarity(rarity) {
+    const filteredMemes = allMemes.filter(meme => meme.chance === rarity);
+    if (filteredMemes.length === 0) return null;
+    
+    return filteredMemes[Math.floor(Math.random() * filteredMemes.length)];
+}
+
+// Добавьте функцию для выбора случайного мема
+function getRandomMeme() {
+    if (allMemes.length === 0) return null;
+    
+    const rand = Math.random();
+    let rarity;
+    
+    if (rand < 0.7) {
+        rarity = 'Rare'; // 70% шанс
+    } else if (rand < 0.9) {
+        rarity = 'Epic'; // 20% шанс
+    } else {
+        rarity = 'Legend'; // 10% шанс
+    }
+    
+    return getRandomMemeByRarity(rarity) || allMemes[Math.floor(Math.random() * allMemes.length)];
+}
+
+
 function startGame() {
     gameActive = true;
     gameStartTime = Date.now();
     sessionId = generateSessionId();
-    displayHeroes();
+    //displayHeroes();
     updateUI();
 }
 
 function getRandomHeroes() {
     if (allHeroes.length < 2) return null;
 
-    // ОДИН РАЗ перемешиваем массив в начале игры
+    // ПЕРЕМЕШИВАЕМ ТОЛЬКО ПРИ ПЕРВОМ ВЫЗОВЕ В ИГРЕ
     if (!window.shuffledHeroes || window.shuffledHeroes.length < 2 || !window.initialShuffleDone) {
+        console.log('=== CREATING NEW DECK WITH MEMES ===');
         window.shuffledHeroes = [...allHeroes].sort(() => Math.random() - 0.5);
         
-        // ДОБАВЛЯЕМ ЗДЕСЬ: определяем отражение для каждого героя при перемешивании
+        // ДОБАВЛЯЕМ МЕМЫ В КОЛОДУ ТОЛЬКО ОДИН РАЗ
+        if (memeSettings.enabled && allMemes.length > 0) {
+            // Проверяем шанс добавления мемов в эту игру
+            if (Math.random() < memeSettings.chance) {
+                memeCardsToAdd = memeSettings.perGame;
+                console.log(`Adding ${memeCardsToAdd} memes to deck`);
+                
+                // Добавляем мемы в случайные позиции ОДИН РАЗ
+                for (let i = 0; i < memeCardsToAdd; i++) {
+                    const meme = getRandomMeme();
+                    if (meme) {
+                        const randomPosition = Math.floor(Math.random() * (window.shuffledHeroes.length - 10)) + 5;
+                        const memeCard = {
+                        ...meme,
+                        id: `meme_${meme.id}`,
+                        originalMemeId: meme.id,
+                        isMeme: true,
+                        shouldFlip: true,
+                        logo_url: null,
+                        chance: meme.chance || 'Rare',
+                        season: meme.season || 'default',
+                        // ВАЖНО: используем случайное изображение из массива
+                        image_url: getRandomMemeImage(meme)
+                    };
+                        window.shuffledHeroes.splice(randomPosition, 0, memeCard);
+                        console.log('Added meme:', memeCard.name, 'at position:', randomPosition);
+                    }
+                }
+            } else {
+                console.log('No memes added to deck (chance failed)');
+            }
+        } else {
+            console.log('Memes disabled or no memes available');
+        }
+        
+        // Определяем отражение для каждого героя
         window.shuffledHeroes.forEach(hero => {
-            hero.shouldFlip = shouldFlipHero(hero);
+            if (!hero.isMeme) {
+                hero.shouldFlip = shouldFlipHero(hero);
+            }
         });
+        
+        console.log('Final deck size:', window.shuffledHeroes.length);
+        console.log('Memes in deck:', window.shuffledHeroes.filter(h => h.isMeme).length);
+
+        // Добавьте в функцию getRandomHeroes():
+        console.log('=== DECK STATISTICS ===');
+        console.log('Total cards in deck:', window.shuffledHeroes.length);
+        console.log('Regular heroes:', window.shuffledHeroes.filter(h => !h.isMeme).length);
+        console.log('Memes:', window.shuffledHeroes.filter(h => h.isMeme).length);
+        console.log('Original heroes count:', allHeroes.length);
         
         window.currentHeroIndex = 0;
         window.initialShuffleDone = true;
@@ -727,6 +1028,7 @@ function getRandomHeroes() {
     
     // Если дошли до конца массива - показываем экран завершения
     if (window.currentHeroIndex >= window.shuffledHeroes.length - 1) {
+        console.log('Deck exhausted, showing completion screen');
         showCompletionScreen();
         return null;
     }
@@ -737,18 +1039,32 @@ function getRandomHeroes() {
         window.shuffledHeroes[window.currentHeroIndex + 1]
     ];
     
+    console.log('Selected pair:', {
+        index: window.currentHeroIndex,
+        hero1: { name: selected[0].name, isMeme: selected[0].isMeme },
+        hero2: { name: selected[1].name, isMeme: selected[1].isMeme }
+    });
+    
     window.currentHeroIndex += 2;
     
     return selected;
 }
 
-// Обновить showCompletionScreen
 function showCompletionScreen() {
     const texts = getText('COMPLETION');
     
     const totalVotes = votedHeroes.size;
     const correctVotes = playerScore;
     const gameWinRate = totalVotes > 0 ? ((correctVotes / totalVotes) * 100).toFixed(1) : 0;
+
+    // Функция для определения цвета винрейта
+    const getWinRateColor = (winRate) => {
+        const rate = parseFloat(winRate);
+        if (rate >= 75) return '#ffd700'; // золотой
+        if (rate >= 50) return '#00de00'; // зеленый
+        if (rate >= 25) return '#4cc9f0'; // синий
+        return '#ffffff'; // белый
+    };
 
     const popup = document.createElement('div');
     popup.className = 'universal-popup active';
@@ -767,7 +1083,7 @@ function showCompletionScreen() {
                 </div>
                 <div class="popup-stat-item">
                     <span class="popup-stat-label">${texts.GAME_WINRATE}:</span>
-                    <span class="popup-stat-value">${correctVotes}/${totalVotes} (${gameWinRate}%)</span>
+                    <span class="popup-stat-value" style="color: ${getWinRateColor(gameWinRate)}">${gameWinRate}%</span>
                 </div>
             </div>
             <button id="popup-complete-restart">${texts.BUTTON}</button>
@@ -895,8 +1211,34 @@ function showResultImage(element, type) {
     }, 50);
 }
 
-// Get hero alignment
-function getHeroAlignment(goodBad) {
+// Обновите функцию getHeroAlignment для мемов
+function getHeroAlignment(goodBad, isMeme, memeRarity) {
+    if (isMeme) {
+        // Убедитесь что memeRarity передается корректно
+        const actualRarity = memeRarity || 'Rare'; // значение по умолчанию
+        
+        let imageUrl, alt;
+        switch(actualRarity) {
+            case 'Rare':
+                imageUrl = 'https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Images/Rare.webp';
+                alt = 'RARE';
+                break;
+            case 'Epic':
+                imageUrl = 'https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Images/Epic.webp';
+                alt = 'EPIC';
+                break;
+            case 'Legend':
+                imageUrl = 'https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Images/Legend.webp';
+                alt = 'LEGEND';
+                break;
+            default:
+                imageUrl = 'https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Images/Rare.webp';
+                alt = 'RARE';
+        }
+        
+        return { imageUrl, alt };
+    }
+    
     switch(goodBad) {
         case 1: return { 
             imageUrl: 'https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Images/hero.webp',
@@ -917,7 +1259,7 @@ function getHeroAlignment(goodBad) {
     }
 }
 
-// Оптимизированная функция отображения героев
+// Обновите функцию displayHeroes для отображения мемов
 function displayHeroes() {
     if (!gameActive) return;
     
@@ -949,21 +1291,32 @@ function displayHeroes() {
         const nameElement = document.getElementById(`hero${heroNum}-name`);
         const publisherElement = document.getElementById(`hero${heroNum}-publisher`);
         const alignmentElement = document.getElementById(`hero${heroNum}-alignment`);
+
+        
         
         // Set hero image
         if (imgElement) imgElement.src = hero.image_url;
 
-        // Используем предопределенное значение shouldFlip
-        if (hero.shouldFlip) {
-            imgElement.style.transform = 'scaleX(-1)';
+        
+
+        if (hero.isMeme) {
+            // Для мемов тоже применяем случайное отражение, но можно исключить какие-то
+            if (shouldFlipHero(hero)) {
+                imgElement.style.transform = 'scaleX(-1)';
+            } else {
+                imgElement.style.transform = 'scaleX(1)';
+            }
         } else {
-            imgElement.style.transform = 'scaleX(1)';
+            if (hero.shouldFlip) {
+                imgElement.style.transform = 'scaleX(-1)';
+            } else {
+                imgElement.style.transform = 'scaleX(1)';
+            }
         }
         
         // Set hero name с оптимизацией
         if (nameElement) {
             nameElement.textContent = hero.name;
-            // ВОЗВРАЩАЕМ рабочие inline стили
             if (hero.name.length > 15) {
                 nameElement.style.fontSize = 'clamp(14px, 3vw, 20px)';
             } else if (hero.name.length > 10) {
@@ -972,10 +1325,16 @@ function displayHeroes() {
                 nameElement.style.fontSize = 'clamp(18px, 5vw, 28px)';
             }
         }
+
         
-        // Set alignment
+        
+        // В функции displayHeroes - ПЕРЕДАВАЙТЕ ФАКТИЧЕСКОЕ ЗНАЧЕНИЕ РЕДКОСТИ
         if (alignmentElement) {
-            const alignment = getHeroAlignment(hero.good_bad);
+            const alignment = getHeroAlignment(
+                hero.good_bad, 
+                hero.isMeme, 
+                hero.isMeme ? hero.chance : undefined // Передаем фактическую редкость из базы
+            );
             alignmentElement.innerHTML = '';
             if (alignment.imageUrl) {
                 const alignmentImg = document.createElement('img');
@@ -987,10 +1346,10 @@ function displayHeroes() {
             }
         }
         
-        // Set publisher logo
+        // Set publisher logo - у мемов нет логотипов
         if (publisherElement) {
             publisherElement.innerHTML = '';
-            if (hero.logo_url) {
+            if (hero.logo_url && !hero.isMeme) {
                 const logoImg = document.createElement('img');
                 logoImg.src = hero.logo_url;
                 logoImg.alt = hero.publisher || 'Publisher';
@@ -1000,9 +1359,46 @@ function displayHeroes() {
             }
         }
     });
+
+    // Применяем стили для мемов (после того как все элементы уже созданы)
+    currentHeroes.forEach((hero, index) => {
+        const heroNum = index + 1;
+        
+        try {
+            const cardElement = document.getElementById(`hero${heroNum}`);
+            const nameElement = document.getElementById(`hero${heroNum}-name`);
+            
+            if (hero.isMeme) {
+                console.log(`Applying meme styles to hero ${heroNum}: ${hero.name}`);
+                
+                if (cardElement) {
+                    cardElement.classList.add('meme-card');
+                    console.log('Meme card class added');
+                }
+                
+                if (nameElement) {
+                    nameElement.classList.add('meme-name');
+                    console.log('Meme name class added');
+                }
+                
+                
+            } else {
+                if (cardElement) cardElement.classList.remove('meme-card');
+                if (nameElement) nameElement.classList.remove('meme-name');
+                
+                // Убираем индикатор мема
+                if (cardElement) {
+                    const indicator = cardElement.querySelector('.meme-indicator');
+                    if (indicator) indicator.remove();
+                }
+            }
+        } catch (error) {
+            console.error('Error applying meme styles:', error);
+        }
+    });
+
 }
 
-// Оптимизированная функция голосования
 async function vote(heroNumber) {
     if (!gameActive || !currentHeroes || currentHeroes.length < 2 || 
         playerLives <= 0 || isVotingInProgress) {
@@ -1010,12 +1406,20 @@ async function vote(heroNumber) {
     }
     
     isVotingInProgress = true;
+    
+    // ПОЛУЧАЕМ КООРДИНАТЫ КЛИКА ИЗ EVENT
+    let clickX, clickY;
+    if (event) {
+        clickX = event.clientX || (event.touches && event.touches[0].clientX);
+        clickY = event.clientY || (event.touches && event.touches[0].clientY);
+    }
+    
     indicateSelection(heroNumber);
     
     const selectedHero = currentHeroes[heroNumber - 1];
     const otherHero = heroNumber === 1 ? currentHeroes[1] : currentHeroes[0];
     
-    const votePairId = `${selectedHero.id}-${otherHero.id}`;
+    const votePairId = `${selectedHero.id}-${otherHero.id}-${selectedHero.isMeme ? 'meme' : 'hero'}`;
     
     if (currentVotePairId === votePairId) {
         isVotingInProgress = false;
@@ -1024,10 +1428,11 @@ async function vote(heroNumber) {
     
     currentVotePairId = votePairId;
     
-    const userMadeRightChoice = selectedHero.rating > otherHero.rating;
+    // ОБНОВЛЕННОЕ СРАВНЕНИЕ: ЕСЛИ РАЗНИЦА МЕНЕЕ 0.1 - ПОБЕЖДАЕТ ИГРОК
+    const ratingDifference = Math.abs(selectedHero.rating - otherHero.rating);
+    const userMadeRightChoice = ratingDifference < 0.1 ? true : selectedHero.rating > otherHero.rating;
     
-    //totalPairsShown++;       // Общая статистика (все игры)
-    currentGamePairsShown++; // Только текущая игра
+    currentGamePairsShown++;
     
     if (userMadeRightChoice) {
         votePowerPairs++; 
@@ -1035,7 +1440,20 @@ async function vote(heroNumber) {
     
     playHaptic('selection');
     
-    // Обновляем силу голоса перед анимацией
+    // ПРИМЕНЯЕМ БУСТЫ ЕСЛИ ЭТО МЕМ С БУСТАМИ И ПОЛЬЗОВАТЕЛЬ ВЫИГРАЛ
+    if (userMadeRightChoice && selectedHero.isMeme) {
+        const hasBoosts = selectedHero.extra_life !== undefined || selectedHero.power_boost !== undefined;
+        console.log('Should apply boosts:', hasBoosts);
+        
+        if (hasBoosts) {
+            // ЗАПОМИНАЕМ БУСТ ДЛЯ ПРИМЕНЕНИЯ СРАЗУ
+            AnimationManager.setTimeout(() => {
+                applyBoostEffects(selectedHero, clickX, clickY);
+            }, 100);
+        }
+    }
+    
+    // ОБНОВЛЯЕМ СИЛУ ГОЛОСА ПЕРЕД АНИМАЦИЕЙ
     updateGameVotePower();
     const currentPower = totalVotePower;
     
@@ -1054,33 +1472,39 @@ async function vote(heroNumber) {
     
     showVoteResult(heroNumber, userMadeRightChoice, selectedHero.rating, otherHero.rating);
 
-    // Анимация цифр с СИЛОЙ ГОЛОСА
-    if (event) {
-        const clickX = event.clientX || event.touches[0].clientX;
-        const clickY = event.clientY || event.touches[0].clientY;
-        
+    // Анимация цифр с СИЛОЙ ГОЛОСА в месте клика
+    if (clickX && clickY) {
         AnimationManager.setTimeout(() => {
             ScoreEmitter.emitFromPoint(clickX, clickY, 4, `+${currentPower}`);
         }, 0);
     }
     
-    // УБИРАЕМ ДУБЛИРОВАНИЕ - оставляем только ОДИН таймаут для обновления жизней
-    AnimationManager.setTimeout(() => {
-        if (!userMadeRightChoice) {
+    // ОБРАБОТКА ПОТЕРИ ЖИЗНИ
+    if (!userMadeRightChoice) {
+        AnimationManager.setTimeout(() => {
+            const livesBefore = playerLives;
             playerLives--;
+            console.log('=== LIFE LOST ===');
+            console.log('Before:', livesBefore, 'After:', playerLives);
+            
+            // Восстанавливаем жизнь из дополнительных, если есть
+            if (extraLives > 0 && playerLives < MAX_VISIBLE_LIVES) {
+                playerLives++;
+                extraLives--;
+                console.log('Restored from extra lives. Player lives:', playerLives, 'Extra lives:', extraLives);
+            }
+            
             updateLivesWithAnimation();
             updateUI();
-        }
-    }, HERO_DISPLAY_DURATION - 500);
+        }, HERO_DISPLAY_DURATION - 500);
+    }
 
     // Обновляем статистику с СИЛОЙ ГОЛОСА
     AnimationManager.setTimeout(() => {
         if (userMadeRightChoice) {
-            // ДОБАВЛЯЕМ ОЧКИ ПО СИЛЕ ГОЛОСА
             playerScore += currentPower;
-            pairsGuessed++; // ← ДОБАВИТЬ ЭТУ СТРОКУ: увеличиваем счетчик пар
+            pairsGuessed++;
             updateUI();
-            // Обновляем игровую силу после увеличения счета
             updateGameVotePower();
         }
         
@@ -1088,8 +1512,10 @@ async function vote(heroNumber) {
         votedHeroes.add(otherHero.id);
         saveProgress();
         
-        // ОБНОВЛЯЕМ СТАТИСТИКУ В БАЗУ: ВСЕГДА записываем победу выбранному герою
-        updateHeroStatsAsync(selectedHero.id, otherHero.id, currentPower);
+        // ОБНОВЛЯЕМ СТАТИСТИКУ В БАЗУ с учетом силы голоса
+        const winnerId = userMadeRightChoice ? selectedHero.id : otherHero.id;
+        const loserId = userMadeRightChoice ? otherHero.id : selectedHero.id;
+        updateHeroStatsAsync(winnerId, loserId, currentPower);
     }, HERO_DISPLAY_DURATION);
     
     AnimationManager.setTimeout(() => {
@@ -1110,7 +1536,27 @@ async function vote(heroNumber) {
     }, HERO_DISPLAY_DURATION);
 }
 
-// Оптимизированная функция показа звездного рейтинга
+
+function applyBoostEffects(boostMeme, clickX, clickY) {
+    if (!boostMeme) return;
+
+    console.log('BOOST:', boostMeme); // ← ОТЛАДКА
+
+    if (boostMeme.extra_life) {
+        addLives(boostMeme.extra_life);
+        ScoreEmitter.emitFromPoint(clickX, clickY, 3, `+${boostMeme.extra_life}⭐`, { isBoost: true });
+    }
+
+    if (boostMeme.power_boost) {
+        powerBoost += boostMeme.power_boost;
+        calculateVotePower();
+        ScoreEmitter.emitFromPoint(clickX, clickY, 3, `+${boostMeme.power_boost}⚡`, { isBoost: true });
+    }
+
+    playHaptic('correct');
+}
+
+// ==================== ОБНОВЛЕННАЯ ФУНКЦИЯ SHOW STAR RATING ====================
 function showStarRating(heroNumber, rating, isWinner) {
     const starContainer = document.getElementById(`hero${heroNumber}-star-rating`);
     const starImage = starContainer.querySelector('.rating-star');
@@ -1124,8 +1570,11 @@ function showStarRating(heroNumber, rating, isWinner) {
     
     percentElement.innerHTML = '';
     
-    const ratingText = `${rating.toFixed(1)}`.replace('.', ',');
-    convertToImageBasedDigits(percentElement, ratingText);
+    // ПРЕОБРАЗУЕМ РЕЙТИНГ В ЦЕЛОЕ ЧИСЛО И ДОБАВЛЯЕМ ЗНАК ПРОЦЕНТОВ
+    const ratingText = Math.round(rating).toString();
+    
+    // Создаем цифры и добавляем значок процентов
+    convertToImageBasedDigitsWithPercent(percentElement, ratingText);
     
     starContainer.classList.remove('show', 'hiding');
     
@@ -1134,28 +1583,68 @@ function showStarRating(heroNumber, rating, isWinner) {
     }, 50);
 }
 
-// Оптимизированная функция обновления жизней
+// ==================== НОВАЯ ФУНКЦИЯ ДЛЯ ЦИФР СО ЗНАКОМ ПРОЦЕНТОВ ====================
+function convertToImageBasedDigitsWithPercent(element, text) {
+    const fragment = document.createDocumentFragment();
+    
+    // Добавляем цифры
+    for (let i = 0; i < text.length; i++) {
+        const char = text[i];
+        if (!isNaN(char) && char !== ' ') {
+            const digitSpan = document.createElement('span');
+            digitSpan.className = 'digit';
+            digitSpan.style.backgroundImage = `url('https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Images/Numbers/${char}.webp')`;
+            fragment.appendChild(digitSpan);
+        }
+    }
+    
+    // Добавляем значок процентов
+    const percentSpan = document.createElement('span');
+    percentSpan.className = 'digit percent';
+    percentSpan.style.backgroundImage = `url('https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Images/Numbers/percent.webp')`;
+    fragment.appendChild(percentSpan);
+    
+    // Один раз обновляем DOM
+    element.appendChild(fragment);
+}
+
+// ==================== ОБНОВЛЕННАЯ ФУНКЦИЯ UPDATE LIVES WITH ANIMATION ====================
 function updateLivesWithAnimation() {
     const globalLives = document.getElementById('global-lives');
     if (!globalLives) return;
     
-    const lifeStars = globalLives.querySelectorAll('.life-star');
-    if (lifeStars.length > 0) {
-        const lastLifeStar = lifeStars[lifeStars.length - 1];
+    const currentStars = globalLives.querySelectorAll('.life-star').length;
+    const targetStars = Math.min(playerLives, MAX_VISIBLE_LIVES);
+    
+    console.log('=== UPDATE LIVES ANIMATION ===');
+    console.log('Current stars:', currentStars, 'Target stars:', targetStars, 'Player lives:', playerLives);
+    
+    if (currentStars > targetStars) {
+        // Нужно удалить звезды
+        const starsToRemove = currentStars - targetStars;
+        const lifeStars = globalLives.querySelectorAll('.life-star');
         
-        // Используем CSS transitions вместо JS анимаций
-        lastLifeStar.classList.remove('life-star-removing');
-        
-        // Принудительный reflow только один раз
-        void lastLifeStar.offsetWidth;
-        
-        lastLifeStar.classList.add('life-star-removing');
-        
-        AnimationManager.setTimeout(() => {
-            if (lastLifeStar.parentNode === globalLives && lastLifeStar.classList.contains('life-star-removing')) {
-                globalLives.removeChild(lastLifeStar);
+        for (let i = 0; i < starsToRemove; i++) {
+            const starToRemove = lifeStars[lifeStars.length - 1 - i];
+            if (starToRemove) {
+                starToRemove.classList.add('life-star-removing');
+                
+                AnimationManager.setTimeout(() => {
+                    if (starToRemove.parentNode === globalLives) {
+                        globalLives.removeChild(starToRemove);
+                        // После удаления обновляем отображение
+                        updateLivesDisplay();
+                    }
+                }, HERO_DISPLAY_DURATION-500);
             }
-        }, 400);
+        }
+    } else if (currentStars < targetStars) {
+        // Нужно добавить звезды
+        const starsToAdd = targetStars - currentStars;
+        animateLifeAddition(starsToAdd);
+    } else {
+        // Количество звезд не изменилось, просто обновляем отображение
+        updateLivesDisplay();
     }
 }
 
@@ -1183,41 +1672,145 @@ function convertToImageBasedDigits(element, text) {
     element.appendChild(fragment);
 }
 
-// Async stats update
-async function updateHeroStatsAsync(winnerId, loserId, votePower = 1) {
+async function updateHeroStatsAsync(winnerId, loserId, votePower = 1, isMeme = false) {
     try {
-        const { data: winnerData, error: winnerFetchError } = await supabase
-            .from('Heroes_Table')
-            .select('wins, viewers')
-            .eq('id', winnerId)
-            .single();
+        console.log('=== UPDATE STATS START ===');
+        console.log('Raw inputs:', { winnerId, loserId, votePower, isMeme });
+        
+        // ОПРЕДЕЛЯЕМ ТИП КАРТ ПО ИХ ID
+        const winnerIsMeme = typeof winnerId === 'string' && winnerId.startsWith('meme_');
+        const loserIsMeme = typeof loserId === 'string' && loserId.startsWith('meme_');
+        
+        console.log('Card types:', { winnerIsMeme, loserIsMeme });
+
+        // ОБНОВЛЯЕМ ПОБЕДИТЕЛЯ
+        if (winnerIsMeme) {
+            // ОБНОВЛЯЕМ МЕМ-ПОБЕДИТЕЛЬ
+            const cleanWinnerId = winnerId.replace('meme_', '');
+            console.log('Updating winner MEME:', cleanWinnerId);
             
-        const { data: loserData, error: loserFetchError } = await supabase
-            .from('Heroes_Table')
-            .select('loses, viewers')
-            .eq('id', loserId)
-            .single();
-        
-        if (winnerFetchError || loserFetchError) return;
-        
-        const { error: winnerError } = await supabase
-            .from('Heroes_Table')
-            .update({ 
-                wins: (winnerData.wins || 0) + votePower, // Умножаем на силу голоса
-                viewers: (winnerData.viewers || 0) + 1
-            })
-            .eq('id', winnerId);
-        
-        const { error: loserError } = await supabase
-            .from('Heroes_Table')
-            .update({ 
-                loses: (loserData.loses || 0) + votePower, // Умножаем на силу голоса
-                viewers: (loserData.viewers || 0) + 1
-            })
-            .eq('id', loserId);
+            const { data: winnerData, error: winnerFetchError } = await supabase
+                .from('Memes_Table')
+                .select('wins, loses, viewers')
+                .eq('id', cleanWinnerId)
+                .single();
             
+            if (winnerFetchError) {
+                console.error('Error fetching winner meme:', winnerFetchError);
+            } else {
+                console.log('Winner meme current stats:', winnerData);
+                
+                const { error: winnerError } = await supabase
+                    .from('Memes_Table')
+                    .update({ 
+                        wins: (parseFloat(winnerData.wins || 0)) + parseFloat(votePower),
+                        viewers: (parseFloat(winnerData.viewers || 0)) + 1
+                    })
+                    .eq('id', cleanWinnerId);
+                
+                if (winnerError) {
+                    console.error('Error updating winner meme:', winnerError);
+                } else {
+                    console.log('✅ Successfully updated winner meme');
+                }
+            }
+        } else {
+            // ОБНОВЛЯЕМ ГЕРОЯ-ПОБЕДИТЕЛЯ
+            console.log('Updating winner HERO:', winnerId);
+            
+            const { data: winnerData, error: winnerFetchError } = await supabase
+                .from('Heroes_Table')
+                .select('wins, viewers')
+                .eq('id', winnerId)
+                .single();
+            
+            if (winnerFetchError) {
+                console.error('Error fetching winner hero:', winnerFetchError);
+            } else {
+                console.log('Winner hero current stats:', winnerData);
+                
+                const { error: winnerError } = await supabase
+                    .from('Heroes_Table')
+                    .update({ 
+                        wins: (parseFloat(winnerData.wins || 0)) + parseFloat(votePower),
+                        viewers: (parseFloat(winnerData.viewers || 0)) + 1
+                    })
+                    .eq('id', winnerId);
+                
+                if (winnerError) {
+                    console.error('Error updating winner hero:', winnerError);
+                } else {
+                    console.log('✅ Successfully updated winner hero');
+                }
+            }
+        }
+
+        // ОБНОВЛЯЕМ ПРОИГРАВШЕГО
+        if (loserIsMeme) {
+            // ОБНОВЛЯЕМ МЕМ-ПРОИГРАВШЕГО
+            const cleanLoserId = loserId.replace('meme_', '');
+            console.log('Updating loser MEME:', cleanLoserId);
+            
+            const { data: loserData, error: loserFetchError } = await supabase
+                .from('Memes_Table')
+                .select('wins, loses, viewers')
+                .eq('id', cleanLoserId)
+                .single();
+            
+            if (loserFetchError) {
+                console.error('Error fetching loser meme:', loserFetchError);
+            } else {
+                console.log('Loser meme current stats:', loserData);
+                
+                const { error: loserError } = await supabase
+                    .from('Memes_Table')
+                    .update({ 
+                        loses: (parseFloat(loserData.loses || 0)) + parseFloat(votePower),
+                        viewers: (parseFloat(loserData.viewers || 0)) + 1
+                    })
+                    .eq('id', cleanLoserId);
+                
+                if (loserError) {
+                    console.error('Error updating loser meme:', loserError);
+                } else {
+                    console.log('✅ Successfully updated loser meme');
+                }
+            }
+        } else {
+            // ОБНОВЛЯЕМ ГЕРОЯ-ПРОИГРАВШЕГО
+            console.log('Updating loser HERO:', loserId);
+            
+            const { data: loserData, error: loserFetchError } = await supabase
+                .from('Heroes_Table')
+                .select('loses, viewers')
+                .eq('id', loserId)
+                .single();
+            
+            if (loserFetchError) {
+                console.error('Error fetching loser hero:', loserFetchError);
+            } else {
+                console.log('Loser hero current stats:', loserData);
+                
+                const { error: loserError } = await supabase
+                    .from('Heroes_Table')
+                    .update({ 
+                        loses: (parseFloat(loserData.loses || 0)) + parseFloat(votePower),
+                        viewers: (parseFloat(loserData.viewers || 0)) + 1
+                    })
+                    .eq('id', loserId);
+                
+                if (loserError) {
+                    console.error('Error updating loser hero:', loserError);
+                } else {
+                    console.log('✅ Successfully updated loser hero');
+                }
+            }
+        }
+
+        console.log('=== UPDATE STATS COMPLETE ===');
+        
     } catch (error) {
-        // Убраны console.log для продакшена
+        console.error("❌ Critical error in updateHeroStatsAsync:", error);
     }
 }
 
@@ -1324,41 +1917,20 @@ function indicateSelection(heroNumber) {
     }, 300);
 }
 
-// Улучшенная функция вибрации
-function playHaptic(type) {
-    if (tg && tg.HapticFeedback) {
-        try {
-            switch(type) {
-                case 'selection': 
-                    tg.HapticFeedback.impactOccurred('light');
-                    break;
-                case 'correct':
-                    tg.HapticFeedback.impactOccurred('heavy');
-                    break;
-                case 'wrong':
-                    tg.HapticFeedback.impactOccurred('medium');
-                    break;
-                case 'game_over':
-                    tg.HapticFeedback.notificationOccurred('error');
-                    break;
-                case 'win':
-                    tg.HapticFeedback.notificationOccurred('success');
-                    break;
-            }
-            return;
-        } catch (e) {
-            // Fallback silently
-        }
-    }
-    
-    if (navigator.vibrate) {
-        switch(type) {
-            case 'selection': navigator.vibrate(50); break;
-            case 'correct': navigator.vibrate([50, 30, 50]); break;
-            case 'wrong': navigator.vibrate(100); break;
-            case 'game_over': navigator.vibrate([100, 50, 100]); break;
-            case 'win': navigator.vibrate([50, 30, 50, 30, 50]); break;
-        }
+function playHaptic(type = 'light') {
+    if (!tg || !tg.HapticFeedback) return;
+
+    try {
+        // Поддерживаемые типы:
+        // 'light', 'medium', 'heavy', 'rigid', 'soft'
+        const style = type === 'correct' ? 'light' :
+                     type === 'wrong' ? 'medium' :
+                     type === 'selection' ? 'soft' :
+                     type === 'game_over' ? 'heavy' : 'light';
+
+        tg.HapticFeedback.impactOccurred(style);
+    } catch (e) {
+        console.warn('Haptic failed:', e);
     }
 }
 
@@ -1454,6 +2026,15 @@ function showGameOverPopup() {
         totalPairsShown: totalPairsShownOverall
     }));
 
+    // Функция для определения цвета винрейта
+    const getWinRateColor = (winRate) => {
+        const rate = parseFloat(winRate);
+        if (rate >= 75) return '#ffd700'; // золотой
+        if (rate >= 50) return '#00de00'; // зеленый
+        if (rate >= 25) return '#4cc9f0'; // синий
+        return '#ffffff'; // белый
+    };
+
     // Создание popup
     const popup = document.createElement('div');
     popup.className = 'universal-popup active';
@@ -1471,11 +2052,11 @@ function showGameOverPopup() {
                 </div>
                 <div class="popup-stat-item">
                     <span class="popup-stat-label">${texts.GAME_WINRATE}:</span>
-                    <span class="popup-stat-value">${gamePairsGuessed}/${gamePairsTotal} (${gameWinRate}%)</span>
+                    <span class="popup-stat-value" style="color: ${getWinRateColor(gameWinRate)}">${gameWinRate}%</span>
                 </div>
                 <div class="popup-stat-item">
                     <span class="popup-stat-label">${texts.OVERALL_WINRATE}:</span>
-                    <span class="popup-stat-value">${totalPairsGuessedOverall}/${totalPairsShownOverall} (${overallWinRate}%)</span>
+                    <span class="popup-stat-value" style="color: ${getWinRateColor(overallWinRate)}">${overallWinRate}%</span>
                 </div>
                 <div class="popup-stat-item">
                     <span class="popup-stat-label">${texts.TOTAL_GAMES}:</span>
@@ -1511,49 +2092,66 @@ function gameOver() {
     }, 1000);
 }
 
+
+
+// ==================== ОБНОВИМ ФУНКЦИЮ RESETGAME ДЛЯ ВЫЗОВА ПРОВЕРКИ ====================
 function resetGame() {
     // ОЧИЩАЕМ ВСЕ ПОПАПЫ ПЕРЕД НОВОЙ ИГРОЙ
     document.querySelectorAll('.universal-popup').forEach(popup => popup.remove());
     
+    // ✅ СБРАСЫВАЕМ ТОЛЬКО ТЕКУЩУЮ ИГРУ:
     playerLives = INITIAL_PLAYER_LIVES;
     playerScore = 0;
     pairsGuessed = 0;
-    votePowerPairs = 0;
-    currentGamePairsShown = 0; // ← Сбрасываем только для текущей игры!
+    currentGamePairsShown = 0;
+    memeCardsToAdd = 0;
+    extraLives = 0; // Сбрасываем дополнительные жизни
+    powerBoost = 0; // Сбрасываем временный буст силы голоса
    
+    // ✅ СБРАСЫВАЕМ ПРОГРЕСС ГОЛОСОВАНИЯ:
     votedHeroes.clear();
     isVotingInProgress = false;
     currentVotePairId = null;
     gameActive = true;
     
+    // ✅ СБРАСЫВАЕМ ИГРОВУЮ СИЛУ ГОЛОСА (но не дневную!):
     resetGameVotePower();
     
-    // ФИКС: ПОЛНОСТЬЮ сбрасываем кеш перемешанных героев для новой игры
-    window.shuffledHeroes = null;
-    window.currentHeroIndex = 0;
-    window.initialShuffleDone = false;
-    
-    localStorage.removeItem('heroVoteProgress');
-    
-    AnimationManager.clearAll();
-    ScoreEmitter.clear();
-    
-    updateUI();
-    displayHeroes();
+    // ✅ ПЕРЕЗАГРУЖАЕМ ДАННЫЕ С АКТУАЛЬНЫМИ РЕЙТИНГАМИ:
+    Promise.all([loadAllHeroes(), loadAllMemes()]).then(() => {
+        // ✅ СБРАСЫВАЕМ КЕШ ГЕРОЕВ ДЛЯ НОВОЙ ИГРЫ:
+        window.shuffledHeroes = null;
+        window.currentHeroIndex = 0;
+        window.initialShuffleDone = false;
+        
+        // ПРОВЕРЯЕМ СТРУКТУРУ МЕМОВ
+        checkMemeStructure();
+        
+        AnimationManager.clearAll();
+        ScoreEmitter.clear();
+        
+        updateUI();
+        displayHeroes();
+    });
 }
 
 
-// Обновите обработчик DOMContentLoaded
+/// Обновите обработчик DOMContentLoaded
 document.addEventListener("DOMContentLoaded", function() {
     initTelegram();
 
     // ИНИЦИАЛИЗИРУЕМ СИЛУ ГОЛОСА ПЕРЕД СБРОСОМ ИГРЫ
     calculateVotePower();
     
-    // ВСЕГДА сбрасываем игру при загрузке (анти-читерство)
-    resetGame();
-    loadAllHeroes();
-    initNetworkMonitoring();
+    // Загружаем настройки мемов и мемы
+    loadMemeSettings().then(() => {
+        loadAllMemes().then(() => {
+            // ВСЕГДА сбрасываем игру при загрузке (анти-читерство)
+            resetGame();
+            loadAllHeroes();
+            initNetworkMonitoring();
+        });
+    });
 
     // Проверяем первый запуск
     const firstRunCompleted = localStorage.getItem(FIRST_RUN_KEY);
@@ -1561,16 +2159,12 @@ document.addEventListener("DOMContentLoaded", function() {
     setTimeout(() => {
         if (!firstRunCompleted) {
             showCopyrightDisclaimer();
-            // Помечаем что первый запуск завершен
             localStorage.setItem(FIRST_RUN_KEY, 'true');
         } else {
-            // Если уже запускались - сразу показываем игру
             document.body.style.opacity = '1';
         }
     }, 1000);
 
-    
-    
     ScoreEmitter.init();
 
     // Hide unnecessary elements
@@ -1602,10 +2196,10 @@ document.addEventListener('keydown', function(e) {
         }
     }
     
-    // F5 для перезагрузки с полным сбросом
     if (e.key === 'F5' || (e.ctrlKey && e.key === 'r')) {
         e.preventDefault();
-        resetGame();
+        // Полная перезагрузка вместо resetGame
+        location.reload();
     }
 });
 
