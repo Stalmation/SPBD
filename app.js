@@ -33,7 +33,7 @@ let powerBoost = 0; // Временный буст силы голоса для 
 const HORIZONTAL_FLIP_EXCLUSIONS = [
     'Superman', 'Superboy', 
     'Supergirl', 'Invisible Woman',
-    'Winter-Soldier',  'Mr. Fantastic', 'Human Torch', 'Thing', 'Amanda Waller', 'Krypto', 'Robin', 'DOGE', 'Damian Wayne','Riddler'
+    'Winter-Soldier',  'Mr. Fantastic', 'Human Torch', 'Thing', 'Amanda Waller', 'Krypto', 'Robin', 'Damian Wayne','Riddler','Bat In The Sun'
     // Добавьте другие имена как они есть в базе
 ];
 
@@ -705,17 +705,16 @@ function updateLivesDisplay() {
 
     for (let i = 0; i < visibleLives; i++) {
         const star = document.createElement('div');
-        star.className = 'life-star'; // без scale(1) и opacity:1
+        star.className = 'life-star';
         globalLives.appendChild(star);
     }
 
-    // Индикатор доп. жизней
+    // Показываем +X только если есть extraLives И playerLives === 5
     if (extraLives > 0 && playerLives >= MAX_VISIBLE_LIVES) {
         const extraIndicator = document.createElement('div');
         extraIndicator.className = 'extra-lives-indicator';
         extraIndicator.textContent = `+${extraLives}`;
         extraIndicator.classList.add('extra-indicator');
-        
         globalLives.appendChild(extraIndicator);
     }
 }
@@ -775,38 +774,22 @@ function animateLifeAddition(count) {
     const globalLives = document.getElementById('global-lives');
     if (!globalLives || count <= 0) return;
 
-    console.log('Animating addition of', count, 'lives');
+    // СНАЧАЛА ДОБАВЛЯЕМ ЗВЁЗДЫ В DOM (чтобы анимация видела)
+    for (let i = 0; i < count; i++) {
+        const star = document.createElement('div');
+        star.className = 'life-star life-star-adding';
+        globalLives.appendChild(star);
 
-    // Сначала обновляем отображение (чтобы появились все звёзды)
-    updateLivesDisplay();
+        // Анимация появления
+        AnimationManager.setTimeout(() => {
+            star.classList.remove('life-star-adding');
+        }, 50);
+    }
 
-    // Даем DOM отрисоваться
-    AnimationManager.requestAnimationFrame(() => {
-        const lifeStars = globalLives.querySelectorAll('.life-star');
-        const startIndex = lifeStars.length - count;
-
-        for (let i = startIndex; i < lifeStars.length; i++) {
-            const star = lifeStars[i];
-
-            // Сбрасываем стили (важно: НЕ перезаписываем transform/opacity)
-            star.style.transition = 'none';
-            star.style.transform = 'scale(0)';
-            star.style.opacity = '0';
-
-            // Принудительно рефлоу
-            void star.offsetWidth;
-
-            // Добавляем класс анимации
-            star.classList.add('life-star-adding');
-
-            // Убираем transition: none и запускаем анимацию
-            AnimationManager.requestAnimationFrame(() => {
-                star.style.transition = '';
-            });
-        }
-
-        playHaptic('correct');
-    });
+    // Через 300мс — убираем класс добавления и обновляем +X
+    AnimationManager.setTimeout(() => {
+        updateLivesDisplay();
+    }, 350);
 }
 
 // Get publisher logo URL
@@ -1480,19 +1463,22 @@ async function vote(heroNumber) {
     // ОБРАБОТКА ПОТЕРИ ЖИЗНИ
     if (!userMadeRightChoice) {
         AnimationManager.setTimeout(() => {
-            const livesBefore = playerLives;
-            playerLives--;
-            console.log('=== LIFE LOST ===');
-            console.log('Before:', livesBefore, 'After:', playerLives);
-            
-            // Восстанавливаем жизнь из дополнительных, если есть
-            if (extraLives > 0 && playerLives < MAX_VISIBLE_LIVES) {
-                playerLives++;
+            let animateLoss = false;
+
+            if (extraLives > 0) {
                 extraLives--;
-                console.log('Restored from extra lives. Player lives:', playerLives, 'Extra lives:', extraLives);
+            } else if (playerLives > 0) {
+                playerLives--;
+                animateLoss = true;
             }
-            
-            updateLivesWithAnimation();
+
+            if (animateLoss) {
+                updateLivesWithAnimation(); // ← Теперь работает!
+                playHaptic('wrong');
+            } else {
+                updateLivesDisplay(); // просто обновить +X
+            }
+
             updateUI();
         }, HERO_DISPLAY_DURATION - 500);
     }
@@ -1607,43 +1593,45 @@ function convertToImageBasedDigitsWithPercent(element, text) {
 }
 
 // ==================== ОБНОВЛЕННАЯ ФУНКЦИЯ UPDATE LIVES WITH ANIMATION ====================
+// ==================== ИСПРАВЛЕННАЯ ФУНКЦИЯ UPDATE LIVES WITH ANIMATION ====================
 function updateLivesWithAnimation() {
     const globalLives = document.getElementById('global-lives');
     if (!globalLives) return;
-    
-    const currentStars = globalLives.querySelectorAll('.life-star').length;
+
     const targetStars = Math.min(playerLives, MAX_VISIBLE_LIVES);
-    
-    console.log('=== UPDATE LIVES ANIMATION ===');
-    console.log('Current stars:', currentStars, 'Target stars:', targetStars, 'Player lives:', playerLives);
-    
-    if (currentStars > targetStars) {
-        // Нужно удалить звезды
-        const starsToRemove = currentStars - targetStars;
-        const lifeStars = globalLives.querySelectorAll('.life-star');
-        
+
+    // УДАЛЯЕМ ВСЕ ЗВЁЗДЫ (это быстро, т.к. их всего 5)
+    const currentStars = globalLives.querySelectorAll('.life-star');
+    const starsToRemove = currentStars.length - targetStars;
+
+    // АНИМИРУЕМ УДАЛЕНИЕ, ЕСЛИ НУЖНО
+    if (starsToRemove > 0) {
+        playHaptic('wrong');
+
         for (let i = 0; i < starsToRemove; i++) {
-            const starToRemove = lifeStars[lifeStars.length - 1 - i];
+            const starToRemove = currentStars[currentStars.length - 1 - i];
             if (starToRemove) {
                 starToRemove.classList.add('life-star-removing');
-                
                 AnimationManager.setTimeout(() => {
                     if (starToRemove.parentNode === globalLives) {
                         globalLives.removeChild(starToRemove);
-                        // После удаления обновляем отображение
-                        updateLivesDisplay();
                     }
                 }, HERO_DISPLAY_DURATION-500);
             }
         }
-    } else if (currentStars < targetStars) {
-        // Нужно добавить звезды
-        const starsToAdd = targetStars - currentStars;
-        animateLifeAddition(starsToAdd);
-    } else {
-        // Количество звезд не изменилось, просто обновляем отображение
-        updateLivesDisplay();
     }
+
+    // ДОБАВЛЯЕМ НОВЫЕ ЗВЁЗДЫ, ЕСЛИ НУЖНО (например, после буста)
+    const starsToAdd = targetStars - (currentStars.length - starsToRemove);
+    if (starsToAdd > 0) {
+        animateLifeAddition(starsToAdd);
+        return; // animateLifeAddition сам вызовет updateLivesDisplay
+    }
+
+    // ВСЕГДА обновляем отображение (включая +X)
+    AnimationManager.setTimeout(() => {
+        updateLivesDisplay();
+    }, starsToRemove > 0 ? 350 : 0);
 }
 
 // Оптимизированная функция создания цифр из картинок
