@@ -33,7 +33,7 @@ let powerBoost = 0; // Временный буст силы голоса для 
 const HORIZONTAL_FLIP_EXCLUSIONS = [
     'Superman', 'Superboy', 
     'Supergirl', 'Invisible Woman',
-    'Winter-Soldier',  'Mr. Fantastic', 'Human Torch', 'Thing', 'Amanda Waller', 'Krypto', 'Robin', 'DOGE', 'Damian Wayne'
+    'Winter-Soldier',  'Mr. Fantastic', 'Human Torch', 'Thing', 'Amanda Waller', 'Krypto', 'Robin', 'DOGE', 'Damian Wayne','Riddler'
     // Добавьте другие имена как они есть в базе
 ];
 
@@ -889,6 +889,7 @@ async function loadMemeSettings() {
     }
 }
 
+// ИЛИ более простое решение, если все дефолтные мемы имеют season = 'default'
 async function loadAllMemes() {
     try {
         if (!memeSettings.enabled) {
@@ -898,17 +899,14 @@ async function loadAllMemes() {
 
         let query = supabase
             .from("Memes_Table")
-            .select("id, name, image_url, image_urls, rating, chance, season, extra_life, power_boost");
-
-        if (memeSettings.season !== 'default') {
-            query = query.eq('season', memeSettings.season);
-        }
+            .select("id, name, image_url, image_urls, rating, chance, season, extra_life, power_boost")
+            .eq('season', memeSettings.season); // ВСЕГДА фильтруем по сезону
 
         const { data, error } = await query;
         if (error) throw error;
         
         allMemes = data || [];
-        console.log('Loaded memes:', allMemes.length);
+        console.log('Loaded memes for season:', memeSettings.season, 'count:', allMemes.length);
         
     } catch (error) {
         console.error("Ошибка загрузки мемов:", error);
