@@ -28,6 +28,7 @@ const MAX_VISIBLE_LIVES = 5; // Максимальное количество о
 // ==================== ПЕРЕМЕННЫЕ ДЛЯ БУСТОВ ====================
 let extraLives = 0; // Дополнительные жизни (сверх 5)
 let powerBoost = 0; // Временный буст силы голоса для текущей игры
+let tablePrefixes = new Map(); // Будет хранить префиксы таблиц
 
 // Добавьте после констант в начале app.js
 const HORIZONTAL_FLIP_EXCLUSIONS = [
@@ -38,6 +39,8 @@ const HORIZONTAL_FLIP_EXCLUSIONS = [
 ];
 
 let memeImageCache = new Map(); // Кеш для рандомных изображений мемов
+// Добавьте глобальные переменные
+let enabledTables = [];
 
 // Переменные для статистики
 let gameStartTime = null;
@@ -669,6 +672,34 @@ function loadProgress() {
     }
 }
 
+// ==================== ФУНКЦИЯ ЗАГРУЗКИ ПРЕФИКСОВ ====================
+async function loadTablePrefixes() {
+    try {
+        const { data, error } = await supabase
+            .from("table_prefixes")
+            .select("table_name, prefix");
+            
+        if (error) throw error;
+        
+        tablePrefixes.clear();
+        if (data) {
+            data.forEach(item => {
+                tablePrefixes.set(item.table_name, item.prefix);
+            });
+        }
+        
+        console.log('Loaded table prefixes:', Object.fromEntries(tablePrefixes));
+        
+    } catch (error) {
+        console.error("Ошибка загрузки префиксов таблиц:", error);
+        // Fallback префиксы
+        tablePrefixes.set('Heroes_Table', 'hero_');
+        tablePrefixes.set('Memes_Table', 'meme_');
+        tablePrefixes.set('Star_Wars_Table', 'sw_');
+        tablePrefixes.set('Video_Games_Table', 'vg_');
+        tablePrefixes.set('Mortal_Kombat_Table', 'mk_');
+    }
+}
 
 // Save progress - ТОЛЬКО ДЛЯ МАКСИМАЛЬНОГО СЧЕТА
 function saveProgress() {
@@ -800,43 +831,163 @@ function getPublisherLogoUrl(publisherName) {
     return PUBLISHER_LOGOS[lowerName] || null;
 }
 
-// Load all heroes
-// Load all heroes
 async function loadAllHeroes() {
     try {
-        let { data, error } = await supabase
-            .from("Heroes_Table")
-            .select("id, name, image_url, rating, good_bad, publisher");
+        // Загружаем префиксы таблиц
+        await loadTablePrefixes();
+        // Загружаем включенные таблицы
+        await loadEnabledTables();
+        
+        console.log('=== LOADING HEROES DEBUG ===');
+        console.log('Enabled tables:', enabledTables);
+        console.log('Table prefixes:', Object.fromEntries(tablePrefixes));
+        
+        let allHeroesFromTables = [];
+        
+        // Загружаем героев из всех включенных таблиц
+        for (const tableName of enabledTables) {
+            if (tableName === 'Memes_Table') continue;
             
-
-        if (error) throw error;
-        if (!data || data.length === 0) return;
-
-        allHeroes = data.map(hero => ({
-            ...hero,
-            logo_url: getPublisherLogoUrl(hero.publisher)
-        }));
+            console.log(`Loading from table: ${tableName}`);
+            
+            try {
+                const prefix = tablePrefixes.get(tableName) || 'def_';
+                
+                // Пробуем загрузить с image_urls
+                let query = supabase
+                    .from(tableName)
+                    .select("id, name, image_url, image_urls, rating, good_bad, publisher");
+                
+                const { data, error } = await query;
+                    
+                if (error) {
+                    // Если ошибка из-за отсутствующей колонки, пробуем без image_urls
+                    if (error.code === '42703' && error.message.includes('image_urls')) {
+                        console.log(`Column image_urls not found in ${tableName}, loading without it`);
+                        const { data: dataWithoutUrls, error: errorWithoutUrls } = await supabase
+                            .from(tableName)
+                            .select("id, name, image_url, rating, good_bad, publisher");
+                            
+                        if (errorWithoutUrls) {
+                            console.error(`Error loading from ${tableName} without image_urls:`, errorWithoutUrls);
+                            continue;
+                        }
+                        
+                        if (dataWithoutUrls && dataWithoutUrls.length > 0) {
+                            const heroesWithSource = dataWithoutUrls.map(hero => ({
+                                ...hero,
+                                source_table: tableName,
+                                // ГЕНЕРИРУЕМ ID С ПРЕФИКСОМ
+                                id: `${prefix}${hero.id}`,
+                                originalId: hero.id, // Сохраняем оригинальный ID для обновления
+                                logo_url: getPublisherLogoUrl(hero.publisher),
+                                image_urls: null
+                            }));
+                            
+                            allHeroesFromTables = allHeroesFromTables.concat(heroesWithSource);
+                            console.log(`✅ Loaded ${heroesWithSource.length} heroes from ${tableName} (with prefix: ${prefix})`);
+                        }
+                    } else {
+                        console.error(`Error loading from ${tableName}:`, error);
+                        continue;
+                    }
+                } else if (data && data.length > 0) {
+                    // Успешно загрузили с image_urls
+                    const heroesWithSource = data.map(hero => ({
+                        ...hero,
+                        source_table: tableName,
+                        // ГЕНЕРИРУЕМ ID С ПРЕФИКСОМ
+                        id: `${prefix}${hero.id}`,
+                        originalId: hero.id, // Сохраняем оригинальный ID для обновления
+                        logo_url: getPublisherLogoUrl(hero.publisher),
+                        // Используем случайное изображение из массива если есть
+                        image_url: hero.image_urls && Array.isArray(hero.image_urls) && hero.image_urls.length > 0 
+                            ? hero.image_urls[Math.floor(Math.random() * hero.image_urls.length)]
+                            : hero.image_url
+                    }));
+                    
+                    allHeroesFromTables = allHeroesFromTables.concat(heroesWithSource);
+                    console.log(`✅ Loaded ${heroesWithSource.length} heroes from ${tableName} (with prefix: ${prefix})`);
+                } else {
+                    console.log(`❌ No data found in table: ${tableName}`);
+                }
+                
+            } catch (tableError) {
+                console.error(`❌ Critical error loading from ${tableName}:`, tableError);
+            }
+        }
+        
+        console.log('=== FINAL HEROES COUNT ===');
+        console.log('Total heroes loaded:', allHeroesFromTables.length);
+        console.log('Distribution by table:', 
+            allHeroesFromTables.reduce((acc, hero) => {
+                acc[hero.source_table] = (acc[hero.source_table] || 0) + 1;
+                return acc;
+            }, {})
+        );
+        
+        allHeroes = allHeroesFromTables;
+        
+        // Fallback если ни одна таблица не загрузилась
+        if (allHeroes.length === 0) {
+            console.log('No heroes loaded from enabled tables, using Heroes_Table as fallback');
+            try {
+                const { data: fallbackData, error: fallbackError } = await supabase
+                    .from('Heroes_Table')
+                    .select("id, name, image_url, rating, good_bad, publisher");
+                    
+                if (!fallbackError && fallbackData) {
+                    const prefix = tablePrefixes.get('Heroes_Table') || 'hero_';
+                    allHeroes = fallbackData.map(hero => ({
+                        ...hero,
+                        source_table: 'Heroes_Table',
+                        id: `${prefix}${hero.id}`,
+                        originalId: hero.id,
+                        logo_url: getPublisherLogoUrl(hero.publisher),
+                        image_urls: null
+                    }));
+                    console.log(`✅ Loaded ${allHeroes.length} heroes from Heroes_Table fallback`);
+                }
+            } catch (fallbackError) {
+                console.error('Fallback also failed:', fallbackError);
+            }
+        }
+        
+        if (allHeroes.length === 0) {
+            throw new Error('No heroes available from any table');
+        }
         
         loadProgress();
         startGame();
         
     } catch (error) {
-       
+        console.error("Critical error loading heroes:", error);
+        showErrorMessage("Failed to load game data. Please try again later.");
     }
 }
 
-// Функция loadMemeSettings должна инициализировать ВСЕ поля
+// app.js - ОБНОВЛЯЕМ функцию loadMemeSettings
 async function loadMemeSettings() {
     try {
         const { data, error } = await supabase
             .from("meme_settings")
             .select("setting_key, setting_value");
             
-        if (error) throw error;
+        if (error) {
+            console.error("Error loading meme settings:", error);
+            // Устанавливаем безопасные значения по умолчанию
+            memeSettings = {
+                enabled: false, // по умолчанию выключено!
+                chance: 0.25,
+                perGame: 1,
+                season: 'default'
+            };
+            return;
+        }
         
         // Инициализируем настройки значениями из базы
         memeSettings = {
-            enabled: false,
+            enabled: false, // по умолчанию false!
             chance: 0.25,
             perGame: 1,
             season: 'default'
@@ -849,10 +1000,10 @@ async function loadMemeSettings() {
                         memeSettings.enabled = setting.setting_value === 'true';
                         break;
                     case 'meme_chance_per_game':
-                        memeSettings.chance = parseFloat(setting.setting_value);
+                        memeSettings.chance = parseFloat(setting.setting_value) || 0.25;
                         break;
                     case 'memes_per_game':
-                        memeSettings.perGame = parseInt(setting.setting_value);
+                        memeSettings.perGame = parseInt(setting.setting_value) || 1;
                         break;
                     case 'season_per_game':
                         memeSettings.season = setting.setting_value || 'default';
@@ -860,6 +1011,9 @@ async function loadMemeSettings() {
                 }
             });
         }
+        
+        console.log('Loaded meme settings:', memeSettings);
+        
     } catch (error) {
         console.error("Ошибка загрузки настроек мемов:", error);
         // В случае ошибки устанавливаем безопасные значения по умолчанию
@@ -948,8 +1102,17 @@ function getRandomHeroes() {
 
     // ПЕРЕМЕШИВАЕМ ТОЛЬКО ПРИ ПЕРВОМ ВЫЗОВЕ В ИГРЕ
     if (!window.shuffledHeroes || window.shuffledHeroes.length < 2 || !window.initialShuffleDone) {
-        console.log('=== CREATING NEW DECK WITH MEMES ===');
-        window.shuffledHeroes = [...allHeroes].sort(() => Math.random() - 0.5);
+        console.log('=== CREATING NEW DECK FROM ALL TABLES WITH MEMES ===');
+        
+        // ПРАВИЛЬНОЕ ПЕРЕМЕШИВАНИЕ - Fisher-Yates shuffle
+        window.shuffledHeroes = [...allHeroes];
+        for (let i = window.shuffledHeroes.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [window.shuffledHeroes[i], window.shuffledHeroes[j]] = 
+            [window.shuffledHeroes[j], window.shuffledHeroes[i]];
+        }
+        
+        console.log('Base heroes in deck:', window.shuffledHeroes.length);
         
         // ДОБАВЛЯЕМ МЕМЫ В КОЛОДУ ТОЛЬКО ОДИН РАЗ
         if (memeSettings.enabled && allMemes.length > 0) {
@@ -962,47 +1125,55 @@ function getRandomHeroes() {
                 for (let i = 0; i < memeCardsToAdd; i++) {
                     const meme = getRandomMeme();
                     if (meme) {
+                        // Безопасная позиция для вставки
                         const randomPosition = Math.floor(Math.random() * (window.shuffledHeroes.length - 10)) + 5;
+                        const safePosition = Math.max(0, Math.min(randomPosition, window.shuffledHeroes.length - 1));
+                        
                         const memeCard = {
-                        ...meme,
-                        id: `meme_${meme.id}`,
-                        originalMemeId: meme.id,
-                        isMeme: true,
-                        shouldFlip: true,
-                        logo_url: null,
-                        chance: meme.chance || 'Rare',
-                        season: meme.season || 'default',
-                        // ВАЖНО: используем случайное изображение из массива
-                        image_url: getRandomMemeImage(meme)
-                    };
-                        window.shuffledHeroes.splice(randomPosition, 0, memeCard);
-                        console.log('Added meme:', memeCard.name, 'at position:', randomPosition);
+                            ...meme,
+                            id: `meme_${meme.id}`,
+                            originalMemeId: meme.id,
+                            isMeme: true,
+                            shouldFlip: true,
+                            logo_url: null,
+                            chance: meme.chance || 'Rare',
+                            season: meme.season || 'default',
+                            source_table: 'Memes_Table',
+                            image_url: getRandomMemeImage(meme)
+                        };
+                        window.shuffledHeroes.splice(safePosition, 0, memeCard);
+                        console.log('Added meme:', memeCard.name, 'at position:', safePosition);
                     }
                 }
             } else {
                 console.log('No memes added to deck (chance failed)');
+                memeCardsToAdd = 0;
             }
         } else {
             console.log('Memes disabled or no memes available');
+            memeCardsToAdd = 0;
         }
         
-        // Определяем отражение для каждого героя
+        // Определяем отражение для каждого героя (из всех таблиц)
         window.shuffledHeroes.forEach(hero => {
             if (!hero.isMeme) {
                 hero.shouldFlip = shouldFlipHero(hero);
             }
         });
         
+        // ПРАВИЛЬНЫЙ ПОДСЧЕТ
+        console.log('=== FINAL DECK COMPOSITION ===');
         console.log('Final deck size:', window.shuffledHeroes.length);
-        console.log('Memes in deck:', window.shuffledHeroes.filter(h => h.isMeme).length);
-
-        // Добавьте в функцию getRandomHeroes():
-        console.log('=== DECK STATISTICS ===');
-        console.log('Total cards in deck:', window.shuffledHeroes.length);
         console.log('Regular heroes:', window.shuffledHeroes.filter(h => !h.isMeme).length);
         console.log('Memes:', window.shuffledHeroes.filter(h => h.isMeme).length);
-        console.log('Original heroes count:', allHeroes.length);
-        
+        console.log('Distribution by table:', 
+            window.shuffledHeroes.reduce((acc, hero) => {
+                const type = hero.isMeme ? 'Meme' : hero.source_table;
+                acc[type] = (acc[type] || 0) + 1;
+                return acc;
+            }, {})
+        );
+
         window.currentHeroIndex = 0;
         window.initialShuffleDone = true;
     }
@@ -1010,11 +1181,11 @@ function getRandomHeroes() {
     // Если дошли до конца массива - показываем экран завершения
     if (window.currentHeroIndex >= window.shuffledHeroes.length - 1) {
         console.log('Deck exhausted, showing completion screen');
-        showCompletionScreen();
+        //showCompletionScreen();
         return null;
     }
     
-    // Берем последовательно пары из перемешанного массива
+    // Берем последовательно пары из перемешанного массива (все таблицы вместе)
     const selected = [
         window.shuffledHeroes[window.currentHeroIndex],
         window.shuffledHeroes[window.currentHeroIndex + 1]
@@ -1022,11 +1193,20 @@ function getRandomHeroes() {
     
     console.log('Selected pair:', {
         index: window.currentHeroIndex,
-        hero1: { name: selected[0].name, isMeme: selected[0].isMeme },
-        hero2: { name: selected[1].name, isMeme: selected[1].isMeme }
+        hero1: { 
+            name: selected[0].name, 
+            source: selected[0].source_table,
+            isMeme: selected[0].isMeme 
+        },
+        hero2: { 
+            name: selected[1].name, 
+            source: selected[1].source_table,
+            isMeme: selected[1].isMeme 
+        }
     });
     
     window.currentHeroIndex += 2;
+    
     
     return selected;
 }
@@ -1081,6 +1261,26 @@ function showCompletionScreen() {
     saveGameStats('completion');
     playHaptic('win');
 }
+
+// Упрощаем функцию загрузки включенных таблиц
+async function loadEnabledTables() {
+    try {
+        const { data, error } = await supabase
+            .from("enabled_tables")
+            .select("table_name, enabled")
+            .eq("enabled", true);
+            
+        if (error) throw error;
+        
+        enabledTables = data ? data.map(item => item.table_name) : ['Heroes_Table'];
+        console.log('Enabled tables:', enabledTables);
+        
+    } catch (error) {
+        console.error("Ошибка загрузки включенных таблиц:", error);
+        enabledTables = ['Heroes_Table']; // fallback
+    }
+}
+
 
 
 // Preload next pair
@@ -1259,6 +1459,10 @@ function displayHeroes() {
         nextHeroes = [];
     } else {
         currentHeroes = getRandomHeroes();
+        if (!currentHeroes) {
+            showCompletionScreen();
+            return;
+        }
     }
     
     if (!currentHeroes) return;
@@ -1380,6 +1584,7 @@ function displayHeroes() {
 
 }
 
+// ==================== ИСПРАВЛЕННАЯ ФУНКЦИЯ ГОЛОСОВАНИЯ ====================
 async function vote(heroNumber) {
     if (!gameActive || !currentHeroes || currentHeroes.length < 2 || 
         playerLives <= 0 || isVotingInProgress) {
@@ -1460,7 +1665,7 @@ async function vote(heroNumber) {
         }, 0);
     }
     
-    // ОБРАБОТКА ПОТЕРИ ЖИЗНИ
+    // ОБРАБОТКА ПОТЕРИ ЖИЗНИ (только для игровой логики)
     if (!userMadeRightChoice) {
         AnimationManager.setTimeout(() => {
             let animateLoss = false;
@@ -1473,10 +1678,10 @@ async function vote(heroNumber) {
             }
 
             if (animateLoss) {
-                updateLivesWithAnimation(); // ← Теперь работает!
+                updateLivesWithAnimation();
                 playHaptic('wrong');
             } else {
-                updateLivesDisplay(); // просто обновить +X
+                updateLivesDisplay();
             }
 
             updateUI();
@@ -1496,9 +1701,11 @@ async function vote(heroNumber) {
         votedHeroes.add(otherHero.id);
         saveProgress();
         
-        // ОБНОВЛЯЕМ СТАТИСТИКУ В БАЗУ с учетом силы голоса
-        const winnerId = userMadeRightChoice ? selectedHero.id : otherHero.id;
-        const loserId = userMadeRightChoice ? otherHero.id : selectedHero.id;
+        // ==================== КЛЮЧЕВОЕ ИЗМЕНЕНИЕ: ВСЕГДА ЗАПИСЫВАЕМ ПОБЕДУ ВЫБРАННОМУ ГЕРОЮ ====================
+        // Независимо от исхода игры, выбранный герой получает победу, невыбранный - поражение
+        const winnerId = selectedHero.id;  // ВСЕГДА тот, кого выбрал игрок
+        const loserId = otherHero.id;      // ВСЕГДА тот, кого не выбрали
+        
         updateHeroStatsAsync(winnerId, loserId, currentPower);
     }, HERO_DISPLAY_DURATION);
     
@@ -1658,27 +1865,68 @@ function convertToImageBasedDigits(element, text) {
     element.appendChild(fragment);
 }
 
-async function updateHeroStatsAsync(winnerId, loserId, votePower = 1, isMeme = false) {
+// ==================== ИСПРАВЛЕННАЯ ФУНКЦИЯ ОБНОВЛЕНИЯ СТАТИСТИКИ ====================
+async function updateHeroStatsAsync(winnerId, loserId, votePower = 1) {
     try {
         console.log('=== UPDATE STATS START ===');
-        console.log('Raw inputs:', { winnerId, loserId, votePower, isMeme });
+        console.log('Raw inputs:', { winnerId, loserId, votePower });
         
-        // ОПРЕДЕЛЯЕМ ТИП КАРТ ПО ИХ ID
-        const winnerIsMeme = typeof winnerId === 'string' && winnerId.startsWith('meme_');
-        const loserIsMeme = typeof loserId === 'string' && loserId.startsWith('meme_');
-        
-        console.log('Card types:', { winnerIsMeme, loserIsMeme });
+        // ПРОСТАЯ ФУНКЦИЯ ОПРЕДЕЛЕНИЯ ИСТОЧНИКА ПО ПРЕФИКСУ
+        const findHeroSource = (heroId) => {
+            // Для мемов
+            if (heroId.startsWith('meme_')) {
+                return {
+                    table: 'Memes_Table',
+                    isMeme: true,
+                    cleanId: heroId.replace('meme_', '')
+                };
+            }
+            
+            // Для других таблиц - ищем по префиксам
+            for (const [tableName, prefix] of tablePrefixes) {
+                if (heroId.startsWith(prefix)) {
+                    return {
+                        table: tableName,
+                        isMeme: false,
+                        cleanId: heroId.replace(prefix, '')
+                    };
+                }
+            }
+            
+            // Если префикс не найден, пробуем найти в текущих героях
+            const heroInCurrent = [...currentHeroes, ...allHeroes].find(h => h.id === heroId);
+            if (heroInCurrent) {
+                return {
+                    table: heroInCurrent.source_table,
+                    isMeme: heroInCurrent.isMeme || false,
+                    cleanId: heroInCurrent.originalId || heroInCurrent.id
+                };
+            }
+            
+            // Fallback
+            console.warn(`Could not determine table for ID: ${heroId}, using Heroes_Table`);
+            return {
+                table: 'Heroes_Table',
+                isMeme: false,
+                cleanId: heroId
+            };
+        };
 
-        // ОБНОВЛЯЕМ ПОБЕДИТЕЛЯ
-        if (winnerIsMeme) {
+        const winnerInfo = findHeroSource(winnerId);
+        const loserInfo = findHeroSource(loserId);
+
+        console.log('Winner info:', winnerInfo);
+        console.log('Loser info:', loserInfo);
+
+        // ОБНОВЛЯЕМ ПОБЕДИТЕЛЯ (ВСЕГДА выбранный герой)
+        if (winnerInfo.isMeme) {
             // ОБНОВЛЯЕМ МЕМ-ПОБЕДИТЕЛЬ
-            const cleanWinnerId = winnerId.replace('meme_', '');
-            console.log('Updating winner MEME:', cleanWinnerId);
+            console.log('Updating winner MEME:', winnerInfo.cleanId);
             
             const { data: winnerData, error: winnerFetchError } = await supabase
                 .from('Memes_Table')
                 .select('wins, loses, viewers')
-                .eq('id', cleanWinnerId)
+                .eq('id', winnerInfo.cleanId)
                 .single();
             
             if (winnerFetchError) {
@@ -1692,7 +1940,7 @@ async function updateHeroStatsAsync(winnerId, loserId, votePower = 1, isMeme = f
                         wins: (parseFloat(winnerData.wins || 0)) + parseFloat(votePower),
                         viewers: (parseFloat(winnerData.viewers || 0)) + 1
                     })
-                    .eq('id', cleanWinnerId);
+                    .eq('id', winnerInfo.cleanId);
                 
                 if (winnerError) {
                     console.error('Error updating winner meme:', winnerError);
@@ -1701,46 +1949,45 @@ async function updateHeroStatsAsync(winnerId, loserId, votePower = 1, isMeme = f
                 }
             }
         } else {
-            // ОБНОВЛЯЕМ ГЕРОЯ-ПОБЕДИТЕЛЯ
-            console.log('Updating winner HERO:', winnerId);
+            // ОБНОВЛЯЕМ ГЕРОЯ-ПОБЕДИТЕЛЯ ИЗ ЛЮБОЙ ТАБЛИЦЫ
+            console.log(`Updating winner HERO from ${winnerInfo.table}:`, winnerInfo.cleanId);
             
             const { data: winnerData, error: winnerFetchError } = await supabase
-                .from('Heroes_Table')
+                .from(winnerInfo.table)
                 .select('wins, viewers')
-                .eq('id', winnerId)
+                .eq('id', winnerInfo.cleanId)
                 .single();
             
             if (winnerFetchError) {
-                console.error('Error fetching winner hero:', winnerFetchError);
+                console.error(`Error fetching winner from ${winnerInfo.table}:`, winnerFetchError);
             } else {
-                console.log('Winner hero current stats:', winnerData);
+                console.log(`Winner from ${winnerInfo.table} current stats:`, winnerData);
                 
                 const { error: winnerError } = await supabase
-                    .from('Heroes_Table')
+                    .from(winnerInfo.table)
                     .update({ 
                         wins: (parseFloat(winnerData.wins || 0)) + parseFloat(votePower),
                         viewers: (parseFloat(winnerData.viewers || 0)) + 1
                     })
-                    .eq('id', winnerId);
+                    .eq('id', winnerInfo.cleanId);
                 
                 if (winnerError) {
-                    console.error('Error updating winner hero:', winnerError);
+                    console.error(`Error updating winner in ${winnerInfo.table}:`, winnerError);
                 } else {
-                    console.log('✅ Successfully updated winner hero');
+                    console.log(`✅ Successfully updated winner in ${winnerInfo.table}`);
                 }
             }
         }
 
-        // ОБНОВЛЯЕМ ПРОИГРАВШЕГО
-        if (loserIsMeme) {
+        // ОБНОВЛЯЕМ ПРОИГРАВШЕГО (ВСЕГДА невыбранный герой)
+        if (loserInfo.isMeme) {
             // ОБНОВЛЯЕМ МЕМ-ПРОИГРАВШЕГО
-            const cleanLoserId = loserId.replace('meme_', '');
-            console.log('Updating loser MEME:', cleanLoserId);
+            console.log('Updating loser MEME:', loserInfo.cleanId);
             
             const { data: loserData, error: loserFetchError } = await supabase
                 .from('Memes_Table')
                 .select('wins, loses, viewers')
-                .eq('id', cleanLoserId)
+                .eq('id', loserInfo.cleanId)
                 .single();
             
             if (loserFetchError) {
@@ -1754,7 +2001,7 @@ async function updateHeroStatsAsync(winnerId, loserId, votePower = 1, isMeme = f
                         loses: (parseFloat(loserData.loses || 0)) + parseFloat(votePower),
                         viewers: (parseFloat(loserData.viewers || 0)) + 1
                     })
-                    .eq('id', cleanLoserId);
+                    .eq('id', loserInfo.cleanId);
                 
                 if (loserError) {
                     console.error('Error updating loser meme:', loserError);
@@ -1763,32 +2010,32 @@ async function updateHeroStatsAsync(winnerId, loserId, votePower = 1, isMeme = f
                 }
             }
         } else {
-            // ОБНОВЛЯЕМ ГЕРОЯ-ПРОИГРАВШЕГО
-            console.log('Updating loser HERO:', loserId);
+            // ОБНОВЛЯЕМ ГЕРОЯ-ПРОИГРАВШЕГО ИЗ ЛЮБОЙ ТАБЛИЦЫ
+            console.log(`Updating loser HERO from ${loserInfo.table}:`, loserInfo.cleanId);
             
             const { data: loserData, error: loserFetchError } = await supabase
-                .from('Heroes_Table')
+                .from(loserInfo.table)
                 .select('loses, viewers')
-                .eq('id', loserId)
+                .eq('id', loserInfo.cleanId)
                 .single();
             
             if (loserFetchError) {
-                console.error('Error fetching loser hero:', loserFetchError);
+                console.error(`Error fetching loser from ${loserInfo.table}:`, loserFetchError);
             } else {
-                console.log('Loser hero current stats:', loserData);
+                console.log(`Loser from ${loserInfo.table} current stats:`, loserData);
                 
                 const { error: loserError } = await supabase
-                    .from('Heroes_Table')
+                    .from(loserInfo.table)
                     .update({ 
                         loses: (parseFloat(loserData.loses || 0)) + parseFloat(votePower),
                         viewers: (parseFloat(loserData.viewers || 0)) + 1
                     })
-                    .eq('id', loserId);
+                    .eq('id', loserInfo.cleanId);
                 
                 if (loserError) {
-                    console.error('Error updating loser hero:', loserError);
+                    console.error(`Error updating loser in ${loserInfo.table}:`, loserError);
                 } else {
-                    console.log('✅ Successfully updated loser hero');
+                    console.log(`✅ Successfully updated loser in ${loserInfo.table}`);
                 }
             }
         }
@@ -2081,6 +2328,7 @@ function gameOver() {
 
 
 // ==================== ОБНОВИМ ФУНКЦИЮ RESETGAME ДЛЯ ВЫЗОВА ПРОВЕРКИ ====================
+// app.js - ОБНОВЛЯЕМ resetGame для работы с таблицами
 function resetGame() {
     // ОЧИЩАЕМ ВСЕ ПОПАПЫ ПЕРЕД НОВОЙ ИГРОЙ
     document.querySelectorAll('.universal-popup').forEach(popup => popup.remove());
@@ -2091,8 +2339,8 @@ function resetGame() {
     pairsGuessed = 0;
     currentGamePairsShown = 0;
     memeCardsToAdd = 0;
-    extraLives = 0; // Сбрасываем дополнительные жизни
-    powerBoost = 0; // Сбрасываем временный буст силы голоса
+    extraLives = 0;
+    powerBoost = 0;
    
     // ✅ СБРАСЫВАЕМ ПРОГРЕСС ГОЛОСОВАНИЯ:
     votedHeroes.clear();
@@ -2100,17 +2348,17 @@ function resetGame() {
     currentVotePairId = null;
     gameActive = true;
     
-    // ✅ СБРАСЫВАЕМ ИГРОВУЮ СИЛУ ГОЛОСА (но не дневную!):
+    // ✅ СБРАСЫВАЕМ ИГРОВУЮ СИЛУ ГОЛОСА:
     resetGameVotePower();
     
-    // ✅ ПЕРЕЗАГРУЖАЕМ ДАННЫЕ С АКТУАЛЬНЫМИ РЕЙТИНГАМИ:
+    // ✅ ПЕРЕЗАГРУЖАЕМ ДАННЫЕ ИЗ ВСЕХ ВКЛЮЧЕННЫХ ТАБЛИЦ:
     Promise.all([loadAllHeroes(), loadAllMemes()]).then(() => {
         // ✅ СБРАСЫВАЕМ КЕШ ГЕРОЕВ ДЛЯ НОВОЙ ИГРЫ:
         window.shuffledHeroes = null;
         window.currentHeroIndex = 0;
         window.initialShuffleDone = false;
         
-        // ПРОВЕРЯЕМ СТРУКТУРУ МЕМОВ
+        // ПРОВЕРЯЕМ СТРУКТУРУ
         checkMemeStructure();
         
         AnimationManager.clearAll();
@@ -2126,17 +2374,20 @@ function resetGame() {
 document.addEventListener("DOMContentLoaded", function() {
     initTelegram();
 
-    // ИНИЦИАЛИЗИРУЕМ СИЛУ ГОЛОСА ПЕРЕД СБРОСОМ ИГРЫ
     calculateVotePower();
     
-    // Загружаем настройки мемов и мемы
+    // Загружаем настройки в правильном порядке
     loadMemeSettings().then(() => {
-        loadAllMemes().then(() => {
-            // ВСЕГДА сбрасываем игру при загрузке (анти-читерство)
-            resetGame();
-            loadAllHeroes();
-            initNetworkMonitoring();
-        });
+        return loadTablePrefixes(); // Загружаем префиксы ПЕРВЫМИ
+    }).then(() => {
+        return loadEnabledTables(); // Затем таблицы
+    }).then(() => {
+        return loadAllMemes(); // Затем мемы
+    }).then(() => {
+        // ВСЕГДА сбрасываем игру при загрузке
+        resetGame();
+        loadAllHeroes(); // Герои загружаются последними
+        initNetworkMonitoring();
     });
 
     // Проверяем первый запуск
