@@ -477,6 +477,7 @@ body::after {
 .hero-publisher img[alt*="Valiant"],
 .hero-publisher img[alt*="dark horse"], 
 .hero-publisher img[alt*="Dark Horse"],
+.hero-publisher img[alt*="Dynamite"],
 .hero-publisher img[alt*="Titan"],
 .hero-publisher img[alt*="Skybound"],
 .hero-publisher img[alt*="dark_horse"] {
@@ -484,7 +485,7 @@ body::after {
     transform-origin: top left;
 }
 
-.hero-publisher img[alt*="Dynamite"],
+
 .hero-publisher img[alt*="Burlyman"] {
     transform: scale(2.0);
     transform-origin: top left;
