@@ -487,9 +487,18 @@ body::after {
     transform-origin: top left;
 }
 
+.hero-publisher img[alt*="Marvel"] {
+    transform: scale(0.75);
+    transform-origin: top left;
+}
+
+.hero-publisher img[alt*="DC"] {
+    transform: scale(0.75);
+    transform-origin: top left;
+}
 
 .hero-publisher img[alt*="Burlyman"] {
-    transform: scale(2.0);
+    transform: scale(1.5);
     transform-origin: top left;
 }
 
