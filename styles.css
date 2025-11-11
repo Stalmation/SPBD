@@ -477,6 +477,7 @@ body::after {
 .hero-publisher img[alt*="Valiant"],
 .hero-publisher img[alt*="dark horse"], 
 .hero-publisher img[alt*="Dark Horse"],
+.hero-publisher img[alt*="Burlyman"],
 .hero-publisher img[alt*="dark_horse"] {
     transform: scale(1.5);
     transform-origin: top left;
