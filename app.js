@@ -149,6 +149,9 @@ const PUBLISHER_LOGOS = {
     'burlyman': 'https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Owner/Burlyman.webp',
     'skybound': 'https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Owner/Skybound.webp',
     'titan': 'https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Owner/Titan.webp',
+    'udon': 'https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Owner/UDON.webp',
+    'boom': 'https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Owner/Boom.webp',
+    'idw': 'https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Owner/IDW.webp',
     
 };
 

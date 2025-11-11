@@ -480,6 +480,8 @@ body::after {
 .hero-publisher img[alt*="Dynamite"],
 .hero-publisher img[alt*="Titan"],
 .hero-publisher img[alt*="Skybound"],
+.hero-publisher img[alt*="UDON"],
+.hero-publisher img[alt*="IDW"],
 .hero-publisher img[alt*="dark_horse"] {
     transform: scale(1.5);
     transform-origin: top left;
