@@ -483,7 +483,7 @@ body::after {
 
 
 .hero-publisher img[alt*="dark_horse"] {
-    transform: scale(1.25);
+    transform: scale(1.0);
     transform-origin: top left;
 }
 
@@ -507,8 +507,13 @@ body::after {
     transform-origin: top left;
 }
 
+.hero-publisher img[alt*="Boom"] {
+    transform: scale(0.75);
+    transform-origin: top left;
+}
+
 .hero-publisher img[alt*="Burlyman"] {
-    transform: scale(1.5);
+    transform: scale(1.25);
     transform-origin: top left;
 }
 
