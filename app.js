@@ -152,6 +152,7 @@ const PUBLISHER_LOGOS = {
     'udon': 'https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Owner/UDON.webp',
     'boom': 'https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Owner/Boom.webp',
     'idw': 'https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Owner/IDW.webp',
+    'sony': 'https://xwtcasfvetisjaiijtsj.supabase.co/storage/v1/object/public/Heroes/Owner/Sony.webp',
     
 };
 
