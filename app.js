@@ -846,10 +846,11 @@ async function loadAllHeroes() {
         await loadTablePrefixes();
         // Загружаем включенные таблицы
         await loadEnabledTables();
+        // Загружаем настройки популярности
+        const popularitySettings = await loadPopularitySettings();
         
-        console.log('=== LOADING HEROES DEBUG ===');
-        console.log('Enabled tables:', enabledTables);
-        console.log('Table prefixes:', Object.fromEntries(tablePrefixes));
+        console.log('=== LOADING HEROES WITH POPULARITY FILTER ===');
+        console.log('Popularity settings:', popularitySettings);
         
         let allHeroesFromTables = [];
         
@@ -862,63 +863,60 @@ async function loadAllHeroes() {
             try {
                 const prefix = tablePrefixes.get(tableName) || 'def_';
                 
-                // Пробуем загрузить с image_urls
+                // ЗАПРАШИВАЕМ КОЛОНКУ popularity
                 let query = supabase
                     .from(tableName)
-                    .select("id, name, image_url, image_urls, rating, good_bad, publisher");
+                    .select("id, name, image_url, image_urls, rating, good_bad, publisher, popularity");
                 
                 const { data, error } = await query;
                     
                 if (error) {
-                    // Если ошибка из-за отсутствующей колонки, пробуем без image_urls
-                    if (error.code === '42703' && error.message.includes('image_urls')) {
-                        console.log(`Column image_urls not found in ${tableName}, loading without it`);
-                        const { data: dataWithoutUrls, error: errorWithoutUrls } = await supabase
+                    // Если ошибка из-за отсутствующей колонки popularity, пробуем без нее
+                    if (error.code === '42703' && error.message.includes('popularity')) {
+                        console.log(`Column popularity not found in ${tableName}, loading without it`);
+                        const { data: dataWithoutPopularity, error: errorWithoutPopularity } = await supabase
                             .from(tableName)
                             .select("id, name, image_url, rating, good_bad, publisher");
                             
-                        if (errorWithoutUrls) {
-                            console.error(`Error loading from ${tableName} without image_urls:`, errorWithoutUrls);
+                        if (errorWithoutPopularity) {
+                            console.error(`Error loading from ${tableName} without popularity:`, errorWithoutPopularity);
                             continue;
                         }
                         
-                        if (dataWithoutUrls && dataWithoutUrls.length > 0) {
-                            const heroesWithSource = dataWithoutUrls.map(hero => ({
+                        if (dataWithoutPopularity && dataWithoutPopularity.length > 0) {
+                            const heroesWithSource = dataWithoutPopularity.map(hero => ({
                                 ...hero,
                                 source_table: tableName,
-                                // ГЕНЕРИРУЕМ ID С ПРЕФИКСОМ
                                 id: `${prefix}${hero.id}`,
-                                originalId: hero.id, // Сохраняем оригинальный ID для обновления
+                                originalId: hero.id,
                                 logo_url: getPublisherLogoUrl(hero.publisher),
-                                image_urls: null
+                                image_urls: null,
+                                popularity: null // Помечаем как неразмеченных
                             }));
                             
                             allHeroesFromTables = allHeroesFromTables.concat(heroesWithSource);
-                            console.log(`✅ Loaded ${heroesWithSource.length} heroes from ${tableName} (with prefix: ${prefix})`);
+                            console.log(`✅ Loaded ${heroesWithSource.length} heroes from ${tableName} (marked as unrated)`);
                         }
                     } else {
                         console.error(`Error loading from ${tableName}:`, error);
                         continue;
                     }
                 } else if (data && data.length > 0) {
-                    // Успешно загрузили с image_urls
+                    // Успешно загрузили с popularity
                     const heroesWithSource = data.map(hero => ({
                         ...hero,
                         source_table: tableName,
-                        // ГЕНЕРИРУЕМ ID С ПРЕФИКСОМ
                         id: `${prefix}${hero.id}`,
-                        originalId: hero.id, // Сохраняем оригинальный ID для обновления
+                        originalId: hero.id,
                         logo_url: getPublisherLogoUrl(hero.publisher),
-                        // Используем случайное изображение из массива если есть
                         image_url: hero.image_urls && Array.isArray(hero.image_urls) && hero.image_urls.length > 0 
                             ? hero.image_urls[Math.floor(Math.random() * hero.image_urls.length)]
-                            : hero.image_url
+                            : hero.image_url,
+                        popularity: hero.popularity // Используем значение из базы (может быть NULL)
                     }));
                     
                     allHeroesFromTables = allHeroesFromTables.concat(heroesWithSource);
-                    console.log(`✅ Loaded ${heroesWithSource.length} heroes from ${tableName} (with prefix: ${prefix})`);
-                } else {
-                    console.log(`❌ No data found in table: ${tableName}`);
+                    console.log(`✅ Loaded ${heroesWithSource.length} heroes from ${tableName} (with popularity)`);
                 }
                 
             } catch (tableError) {
@@ -926,40 +924,43 @@ async function loadAllHeroes() {
             }
         }
         
-        console.log('=== FINAL HEROES COUNT ===');
+        console.log('=== BEFORE POPULARITY FILTER ===');
         console.log('Total heroes loaded:', allHeroesFromTables.length);
-        console.log('Distribution by table:', 
-            allHeroesFromTables.reduce((acc, hero) => {
-                acc[hero.source_table] = (acc[hero.source_table] || 0) + 1;
-                return acc;
-            }, {})
-        );
+        
+        // ДЕТАЛЬНАЯ СТАТИСТИКА ПО ПОПУЛЯРНОСТИ
+        const popularityStats = allHeroesFromTables.filter(h => !h.isMeme).reduce((acc, hero) => {
+            const pop = hero.popularity;
+            if (pop === null || pop === undefined) {
+                acc.unrated = (acc.unrated || 0) + 1;
+            } else if (pop === 1) {
+                acc.high = (acc.high || 0) + 1;
+            } else if (pop === 2) {
+                acc.medium = (acc.medium || 0) + 1;
+            } else if (pop === 3) {
+                acc.low = (acc.low || 0) + 1;
+            } else {
+                acc.unknown = (acc.unknown || 0) + 1;
+            }
+            return acc;
+        }, {});
+        
+        console.log('Popularity distribution before filter:', popularityStats);
+        
+        // ПРИМЕНЯЕМ ФИЛЬТР ПОПУЛЯРНОСТИ
+        const heroesBeforeFilter = allHeroesFromTables.length;
+        allHeroesFromTables = filterHeroesByPopularity(allHeroesFromTables, popularitySettings);
+        const heroesAfterFilter = allHeroesFromTables.length;
+        
+        console.log('=== AFTER POPULARITY FILTER ===');
+        console.log(`Filtered out: ${heroesBeforeFilter - heroesAfterFilter} heroes`);
+        console.log('Remaining heroes:', heroesAfterFilter);
         
         allHeroes = allHeroesFromTables;
         
         // Fallback если ни одна таблица не загрузилась
         if (allHeroes.length === 0) {
             console.log('No heroes loaded from enabled tables, using Heroes_Table as fallback');
-            try {
-                const { data: fallbackData, error: fallbackError } = await supabase
-                    .from('Heroes_Table')
-                    .select("id, name, image_url, rating, good_bad, publisher");
-                    
-                if (!fallbackError && fallbackData) {
-                    const prefix = tablePrefixes.get('Heroes_Table') || 'hero_';
-                    allHeroes = fallbackData.map(hero => ({
-                        ...hero,
-                        source_table: 'Heroes_Table',
-                        id: `${prefix}${hero.id}`,
-                        originalId: hero.id,
-                        logo_url: getPublisherLogoUrl(hero.publisher),
-                        image_urls: null
-                    }));
-                    console.log(`✅ Loaded ${allHeroes.length} heroes from Heroes_Table fallback`);
-                }
-            } catch (fallbackError) {
-                console.error('Fallback also failed:', fallbackError);
-            }
+            // ... существующий fallback код ...
         }
         
         if (allHeroes.length === 0) {
@@ -1781,6 +1782,79 @@ function showStarRating(heroNumber, rating, isWinner) {
     AnimationManager.setTimeout(() => {
         starContainer.classList.add('show');
     }, 50);
+}
+
+// Загрузка настроек популярности
+async function loadPopularitySettings() {
+    try {
+        const { data, error } = await supabase
+            .from("popularity_settings")
+            .select("setting_key, setting_value");
+            
+        if (error) throw error;
+        
+        // Значения по умолчанию - все включены
+        const popularitySettings = {
+            high: true,
+            medium: true,
+            low: true,
+            unrated: true
+        };
+        
+        if (data) {
+            data.forEach(setting => {
+                switch(setting.setting_key) {
+                    case 'popularity_high':
+                        popularitySettings.high = setting.setting_value === 'true';
+                        break;
+                    case 'popularity_medium':
+                        popularitySettings.medium = setting.setting_value === 'true';
+                        break;
+                    case 'popularity_low':
+                        popularitySettings.low = setting.setting_value === 'true';
+                        break;
+                    case 'popularity_unrated':
+                        popularitySettings.unrated = setting.setting_value === 'true';
+                        break;
+                }
+            });
+        }
+        
+        return popularitySettings;
+        
+    } catch (error) {
+        console.error("Ошибка загрузки настроек популярности:", error);
+        return { high: true, medium: true, low: true, unrated: true };
+    }
+}
+
+// Функция фильтрации героев по популярности
+function filterHeroesByPopularity(heroes, popularitySettings) {
+    return heroes.filter(hero => {
+        // Для мемов всегда пропускаем (у них нет popularity)
+        if (hero.isMeme) return true;
+        
+        // Определяем уровень популярности (NULL = неразмеченные)
+        const popularity = hero.popularity;
+        
+        // Если popularity NULL или undefined - это неразмеченные герои
+        if (popularity === null || popularity === undefined) {
+            return popularitySettings.unrated;
+        }
+        
+        // Для размеченных героев проверяем соответствующие настройки
+        switch(popularity) {
+            case 1:
+                return popularitySettings.high;
+            case 2:
+                return popularitySettings.medium;
+            case 3:
+                return popularitySettings.low;
+            default:
+                // Если какое-то нестандартное значение, считаем неразмеченным
+                return popularitySettings.unrated;
+        }
+    });
 }
 
 // ==================== НОВАЯ ФУНКЦИЯ ДЛЯ ЦИФР СО ЗНАКОМ ПРОЦЕНТОВ ====================
