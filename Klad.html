@@ -1,0 +1,1333 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>КЛАД — ZX Lode Runner + редактор</title>
+<style>
+:root{--zy:#ffe600}
+*{box-sizing:border-box}
+body{margin:0;background:#0a0a0f;color:#eee;font-family:'Courier New',monospace;display:flex;flex-direction:column;align-items:center;min-height:100vh;padding:14px;user-select:none;background-image:radial-gradient(circle at 50% 15%,#15151f,#05050a)}
+#frame{border:6px solid #3c3c4a;border-top-color:#5a5a6e;border-left-color:#5a5a6e;background:#000;padding:10px;box-shadow:0 10px 40px #000}
+#hud{display:flex;gap:18px;justify-content:space-between;color:var(--zy);font-weight:700;letter-spacing:1px;padding:2px 4px 8px;font-size:15px;text-shadow:0 0 8px rgba(255,230,0,.35)}
+canvas{display:block;image-rendering:pixelated;background:#000;outline:1px solid #222;cursor:crosshair;width:min(672px,92vw);height:auto}
+#scan{pointer-events:none;position:fixed;inset:0;background:repeating-linear-gradient(0deg,rgba(0,0,0,.14) 0 1px,transparent 1px 3px)}
+#toolbar{max-width:672px;width:100%;margin-top:10px;display:none;flex-direction:column;gap:8px}
+.row{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+button{background:#15151d;color:#ddd;border:2px solid #444;padding:5px 9px;font-family:inherit;font-size:12px;cursor:pointer;text-transform:uppercase;border-radius:2px}
+button:hover{border-color:#aaa;color:#fff}
+button.active{background:#3a2b00;border-color:var(--zy);color:var(--zy)}
+.pl i{display:inline-block;width:11px;height:11px;margin-right:6px;border:1px solid #000;vertical-align:-1px}
+.act{border-color:#3a7a55}
+#hint{color:#8a8a9a;font-size:12px;margin-top:10px;text-align:center;line-height:1.7;max-width:672px}
+#modal{position:fixed;inset:0;background:rgba(0,0,0,.75);display:none;align-items:center;justify-content:center;z-index:10}
+#modal .box{background:#101018;border:3px solid #666;padding:16px;max-width:660px;width:94%}
+#modal textarea{width:100%;height:280px;background:#000;color:#7dff7d;border:2px solid #444;font-family:inherit;font-size:12px;padding:8px}
+h3{margin:0 0 10px;color:var(--zy);font-size:14px;letter-spacing:2px}
+#touch-controls{display:none;width:100%;max-width:672px;margin-top:10px;flex-direction:column;align-items:center;gap:10px}
+.dpad{display:grid;grid-template-columns:repeat(3,60px);grid-template-rows:repeat(3,60px);gap:4px}
+.dpad button{background:rgba(20,20,30,0.8);border:2px solid #666;color:#fff;font-size:24px;border-radius:8px;touch-action:none;user-select:none;-webkit-user-select:none}
+.dpad button:active{background:#3a2b00;border-color:var(--zy)}
+.dpad .empty{background:transparent;border:none}
+.dig-buttons{display:flex;gap:20px;margin-top:5px}
+.dig-buttons button{background:rgba(20,20,30,0.8);border:2px solid #666;color:#fff;font-size:20px;width:70px;height:60px;border-radius:8px;touch-action:none;user-select:none;-webkit-user-select:none}
+.dig-buttons button:active{background:#3a2b00;border-color:var(--zy)}
+.action-buttons{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:5px}
+.action-buttons button{background:rgba(20,20,30,0.8);border:2px solid #666;color:#fff;font-size:14px;padding:10px 14px;border-radius:8px;touch-action:none;user-select:none;-webkit-user-select:none}
+.action-buttons button:active{background:#3a2b00;border-color:var(--zy)}
+@media (max-width:800px){#touch-controls{display:flex}}
+</style>
+</head>
+<body>
+<div id="frame">
+  <div id="hud">
+    <span>ОЧКИ:&nbsp;<b id="hScore">0</b></span>
+    <span>КЛАД:&nbsp;<b id="hGold">0</b></span>
+    <span>ЖИЗНИ:&nbsp;<b id="hLives">3</b></span>
+    <span>УРОВЕНЬ:&nbsp;<b id="hLevel">1</b></span>
+  </div>
+  <canvas id="cv" width="672" height="384"></canvas>
+</div>
+<div id="touch-controls">
+  <div class="dpad">
+    <div class="empty"></div>
+    <button id="btnUp">▲</button>
+    <div class="empty"></div>
+    <button id="btnLeft">◀</button>
+    <div class="empty"></div>
+    <button id="btnRight">▶</button>
+    <div class="empty"></div>
+    <button id="btnDown">▼</button>
+    <div class="empty"></div>
+  </div>
+  <div class="dig-buttons">
+    <button id="btnDigL">Z</button>
+    <button id="btnDigR">X</button>
+  </div>
+  <div class="action-buttons">
+    <button id="btnEnter">ENTER</button>
+    <button id="btnR">R</button>
+    <button id="btnEsc">ESC</button>
+    <button id="btnP">P</button>
+  </div>
+</div>
+<div id="toolbar">
+  <div class="row" id="palette"></div>
+  <div class="row">
+    <button class="act" id="bTest">▶ Тест</button>
+    <button id="bRand">🎲 Случайный</button>
+    <button id="bClear">Очистить</button>
+    <button id="bSample">Пример</button>
+    <button class="act" id="bSave">Сохранить</button>
+    <button id="bExport">Экспорт</button>
+    <button id="bImport">Импорт</button>
+    <button id="bMenu">Меню</button>
+    <span style="flex:1"></span>
+    <span style="color:#8a8a9a;font-size:12px">Слот:</span><span id="slots" class="row" style="gap:4px"></span>
+  </div>
+</div>
+<div id="hint"></div>
+<div id="modal"><div class="box"><h3 id="mTitle"></h3><textarea id="mText" spellcheck="false"></textarea>
+<div class="row" style="margin-top:10px"><button class="act" id="mOk">OK</button><button id="mCancel">Отмена</button><span id="mMsg" style="color:#ff7b7b;font-size:12px"></span></div></div></div>
+<div id="scan"></div>
+<script>
+'use strict';
+const COLS=28, ROWS=16, TS=24;
+const cv=document.getElementById('cv'), ctx=cv.getContext('2d');
+const T={EMPTY:0,BRICK:1,SOLID:2,LADDER:3,ROPE:4,GOLD:5,GOLDROPE:6,DOOR:7};
+const CH2T={'.':T.EMPTY,'B':T.BRICK,'S':T.SOLID,'L':T.LADDER,'R':T.ROPE,'G':T.GOLD,'T':T.GOLDROPE,'P':T.EMPTY,'E':T.EMPTY,'D':T.DOOR};
+const PW=105, ES=82, CS=80, FS=270;
+
+const LEVEL1=[
+"............................",
+"............GD.G............",
+"...........BBBBBL...........",
+"................L...........",
+"G.....G.........L....G.....G",
+"BBLBBBB..RTRRRRRL....BBBBLBB",
+"..L........L....L........L..",
+"..L.....GE.L....L.G......L..",
+"..L.BBBBBBBB....BBBBBBBB.L..",
+"..L.........RTRR.........L..",
+".GL....E.G.........G.....LG.",
+"BBLBBLBBBBB......BBBBBLBBLBB",
+"..L..L................L..L..",
+".P..G........G......E..G....",
+"BBBBBBBBBBBBBBBBBBBBBBBBBBBB",
+"BBBBBBBBBBBBBBBBBBBBBBBBBBBB"];
+
+const LEVEL2=[
+"............................",
+"............D.GG............",
+"...........BBBBBL...........",
+"................L...........",
+".........G........G.........",
+"........BBBBBLBBBBBB........",
+".............L..............",
+"..EG........G...........G...",
+"BBBBLB......BBLB......BBBBBB",
+"....L.........L...........L.",
+"...G...........E.......G....",
+"...BBBLB...BBBBBB...BBBLBBB.",
+"......L.....BBBB....L.......",
+".P.......G..........G.E.....",
+"BBBBBBBBBBBB.GG.LBBBBBBBBBBB",
+"BBBBBBBBBBBBBBBBBBBBBBBBBBBB"];
+
+const LEVEL3=[
+"............................",
+"..D......................G..",
+"BBLBB....LRRTRRTRR.....BBLBB",
+"..L......L...............L..",
+"..L.....G..........G.....L..",
+"..L...BLBBBBLBBBBBBBLB...L..",
+"..L....L....L.......L....L..",
+"..L.G.....G.L....G.E...G.L..",
+"BBLBBBBBBLBBL...BBLBBBBBBLBB",
+"..L......L..LRRR..L......L..",
+".G.........EL...G...........",
+"BBBLBB...BBBLBBBBBB...BBLBBB",
+"...L........L..........L....",
+".P.....G......E.....G.....G.",
+"BBBBBBBBBBBBBBBBBBBBBBBBBBBB",
+"BBBBBBBBBBBBBBBBBBBBBBBBBBBB"];
+
+const LEVEL4=[
+"............................",
+"............D...............",
+"...........BBBBBB...........",
+"............................",
+"....G.....BBBBBB.....G......",
+"...BBB....BBBBBB....BBB.....",
+"...BLB....BBBBBB....BLB.....",
+"...BLB....BBBBBB....BLB.....",
+"...BLB....BBBBBB....BLB.....",
+"...BLB....BBBBBB....BLB.....",
+"...BLB....BBBBBB....BLB.....",
+"...BLB....BBBBBB....BLB.....",
+"...BLB....BBBBBB....BLB.....",
+".P.BLB....BBBBBB....BLB.E..",
+"BBBBBBBBBBBBBBBBBBBBBBBBBBBB",
+"BBBBBBBBBBBBBBBBBBBBBBBBBBBB"];
+
+const LEVEL5=[
+"............................",
+"D...........................",
+"BB..........................",
+"BBB.L.......................",
+"BBBBBL......................",
+"BBBBBBBL....................",
+"BBBBBBBBL...................",
+"BBBBBBBBBL..................",
+"BBBBBBBBBBL.................",
+"BBBBBBBBBBBL................",
+"BBBBBBBBBBBBL...............",
+"BBBBBBBBBBBBBL..............",
+"BBBBBBBBBBBBBBL.............",
+"P.............BL............E",
+"BBBBBBBBBBBBBBBBBBBBBBBBBBBB",
+"BBBBBBBBBBBBBBBBBBBBBBBBBBBB"];
+
+const LEVEL6=[
+"............................",
+"............D...............",
+"...........RRRRR............",
+"..........R...R.............",
+".........R.....R............",
+"........R.......R...........",
+".......R.........R..........",
+"......R...........R.........",
+".....R.............R........",
+"....R...............R.......",
+"...R.................R......",
+"..R...................R.....",
+".R.....................R....",
+"P.......................R..E",
+"BBBBBBBBBBBBBBBBBBBBBBBBBBBB",
+"BBBBBBBBBBBBBBBBBBBBBBBBBBBB"];
+
+const LEVEL7=[
+"............................",
+"............D...............",
+"...........BLB..............",
+"...........BLB..............",
+"...........BLB..............",
+"...........BLB..............",
+"...........BLB..............",
+"...........BLB..............",
+"...........BLB..............",
+"...........BLB..............",
+"...........BLB..............",
+"...........BLB..............",
+"...........BLB..............",
+".P.........BLB...........E..",
+"BBBBBBBBBBBBBBBBBBBBBBBBBBBB",
+"BBBBBBBBBBBBBBBBBBBBBBBBBBBB"];
+
+const LEVEL8=[
+"............................",
+"............D...............",
+"...........BBBBB............",
+"............................",
+"............................",
+"............................",
+"....G.....G.....G.....G.....",
+"...BBB...BBB...BBB...BBB....",
+"...BLB...BLB...BLB...BLB....",
+"...BLB...BLB...BLB...BLB....",
+"...BLB...BLB...BLB...BLB....",
+"...BLB...BLB...BLB...BLB....",
+"...BLB...BLB...BLB...BLB....",
+".P.BLB.E.BLB...BLB...BLB....",
+"BBBBBBBBBBBBBBBBBBBBBBBBBBBB",
+"BBBBBBBBBBBBBBBBBBBBBBBBBBBB"];
+
+const LEVEL9=[
+"............................",
+"............D...............",
+"...........BBBBB............",
+"..........BBBBBBB...........",
+".........BBBBGBBBB..........",
+"........BBBGBGBGBBB.........",
+".......BBBGBGBGBGBBB........",
+"......BBBBBBBBBBBBBBB.......",
+"......B.............B.......",
+"......B.............B.......",
+"......B.............B.......",
+"......B.............B.......",
+"......B.............B.......",
+".P....B.............B....E..",
+"BBBBBBBBBBBBBBBBBBBBBBBBBBBB",
+"BBBBBBBBBBBBBBBBBBBBBBBBBBBB"];
+
+const LEVEL10=[
+"............................",
+"............D...............",
+"...........RRRRR............",
+"..........R...R.............",
+".........R.G..R.............",
+"........R.BBB.R.............",
+".......R.BGBG.R.............",
+"......R.BBBBB.R.............",
+".....R........R.............",
+"....R....G....R.............",
+"...R...BBBB...R.............",
+"..R...BGBGB...R.............",
+".R...BBBBBB...R.............",
+"P..R..........R..........E..",
+"BBBBBBBBBBBBBBBBBBBBBBBBBBBB",
+"BBBBBBBBBBBBBBBBBBBBBBBBBBBB"];
+
+const SAMPLE=[
+"............................",
+"............................",
+"....G..........G..D.....G...",
+"..LBBBB.......BBBBB.L..BBBLB",
+"..L................L.....L..",
+"..L....RRRRRRRRRRRRL.....L..",
+"..L................L.....L..",
+"..L.BBBBBBBB..BBBBBBBB...L..",
+"..L......................L..",
+"..L....G..........G......L..",
+"..L..BBBBBB....BBBBBB....L..",
+"..L......................L..",
+"..L......................L..",
+".P......E......G.......E....",
+"BBBBBBBBBBBBBBBBBBBBBBBBBBBB",
+"BBBBBBBBBBBBBBBBBBBBBBBBBBBB"];
+
+let LEVELS=[LEVEL1,LEVEL2,LEVEL3,LEVEL4,LEVEL5,LEVEL6,LEVEL7,LEVEL8,LEVEL9,LEVEL10];
+try{const s=JSON.parse(localStorage.getItem('klad.lv')||'[]');s.forEach((l,i)=>{if(l&&l.length)LEVELS[i]=l;});}catch(e){}
+let best=+localStorage.getItem('klad.best')||0;
+
+let mode='menu',grid=[],player=null,enemies=[],holes=[],digQ=[],digCd=0,goldFallAcc=0;
+let goldLeft=0,totalGold=0,score=0,lives=3,curLevel=0,phase='play',phaseT=0,invuln=0;
+let doorPos=null,doorOpen=false;
+let fromEditor=false,isCustom=false,paused=false,tGlob=0,msg='',msgT=0;
+let editSlot=0,editGrid=null,selTile='B',painting=null,hoverC=-1,hoverR=-1;
+const keys={},jp={};
+let enemySpawns=[];
+
+const blankGrid=()=>Array.from({length:ROWS},()=>Array(COLS).fill('.'));
+const clampC=v=>v<0?0:v>=COLS?COLS-1:v;
+const clampR=v=>v<0?0:v>=ROWS?ROWS-1:v;
+
+let AC=null;
+function ac(){if(!AC)AC=new (window.AudioContext||window.webkitAudioContext)();return AC;}
+function tone(f,d,type='square',vol=.12,f2=0){try{const a=ac(),o=a.createOscillator(),g=a.createGain();
+o.type=type;o.frequency.setValueAtTime(f,a.currentTime);if(f2)o.frequency.exponentialRampToValueAtTime(f2,a.currentTime+d);
+g.gain.setValueAtTime(vol,a.currentTime);g.gain.exponentialRampToValueAtTime(.001,a.currentTime+d);
+o.connect(g).connect(a.destination);o.start();o.stop(a.currentTime+d);}catch(e){}}
+const SFX={gold(){tone(880,.07);setTimeout(()=>tone(1318,.12),60);},
+dig(){tone(150,.12,'sawtooth',.15,70);},
+death(){tone(420,.5,'square',.15,55);},
+door(){[660,784,988].forEach((f,i)=>setTimeout(()=>tone(f,.12),i*90));},
+win(){[523,659,784,1046].forEach((f,i)=>setTimeout(()=>tone(f,.16),i*130));}};
+const sfx=n=>SFX[n]&&SFX[n]();
+
+function parseLevel(chs){
+  grid=chs.map(row=>{const a=[];for(let c=0;c<COLS;c++)a.push(CH2T[row[c]]??T.EMPTY);return a;});
+  const esp=[];let psp=null,gc=0;doorPos=null;doorOpen=false;
+  for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){const ch=chs[r][c];
+    if(ch=='P')psp={c,r};else if(ch=='E')esp.push({c,r});
+    else if(ch=='G'||ch=='T')gc++;else if(ch=='D'&&!doorPos)doorPos={c,r};}
+  if(!psp)psp={c:1,r:ROWS-2};
+  goldLeft=gc;totalGold=gc;
+  player={x:psp.c*TS+TS/2,y:(psp.r+1)*TS,dir:1,state:'walk',spawnC:psp.c,spawnR:psp.r,moving:false,pose:'stand',fidx:0};
+  enemySpawns=esp.map(s=>({c:s.c,r:s.r}));
+  enemies=esp.map(s=>({x:s.c*TS+TS/2,y:(s.r+1)*TS,dir:1,state:'walk',vdir:1,spawnC:s.c,spawnR:s.r,
+    carry:false,dead:0,animT:Math.random()*9,think:true,lastC:s.c,moving:false,pose:'stand',fidx:0,
+    trapped:false,trappedTimer:0}));
+  holes=[];digQ=[];digCd=0;
+}
+function startPlay(idx,keep){
+  if(!(idx>=0&&idx<LEVELS.length&&LEVELS[idx])){flashMsg('УРОВЕНЬ ПУСТ — заполните его в редакторе!');mode='editor';return;}
+  isCustom=false;curLevel=idx;parseLevel(LEVELS[idx]);
+  if(!keep){score=0;lives=3;}
+  phase='play';phaseT=0;invuln=1.2;paused=false;mode='play';
+  keys.up=keys.down=keys.left=keys.right=false;updateHUD();
+}
+function startCustom(chs,keepStats=false){
+  isCustom=true;fromEditor=false;curLevel=-1;parseLevel(chs);
+  if(!keepStats){score=0;lives=3;}
+  phase='play';phaseT=0;invuln=1.2;paused=false;mode='play';
+  updateHUD();
+}
+function nextLevel(){
+  if(isCustom){
+    if(lives>0){
+      const newLevel=genLevel();
+      startCustom(newLevel,true);
+      flashMsg('НОВЫЙ СЛУЧАЙНЫЙ УРОВЕНЬ!');
+    } else {
+      saveBest(); mode='menu'; setHint('menu');
+    }
+    return;
+  }
+  if(fromEditor){fromEditor=false;mode='editor';setHint('editor');flashMsg('УРОВЕНЬ ПРОЙДЕН!');return;}
+  let i=curLevel+1;while(i<LEVELS.length&&!LEVELS[i])i++;
+  if(i>=LEVELS.length){saveBest();phase='clear';phaseT=0;}
+  else startPlay(i,true);
+}
+function saveBest(){if(score>best){best=score;localStorage.setItem('klad.best',best);}}
+
+function tileAt(c,r){
+  if(c<0||c>=COLS)return T.SOLID;
+  if(r<0)return T.EMPTY;
+  if(r>=ROWS)return T.EMPTY;
+  return grid[r][c];
+}
+function isSolidT(t){return t===T.BRICK||t===T.SOLID;}
+function isSolidOrTrapped(c,r){
+  if(c<0||c>=COLS||r<0||r>=ROWS)return true;
+  if(isSolidT(tileAt(c,r)))return true;
+  for(const e of enemies){
+    if(e.trapped && Math.floor(e.x/TS)===c && Math.floor((e.y-0.1)/TS)===r)return true;
+  }
+  return false;
+}
+function isFloorAt(c,r){
+  if(c<0||c>=COLS||r<0||r>=ROWS)return false;
+  const t=tileAt(c,r);
+  if(t===T.BRICK||t===T.SOLID||t===T.LADDER)return true;
+  for(const e of enemies){
+    if(e.trapped && Math.floor(e.x/TS)===c && Math.floor((e.y-0.1)/TS)===r)return true;
+  }
+  return false;
+}
+function isRopeT(t){return t===T.ROPE||t===T.GOLDROPE;}
+const ec=e=>clampC(Math.floor(e.x/TS)), er=e=>clampR(Math.floor((e.y-0.1)/TS));
+
+function openDoor(){
+  if(doorOpen)return;doorOpen=true;sfx('door');
+  flashMsg(doorPos?'ВЕСЬ КЛАД СОБРАН! ДВЕРЬ ОТКРЫТА — БЕГИ К ВЫХОДУ!':'ВЕСЬ КЛАД СОБРАН! БЕГИ НА САМЫЙ ВЕРХ!');
+}
+function collectAt(c,r){
+  if(r<0||r>=ROWS||c<0||c>=COLS)return;
+  const t=grid[r][c];
+  if(t===T.GOLD||t===T.GOLDROPE){grid[r][c]=(t===T.GOLDROPE)?T.ROPE:T.EMPTY;goldLeft--;score+=100;sfx('gold');
+    if(goldLeft<=0)openDoor();updateHUD();}
+}
+function tryDig(d){
+  if(digCd>0)return;const c=ec(player),r=er(player);
+  if(tileAt(c+d,r+1)===T.BRICK){digQ.push({c:c+d,r:r+1,t:.3});digCd=.45;sfx('dig');}
+}
+function pushGoldUp(c,r){
+  for(let rr=r-1;rr>=0;rr--){if(grid[rr][c]===T.EMPTY){grid[rr][c]=T.GOLD;return;}}
+  goldLeft--; if(goldLeft<=0)openDoor(); updateHUD();
+}
+function dropGold(e){
+  if(!e.carry)return;e.carry=false;
+  const c=ec(e),r=er(e);
+  for(const[cc,rr]of[[c,r],[c,r-1],[c-1,r],[c+1,r]])
+    if(rr>=0&&rr<ROWS&&cc>=0&&cc<COLS&&grid[rr][cc]===T.EMPTY){grid[rr][cc]=T.GOLD;return;}
+  pushGoldUp(c,r);
+}
+function updDigHoles(dt){
+  digCd-=dt;
+  for(let i=digQ.length-1;i>=0;i--){const q=digQ[i];q.t-=dt;
+    if(q.t<=0){
+      digQ.splice(i,1);
+      if(grid[q.r][q.c]===T.BRICK){
+        grid[q.r][q.c]=T.EMPTY;
+        holes.push({c:q.c,r:q.r,t:6});
+        let trappedCount=0;
+        for(const e of enemies){
+          if(e.dead<=0 && !e.trapped){
+            const ecx=Math.floor(e.x/TS), ery=Math.floor((e.y-0.1)/TS);
+            if(ecx===q.c && ery===q.r){
+              if(trappedCount===0){
+                e.trapped=true;
+                e.trappedTimer=4.5;
+                e.x=q.c*TS+TS/2;
+                e.y=(q.r+1)*TS;
+                e.state='walk';
+                e.moving=false;
+                e.pose='trapped';
+                trappedCount++;
+              } else {
+                if(e.carry){dropGold(e);}
+                e.dead=2.5;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  for(let i=holes.length-1;i>=0;i--){const h=holes[i];h.t-=dt;
+    if(h.t<=0){
+      holes.splice(i,1);
+      for(const e of enemies){
+        const ecx=Math.floor(e.x/TS), ery=Math.floor((e.y-0.1)/TS);
+        if(ecx===h.c && ery===h.r && e.dead<=0){
+          if(e.carry){dropGold(e);}
+          e.dead=2.5;
+          e.trapped=false;
+          e.trappedTimer=0;
+        }
+      }
+      if(grid[h.r][h.c]===T.GOLD) pushGoldUp(h.c,h.r);
+      grid[h.r][h.c]=T.BRICK;
+      if(er(player)===h.r && ec(player)===h.c)killPlayer();
+    }
+  }
+}
+function updGoldFall(dt){
+  goldFallAcc+=dt;if(goldFallAcc<.09)return;goldFallAcc=0;
+  for(let r=ROWS-2;r>=0;r--)for(let c=0;c<COLS;c++)
+    if(grid[r][c]===T.GOLD && grid[r+1][c]===T.EMPTY){grid[r+1][c]=T.GOLD;grid[r][c]=T.EMPTY;}
+}
+function respawnEnemy(e){
+  let r=e.spawnR,c=e.spawnC;
+  while(r>0 && isSolidT(tileAt(c,r)))r--;
+  e.x=c*TS+TS/2;e.y=(r+1)*TS;e.state='walk';e.dir=1;e.think=true;e.lastC=c;e.trapped=false;e.trappedTimer=0;e.dead=0;e.pose='stand';e.moving=false;
+  e.carry=false;
+}
+function resetEnemies(){
+  for(const e of enemies){
+    if(e.carry){dropGold(e);}
+  }
+  enemies = enemySpawns.map(s=>({
+    x:s.c*TS+TS/2, y:(s.r+1)*TS, dir:1, state:'walk', vdir:1,
+    spawnC:s.c, spawnR:s.r, carry:false, dead:0,
+    animT:Math.random()*9, think:true, lastC:s.c,
+    moving:false, pose:'stand', fidx:0,
+    trapped:false, trappedTimer:0
+  }));
+}
+
+function updPlayer(dt){
+  const p=player,c=ec(p),r=er(p);
+  collectAt(c,r);
+  p.moving=false;
+  switch(p.state){
+  case 'walk':{
+    let dx=0;if(keys.left)dx=-1;else if(keys.right)dx=1;
+    if(dx){
+      const nc = c + dx;
+      if(!isSolidOrTrapped(nc, r) && !(nc<0||nc>=COLS)){
+        p.dir=dx; p.moving=true;
+        let nx=p.x+dx*PW*dt;
+        const edge=dx>0?nx+8:nx-8, nc2=Math.floor(edge/TS);
+        if(isSolidOrTrapped(nc2,r)) nx=dx>0?nc2*TS-8.01:(nc2+1)*TS+8.01;
+        p.x=nx;
+      }
+    }
+    if(phase=='play'){if(keys.digL)tryDig(-1);if(keys.digR)tryDig(1);}
+    const c2=ec(p),r2=er(p);
+    if(!isFloorAt(c2,r2+1)){
+      p.state='fall';
+      break;
+    } else {
+      p.y=(r2+1)*TS;
+    }
+    if(keys.up){
+      const here=tileAt(c2,r2),above=tileAt(c2,r2-1);
+      if(isRopeT(here))p.state='hang';
+      else if(here===T.LADDER||above===T.LADDER){
+        p.state='climb';
+        p.x = c2*TS + TS/2;
+      }
+      else if(isRopeT(above)){p.y-=TS;p.state='hang';}
+    } else if(keys.down&&(tileAt(c2,r2+1)===T.LADDER||tileAt(c2,r2)===T.LADDER)){
+      p.state='climb';
+      p.x = c2*TS + TS/2;
+    }
+    break;}
+  case 'climb':{
+    const c0=ec(p);let dy=0;
+    if(keys.up)dy=-1;else if(keys.down)dy=1;
+    if(dy){p.moving=true;const ny=p.y+dy*CS*dt;
+      if(dy<0){const nr=Math.floor((ny-0.1)/TS);
+        if(nr<r){const t=tileAt(c0,nr);
+          if(t===T.LADDER)p.y=ny;
+          else if(isRopeT(t)){p.y=(nr+1)*TS;p.state='hang';}
+          else{p.y=r*TS;p.state='walk';}
+        }else p.y=ny;
+      }else{const nr=Math.floor((ny-0.1)/TS);
+        if(nr>r){const t=tileAt(c0,nr);
+          if(t===T.LADDER)p.y=ny;
+          else if(isFloorAt(c0,nr)){p.y=nr*TS;p.state='walk';}
+          else{p.y=ny;p.state='fall';}
+        }else p.y=ny;}
+    }else if(tileAt(c0,r)!==T.LADDER&&!isFloorAt(c0,r+1))p.state='fall';
+    if(p.state==='climb' || p.state==='walk'){
+      p.x = c0*TS + TS/2;
+    }
+    if(p.state==='climb'){
+      let sx=0;
+      if(jp.left) sx=-1;
+      else if(jp.right) sx=1;
+      if(sx){
+        const nc=c0+sx;
+        if(!isSolidOrTrapped(nc,r)){
+          p.x=nc*TS+TS/2;
+          if(isFloorAt(nc,r+1)){
+            p.state='walk';
+            p.y=(r+1)*TS;
+          } else {
+            p.state='fall';
+          }
+        }
+      }
+    }
+    collectAt(ec(p),er(p));
+    break;}
+  case 'hang':{
+    const t=tileAt(c,r);
+    if(!isRopeT(t)){p.state=(t===T.LADDER)?'climb':'fall';break;}
+    let dx=0;if(keys.left)dx=-1;else if(keys.right)dx=1;
+    if(dx){p.dir=dx;p.moving=true;
+      const nx=p.x+dx*PW*dt,nc=Math.floor(nx/TS);
+      if(!isSolidOrTrapped(nc,r))p.x=nx;
+    }
+    if(keys.down)p.state='fall';
+    collectAt(ec(p),er(p));
+    break;}
+  case 'fall':{
+    const ny=p.y+FS*dt,c0=ec(p),r0=Math.floor((p.y-0.1)/TS),r1=Math.floor((ny-0.1)/TS);
+    let done=false;
+    for(let R=r0+1;R<=ROWS;R++){const yR=R*TS;
+      if(yR>p.y&&yR<=ny&&isFloorAt(c0,R)){p.y=yR;p.state='walk';done=true;break;}}
+    if(!done)for(let rr=Math.max(0,r0+1);rr<=Math.min(ROWS-1,r1);rr++){
+      if(isRopeT(tileAt(c0,rr))){p.y=(rr+1)*TS;p.state='hang';done=true;break;}}
+    if(!done)p.y=ny;
+    if(p.y>ROWS*TS+20)killPlayer();
+    let holeCount = 0;
+    for(const h of holes){
+      if(h.r === er(p) && Math.abs(h.c - ec(p)) <= 1) holeCount++;
+    }
+    if(holeCount <= 1 && (keys.left || keys.right)){
+      keys.left = false; keys.right = false;
+      jp.left = false; jp.right = false;
+    }
+    break;
+  }
+  }
+  if(p.state=='walk')p.pose=p.moving?'run':'stand';
+  else if(p.state=='climb')p.pose='climb';
+  else if(p.state=='hang')p.pose='hang';
+  else p.pose='fall';
+  if(p.moving)p.fidx=Math.floor(tGlob*10);else if(p.state=='climb')p.fidx=Math.floor(tGlob*7);
+}
+function killPlayer(){
+  if(phase!='play'||invuln>0)return;
+  phase='dying';phaseT=1;sfx('death');
+}
+function resetAfterDeath(){
+  player.x=player.spawnC*TS+TS/2;player.y=(player.spawnR+1)*TS;player.state='walk';
+  resetEnemies();
+  digQ=[];
+}
+function checkCollisions(){
+  if(phase!='play'||invuln>0)return;
+  for(const e of enemies){if(e.dead>0||e.trapped)continue;
+    if(Math.abs(e.x-player.x)<14&&Math.abs(e.y-player.y)<16){killPlayer();break;}}
+}
+
+function enemyThink(e){
+  const c = ec(e), r = er(e);
+  const pc = ec(player), pr = er(player);
+  const tHere = tileAt(c, r);
+  const tAbove = tileAt(c, r - 1);
+  const tBelow = tileAt(c, r + 1);
+
+  if (tHere === T.LADDER || isRopeT(tHere)) {
+    if (pr < r) {
+      if (tAbove === T.LADDER) {
+        e.state = 'climb'; e.vdir = -1; 
+        e.x = c * TS + TS / 2;
+        return;
+      }
+    } else if (pr > r) {
+      if (tBelow === T.LADDER || isFloorAt(c, r + 1)) {
+        e.state = 'climb'; e.vdir = 1; 
+        e.x = c * TS + TS / 2;
+        return;
+      }
+    }
+    if (e.state === 'climb' && pr === r) {
+      e.state = 'walk'; e.think = true;
+    }
+    return;
+  }
+
+  if (pr !== r) {
+    let bestDist = 9999, bestC = c;
+    let found = false;
+    for (let x = 0; x < COLS; x++) {
+      const t = tileAt(x, r);
+      const tUp = tileAt(x, r - 1);
+      const tDown = tileAt(x, r + 1);
+      let isUsable = false;
+      if (pr < r) {
+        if (t === T.LADDER || tUp === T.LADDER || isRopeT(t)) isUsable = true;
+      } else {
+        if (t === T.LADDER || tDown === T.LADDER) isUsable = true;
+      }
+      if (isUsable) {
+        const dist = Math.abs(x - c);
+        if (dist < bestDist) {
+          bestDist = dist; bestC = x; found = true;
+        }
+      }
+    }
+    if (found) {
+      if (bestC < c) e.dir = -1;
+      else if (bestC > c) e.dir = 1;
+      else e.dir = 0;
+      return;
+    }
+  }
+
+  let d = player.x < e.x ? -1 : 1;
+  if (isSolidOrTrapped(c + d, r)) {
+    d = -d;
+    if (isSolidOrTrapped(c + d, r)) { e.dir = 0; return; }
+  }
+  e.dir = d;
+}
+
+function updEnemy(e,dt){
+  if(e.dead>0){
+    e.dead-=dt;
+    if(e.dead<=0)respawnEnemy(e);
+    return;
+  }
+  if(!e.trapped){
+    const c=Math.floor(e.x/TS), r=Math.floor((e.y-0.1)/TS);
+    let onHole=false;
+    for(const h of holes){
+      if(h.c===c && h.r===r){ onHole=true; break; }
+    }
+    if(onHole){
+      let alreadyTrapped=false;
+      for(const other of enemies){
+        if(other!==e && other.trapped && Math.floor(other.x/TS)===c && Math.floor((other.y-0.1)/TS)===r){
+          alreadyTrapped=true; break;
+        }
+      }
+      if(!alreadyTrapped){
+        e.trapped=true;
+        e.trappedTimer=4.5;
+        e.x=c*TS+TS/2;
+        e.y=(r+1)*TS;
+        e.state='walk';
+        e.moving=false;
+        e.pose='trapped';
+        return;
+      } else {
+        if(e.carry){dropGold(e);}
+        e.dead=2.5;
+        return;
+      }
+    }
+  }
+  if(e.trapped){
+    e.trappedTimer-=dt;
+    e.pose='trapped';
+    if(e.trappedTimer<=0){
+      const c=Math.floor(e.x/TS), r=Math.floor((e.y-0.1)/TS);
+      let exitDir = 0;
+      const pc = ec(player);
+      if(pc < c) exitDir = -1;
+      else if(pc > c) exitDir = 1;
+      const dirs = exitDir!==0 ? [exitDir, -exitDir] : [1, -1];
+      let placed = false;
+      for(const d of dirs){
+        const nc = c + d;
+        const nr = r - 1;
+        if(nr >= 0 && nc>=0 && nc<COLS){
+          const tt = tileAt(nc, nr);
+          if(tt === T.EMPTY || tt === T.LADDER || tt === T.ROPE || tt === T.GOLDROPE){
+            if(isFloorAt(nc, nr+1)){
+              let occupied = false;
+              for(const other of enemies){
+                if(other !== e && Math.floor(other.x/TS)===nc && Math.floor((other.y-0.1)/TS)===nr && other.dead<=0){
+                  occupied = true; break;
+                }
+              }
+              if(!occupied){
+                e.x = nc*TS + TS/2;
+                e.y = (nr+1)*TS;
+                e.trapped = false;
+                e.trappedTimer = 0;
+                e.state = 'walk';
+                e.think = true;
+                e.lastC = nc;
+                e.pose = 'stand';
+                placed = true;
+                break;
+              }
+            }
+          }
+        }
+      }
+    }
+    return;
+  }
+  const c=ec(e),r=er(e);
+  const t=tileAt(c,r);
+  if((t===T.GOLD||t===T.GOLDROPE)&&!e.carry){e.carry=true;grid[r][c]=(t===T.GOLDROPE)?T.ROPE:T.EMPTY;}
+  if(e.carry&&Math.random()<dt*0.08&&grid[r][c]===T.EMPTY){grid[r][c]=T.GOLD;e.carry=false;}
+  e.moving=true;
+  switch(e.state){
+  case 'walk':{
+    if(e.think){e.think=false;enemyThink(e);}
+    if(e.dir!==0){
+      const nx=e.x+e.dir*ES*dt,edge=e.dir>0?nx+8:nx-8,nc=Math.floor(edge/TS);
+      if(isSolidOrTrapped(nc,r)){e.x=e.dir>0?nc*TS-8.01:(nc+1)*TS+8.01;e.dir*=-1;e.think=true;}
+      else e.x=nx;
+    }else{
+      enemyThink(e);
+    }
+    const c2=ec(e);
+    if(c2!==e.lastC){e.lastC=c2;enemyThink(e);}
+    if(!isFloorAt(c2,r+1)){e.state='fall';e.moving=false;}
+
+    if (e.state === 'walk') {
+      const tHere = tileAt(c2, r);
+      const tAbove = tileAt(c2, r - 1);
+      const tBelow = tileAt(c2, r + 1);
+      const pr = er(player);
+
+      if (tHere === T.LADDER && pr !== r) {
+        e.state = 'climb';
+        e.vdir = (pr < r) ? -1 : 1;
+        e.x = c2 * TS + TS / 2;
+        e.think = false;
+      } else if (tAbove === T.LADDER && pr < r) {
+        e.state = 'climb';
+        e.vdir = -1;
+        e.x = c2 * TS + TS / 2;
+        e.think = false;
+      } else if (tBelow === T.LADDER && pr > r) {
+        e.state = 'climb';
+        e.vdir = 1;
+        e.x = c2 * TS + TS / 2;
+        e.think = false;
+      }
+    }
+    break;}
+  case 'climb':{
+    e.x = c * TS + TS / 2;
+    const ny=e.y+e.vdir*CS*0.85*dt;
+    if(e.vdir<0){const nr=Math.floor((ny-0.1)/TS);
+      if(nr<r){const tt=tileAt(c,nr);
+        if(tt===T.LADDER)e.y=ny;
+        else if(isRopeT(tt)){e.y=(nr+1)*TS;e.state='hang';break;}
+        else{e.y=r*TS;e.state='walk';e.think=true;break;}
+      }else e.y=ny;
+    }else{const nr=Math.floor((ny-0.1)/TS);
+      if(nr>r){const tt=tileAt(c,nr);
+        if(tt===T.LADDER)e.y=ny;
+        else if(isFloorAt(c,nr)){e.y=nr*TS;e.state='walk';e.think=true;break;}
+        else{e.y=ny;e.state='fall';break;}
+      }else e.y=ny;}
+    const pr=er(player);
+    if((e.vdir<0&&er(e)<=pr)||(e.vdir>0&&er(e)>=pr)){e.state='walk';e.think=true;}
+    break;}
+  case 'hang':{
+    const tt=tileAt(c,r);
+    if(!isRopeT(tt)){e.state=(tt===T.LADDER)?'climb':'fall';if(e.state=='climb')e.vdir=1;break;}
+    if(er(player)>r&&Math.random()<dt*.8){e.state='fall';break;}
+    const d=player.x<e.x?-1:1,nx=e.x+d*ES*dt,nc=Math.floor(nx/TS);
+    if(!isSolidOrTrapped(nc,r))e.x=nx;
+    break;}
+  case 'fall':{
+    e.moving=false;
+    const ny=e.y+FS*dt,r0=Math.floor((e.y-0.1)/TS),r1=Math.floor((ny-0.1)/TS);
+    let done=false;
+    for(let R=r0+1;R<=ROWS;R++){const yR=R*TS;
+      if(yR>e.y&&yR<=ny&&isFloorAt(c,R)){e.y=yR;e.state='walk';e.think=true;e.lastC=ec(e);done=true;break;}}
+    if(!done){
+      for(let rr=Math.max(0,r0+1);rr<=Math.min(ROWS-1,r1);rr++){
+        const tt = tileAt(c, rr);
+        if(isRopeT(tt)){ e.y=(rr+1)*TS; e.state='hang'; done=true; break; }
+        if(tt === T.LADDER) {
+          e.y = (rr+1)*TS;
+          e.state = 'climb';
+          e.vdir = 0;
+          e.think = true;
+          e.moving = false;
+          e.x = c * TS + TS / 2;
+          done = true;
+          break;
+        }
+      }
+    }
+    if(!done)e.y=ny;
+    if(e.y>ROWS*TS+20){if(e.carry){dropGold(e);} e.dead=2.5; return;}
+    break;
+  }
+  }
+  if(e.moving)e.animT+=dt;
+  e.pose=e.state=='walk'?'run':e.state=='climb'?'climb':e.state=='hang'?'hang':'fall';
+  e.fidx=Math.floor(e.animT*(e.state=='walk'?8:7));
+}
+
+function updatePlay(dt){
+  if(paused)return;
+  if(phase=='play'){invuln-=dt;updPlayer(dt);updGoldFall(dt);updDigHoles(dt);
+    for(const e of enemies)updEnemy(e,dt);
+    checkCollisions();
+    if(phase=='play'&&doorOpen){
+      const win=doorPos?(ec(player)==doorPos.c&&er(player)==doorPos.r):(er(player)==0);
+      if(win){phase='win';phaseT=0;sfx('win');}
+    }
+  }else if(phase=='dying'){phaseT-=dt;
+    if(phaseT<=0){lives--;updateHUD();
+      if(lives<0){phase='over';saveBest();}else{resetAfterDeath();phase='play';invuln=2;}}}
+  else if(phase=='win'){phaseT+=dt;if(phaseT>2.2)nextLevel();}
+  else if(phase=='over'){phaseT+=dt;if(phaseT>2.5){saveBest();mode='menu';setHint('menu');}}
+  else if(phase=='clear'){phaseT+=dt;}
+}
+
+const HEADR=["..HHHH..","..HHHH..","..FFFF.."];
+const TORSO=".BBBBBB.", WAIST="..BBBB..";
+const CLIMB_FRAMES=[
+  {a:"BBBBBBBB",l:["..B..B..","..B..B.."]},
+  {a:"BBBBBBBB",l:["...BB...","..B..B.."]},
+  {a:"BBBBBBBB",l:["..B..B..","...BB..."]}
+];
+const HANG_FRAMES=[
+  {a:"B.BBBB.B", l:["..B..B..",".B....B."]},
+  {a:"B.BBBB.B", l:["...BB...",".B....B."]},
+  {a:"B.BBBB.B", l:["..B..B..",".B....B."]},
+  {a:"B.BBBB.B", l:[".B....B.",".B....B."]}
+];
+const FALL_FRAME={a:"B.BBBB.B", l:[".B....B.","..B..B.."]};
+const STAND_FRAME={a:".BBBBBB.", l:["..B..B..",".BB..BB."]};
+const RUN_FRAMES=[
+  {a:"B.BBBB.B", l:["..B..B..",".BB..BB."]},
+  {a:".BBBBBB.", l:["...BB...","...BB..."]},
+  {a:"B.BBBB.B", l:[".B....B.","B.....B."]},
+  {a:".BBBBBB.", l:["..B..B..","..B..B.."]}
+];
+const TRAPPED_FRAME={a:"B.BBBB.B", l:["..B..B..","..B..B.."]};
+
+function drawHero(px,py,main,accent,pose,fidx){
+  let f;
+  if(pose=='run')f=RUN_FRAMES[fidx%4];
+  else if(pose=='climb')f=CLIMB_FRAMES[fidx%3];
+  else if(pose=='hang')f=HANG_FRAMES[fidx%4];
+  else if(pose=='fall')f=FALL_FRAME;
+  else if(pose=='trapped')f=TRAPPED_FRAME;
+  else f=STAND_FRAME;
+  if(pose=='hang'){ctx.fillStyle=main;ctx.fillRect(px,py,3,6);ctx.fillRect(px+21,py,3,6);}
+  const rows=[HEADR[0],HEADR[1],HEADR[2],f.a,TORSO,WAIST,f.l[0],f.l[1]];
+  for(let i=0;i<8;i++){const row=rows[i];
+    for(let j=0;j<8;j++){const ch=row[j];if(ch=='.')continue;
+      ctx.fillStyle=(ch=='B')?main:accent;ctx.fillRect(px+j*3,py+i*3,3,3);}}
+}
+const PC='#f2f2f2',PA='#ffd400',EC='#ff3838',EA='#8f1010';
+
+function drawTile(t,x,y){
+  switch(t){
+  case T.BRICK:{ctx.fillStyle='#e0009f';ctx.fillRect(x,y,TS,TS);ctx.fillStyle='#8a0062';
+    for(let yy=0;yy<TS;yy+=8)ctx.fillRect(x,y+yy,TS,2);
+    let row=0;for(let yy=0;yy<TS;yy+=8,row++){const off=(row%2)?6:1;
+      for(let xx=off;xx<TS;xx+=12)ctx.fillRect(x+xx,y+yy,2,8);}break;}
+  case T.SOLID:{ctx.fillStyle='#00c8c8';ctx.fillRect(x,y,TS,TS);ctx.fillStyle='#008a8a';
+    for(let yy=2;yy<TS;yy+=6)for(let xx=2;xx<TS;xx+=6)ctx.fillRect(x+xx,y+yy,3,3);
+    ctx.fillStyle='#8fffff';ctx.fillRect(x,y,TS,2);break;}
+  case T.LADDER:{ctx.fillStyle='#ececec';ctx.fillRect(x+4,y,3,TS);ctx.fillRect(x+17,y,3,TS);
+    for(let yy=3;yy<TS;yy+=6)ctx.fillRect(x+4,y+yy,16,2);break;}
+  case T.ROPE:{ctx.fillStyle='#00c400';ctx.fillRect(x,y+2,TS,3);
+    ctx.fillStyle='#007a00';ctx.fillRect(x,y+5,TS,1);break;}
+  case T.GOLD:{const p=Math.floor(tGlob*6)%3;
+    ctx.fillStyle='#7a5200';ctx.fillRect(x+3,y+13,18,8);
+    ctx.fillStyle='#ffd800';ctx.fillRect(x+4,y+14,7,6);ctx.fillRect(x+13,y+14,7,6);ctx.fillRect(x+8,y+8,8,6);
+    ctx.fillStyle='#fff2a0';ctx.fillRect(x+5,y+15,3,2);ctx.fillRect(x+14,y+15,3,2);ctx.fillRect(x+9,y+9,4,2);
+    ctx.fillStyle='#ffffff';if(p==0)ctx.fillRect(x+17,y+6,2,2);if(p==1)ctx.fillRect(x+5,y+10,2,2);break;}
+  case T.GOLDROPE:{ctx.fillStyle='#00c400';ctx.fillRect(x,y+2,TS,3);
+    ctx.fillStyle='#7a5200';ctx.fillRect(x+11,y+5,2,4);ctx.fillRect(x+7,y+9,10,9);
+    ctx.fillStyle='#ffd800';ctx.fillRect(x+8,y+10,8,7);
+    ctx.fillStyle='#fff2a0';ctx.fillRect(x+9,y+11,3,2);break;}
+  case T.DOOR:{
+    ctx.fillStyle='#6a6a7a';ctx.fillRect(x+2,y,20,TS);
+    ctx.fillStyle=doorOpen?'#000':'#1c1c26';ctx.fillRect(x+5,y+3,14,TS-3);
+    if(!doorOpen){ctx.strokeStyle='#c04040';ctx.lineWidth=2;ctx.beginPath();
+      ctx.moveTo(x+6,y+6);ctx.lineTo(x+18,y+20);ctx.moveTo(x+18,y+6);ctx.lineTo(x+6,y+20);ctx.stroke();ctx.lineWidth=1;
+    }else{
+      ctx.fillStyle=Math.floor(tGlob*6)%2?'#ffe600':'#ff9500';ctx.fillRect(x+7,y+5,10,TS-5);
+      ctx.fillStyle='#fff';ctx.fillRect(x+10,y+7,4,4);
+      const ay=y-6+Math.floor(tGlob*4)%2*2;
+      ctx.fillStyle='#ffe600';ctx.fillRect(x+10,ay,4,4);ctx.fillRect(x+8,ay+4,8,2);
+    }break;}
+  }
+}
+function drawGrid(g,asChars){
+  for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){
+    const v=g[r][c];
+    if(asChars){
+      if(v=='P')drawHero(c*TS+TS/2-12,(r+1)*TS-24,PC,PA,'stand',0);
+      else if(v=='E')drawHero(c*TS+TS/2-12,(r+1)*TS-24,EC,EA,'stand',0);
+      else drawTile(CH2T[v]??0,c*TS,r*TS);
+    }else drawTile(v,c*TS,r*TS);
+  }
+}
+function drawPlay(){
+  drawGrid(grid,false);
+  for(const h of holes)if(h.t<2&&Math.floor(tGlob*8)%2==0){
+    ctx.strokeStyle='#e0009f';ctx.strokeRect(h.c*TS+1.5,h.r*TS+1.5,TS-3,TS-3);}
+  for(const q of digQ){const x=q.c*TS,y=q.r*TS;ctx.fillStyle='#3a0028';
+    ctx.fillRect(x+5,y+4,3,16);ctx.fillRect(x+15,y+6,3,14);ctx.fillRect(x+10,y+10,3,8);}
+  if(doorOpen&&Math.floor(tGlob*4)%2==0){ctx.fillStyle='rgba(255,216,0,0.06)';ctx.fillRect(0,0,COLS*TS,ROWS*TS);}
+  for(const e of enemies){
+    if(e.dead>0){if(e.carry){ctx.fillStyle='#ffd800';ctx.fillRect(e.x-3,e.y-22,6,5);}continue;}
+    drawHero(e.x-12,e.y-24,EC,EA,e.pose,e.fidx);
+    if(e.carry){ctx.fillStyle='#ffd800';ctx.fillRect(e.x-3,e.y-28,6,5);}
+    if(e.trapped){
+      ctx.fillStyle='rgba(120,120,120,0.2)';
+      ctx.fillRect(e.x-12,e.y-24,24,24);
+    }
+  }
+  if(!(phase=='dying'||(invuln>0&&Math.floor(tGlob*12)%2==0)))
+    drawHero(player.x-12,player.y-24,PC,PA,player.pose,player.fidx);
+  if(phase=='dying'){const t=1-phaseT,rad=6+t*30;
+    for(let i=0;i<8;i++){const a=i*Math.PI/4+t*2;
+      ctx.fillStyle=i%2?'#ffe600':'#ff3030';
+      ctx.fillRect(player.x+Math.cos(a)*rad-2,player.y-12+Math.sin(a)*rad-2,5,5);}}
+}
+function overlayText(txt,y,color='#ffe600',size=26){
+  ctx.font='bold '+size+'px monospace';ctx.textAlign='center';
+  ctx.fillStyle='#000';ctx.fillText(txt,cv.width/2+2,y+2);
+  ctx.fillStyle=color;ctx.fillText(txt,cv.width/2,y);
+}
+function render(){
+  ctx.fillStyle='#000';ctx.fillRect(0,0,cv.width,cv.height);
+  if(mode=='menu'){drawMenu();return;}
+  if(mode=='editor'){drawEditor();return;}
+  drawPlay();
+  if(paused)overlayText('ПАУЗА',180);
+  if(phase=='win')overlayText('УРОВЕНЬ ПРОЙДЕН!',190);
+  if(phase=='over'){overlayText('ИГРА ОКОНЧЕНА',180,'#ff4040');
+    overlayText('ОЧКИ: '+score,215,'#fff',18);
+    overlayText('ENTER — В МЕНЮ',250,'#9a9ab0',16);}
+  if(phase=='clear'){overlayText('ВСЕ УРОВНИ ПРОЙДЕНЫ!',160);
+    overlayText('ОЧКИ: '+score+'   РЕКОРД: '+best,200,'#fff',18);
+    overlayText('ENTER — МЕНЮ · E — РЕДАКТОР',240,'#7dff7d',16);
+    overlayText('сделай новые уровни в редакторе!',272,'#9a9ab0',14);}
+  if(fromEditor)overlayText('ТЕСТ УРОВНЯ (ESC — НАЗАД)',20,'#7dff7d',13);
+  if(msgT>0){ctx.globalAlpha=Math.min(1,msgT);
+    overlayText(msg,44,'#7dff7d',15);ctx.globalAlpha=1;}
+  ctx.textAlign='left';
+}
+function drawMenu(){
+  ctx.save();ctx.shadowColor='#ff00d0';ctx.shadowBlur=20;
+  ctx.font='bold 64px monospace';ctx.textAlign='center';
+  ctx.fillStyle='#ff00d0';ctx.fillText('КЛАД',cv.width/2+4,70);
+  ctx.fillStyle='#ffe600';ctx.fillText('КЛАД',cv.width/2,66);ctx.restore();
+  ctx.textAlign='center';ctx.fillStyle='#00d8d8';ctx.font='14px monospace';
+  ctx.fillText('Lode Runner в стиле ZX Spectrum',cv.width/2,92);
+  for(let i=0;i<6;i++)drawTile(T.BRICK,90+i*24,330);
+  for(let i=0;i<6;i++)drawTile(T.BRICK,438+i*24,330);
+  drawTile(T.DOOR,312,282);
+  drawTile(T.LADDER,312,306);
+  drawTile(T.LADDER,312,330);
+  drawHero(180,306,PC,PA,'run',Math.floor(tGlob*8));
+  drawHero(450,306,EC,EA,'run',Math.floor(tGlob*8+2));
+  ctx.fillStyle='#fff';ctx.font='bold 18px monospace';
+  ctx.fillText('[ ENTER ]  ИГРАТЬ',cv.width/2,145);
+  ctx.fillText('[ R ]  СЛУЧАЙНЫЙ УРОВЕНЬ',cv.width/2,175);
+  ctx.fillText('[ E ]  РЕДАКТОР УРОВНЕЙ',cv.width/2,205);
+  ctx.fillStyle='#9a9ab0';ctx.font='13px monospace';
+  ctx.fillText('собери весь клад → дверь откроется → беги к выходу',cv.width/2,238);
+  ctx.fillText('стрелки/WASD — движение · Z/X — копать',cv.width/2,258);
+  ctx.fillStyle='#ffd800';ctx.fillText('РЕКОРД: '+best,cv.width/2,370);
+  ctx.textAlign='left';
+}
+function drawEditor(){
+  drawGrid(editGrid,true);
+  ctx.strokeStyle='rgba(255,255,255,0.08)';ctx.beginPath();
+  for(let c=1;c<COLS;c++){ctx.moveTo(c*TS+.5,0);ctx.lineTo(c*TS+.5,ROWS*TS);}
+  for(let r=1;r<ROWS;r++){ctx.moveTo(0,r*TS+.5);ctx.lineTo(COLS*TS,r*TS+.5);}
+  ctx.stroke();
+  if(hoverC>=0&&hoverC<COLS&&hoverR>=0&&hoverR<ROWS){
+    ctx.strokeStyle='#ffe600';ctx.strokeRect(hoverC*TS+1, hoverR*TS+1, TS-2, TS-2);}
+  ctx.textAlign='left';ctx.fillStyle='#7dff7d';ctx.font='12px monospace';
+  ctx.fillText('РЕДАКТОР · УРОВЕНЬ '+(editSlot+1)+' · ЛКМ рисовать · ПКМ стирать · ENTER тест',6,ROWS*TS-8);
+  if(msgT>0){ctx.globalAlpha=Math.min(1,msgT);
+    overlayText(msg,44,'#7dff7d',15);ctx.globalAlpha=1;}
+}
+function updateHUD(){
+  hScore.textContent=score;hGold.textContent=goldLeft;
+  hLives.textContent=Math.max(0,lives);hLevel.textContent=isCustom?'R':curLevel+1;
+}
+function flashMsg(m){msg=m;msgT=3;}
+
+function genLevel(){
+  const g=blankGrid();
+  const rnd=n=>Math.floor(Math.random()*n);
+  const setX=(c,r,ch)=>{if(c>=0&&c<COLS&&r>=0&&r<ROWS)g[r][c]=ch;};
+  for(let c=0;c<COLS;c++){setX(c,ROWS-1,'B');setX(c,ROWS-2,'B');}
+  const gw=ROWS-3;
+  const floors=[];let row=gw-(Math.random()<.5?3:4);
+  while(row>=3){floors.push({row,segs:mkSegs(),kept:[]});row-=Math.random()<.35?4:3;}
+  function mkSegs(){
+    const t=rnd(3);
+    if(t===0){
+      const w=3+rnd(3),a=5+rnd(Math.max(1,COLS-10-w));
+      return [{a:0,b:a-1},{a:a+w,b:COLS-1}].filter(s=>s.b-s.a>=2);
+    }else if(t===1){
+      const l=7+rnd(5),r2=COLS-8-rnd(5);
+      return [{a:rnd(2),b:l},{a:r2,b:COLS-1-rnd(2)}].filter(s=>s.b-s.a>=3);
+    }else{
+      return rnd(2)?[{a:6+rnd(5),b:COLS-1-rnd(3)}]:[{a:rnd(3),b:COLS-7-rnd(5)}];
+    }
+  }
+  let lowerCov=[{a:0,b:COLS-1}],lowerWalk=gw;
+  for(const f of floors){
+    const kept=[],cols=[];
+    for(const s of f.segs){
+      const cand=[];
+      for(const lc of lowerCov){const ia=Math.max(s.a,lc.a),ib=Math.min(s.b,lc.b);if(ib-ia>=1)cand.push([ia,ib]);}
+      if(!cand.length)continue;
+      let col=-1;
+      for(let tr=0;tr<10;tr++){
+        const seg=cand[rnd(cand.length)],c2=seg[0]+rnd(seg[1]-seg[0]+1);
+        if(cols.every(x=>Math.abs(x-c2)>=4)||tr==9){col=c2;break;}
+      }
+      cols.push(col);
+      for(let rr=f.row;rr<=lowerWalk-1;rr++)setX(col,rr,'L');
+      kept.push(s);
+    }
+    f.kept=kept;lowerCov=kept;lowerWalk=f.row-1;
+  }
+  for(const f of floors)for(const s of f.kept){
+    const ch=Math.random()<.15?'S':'B';
+    for(let c=s.a;c<=s.b;c++)if(g[f.row][c]!=='L')g[f.row][c]=ch;
+  }
+  for(const f of floors)for(let i=0;i+1<f.kept.length;i++){
+    const a=f.kept[i].b+1,b=f.kept[i+1].a-1;
+    if(b-a>=2&&f.row+1<ROWS){
+      for(let c=a;c<=b;c++)if(g[f.row+1][c]==='.')g[f.row+1][c]='R';
+      if(Math.random()<.75){const gc=a+rnd(b-a+1);if(g[f.row+1][gc]==='R')g[f.row+1][gc]='T';}
+    }
+  }
+  for(const f of floors)for(const s of f.kept){
+    const n=1+(s.b-s.a>7?1:0)+(Math.random()<.4?1:0);
+    for(let i=0;i<n;i++){
+      const c=s.a+rnd(s.b-s.a+1),rr=f.row-1;
+      if(g[rr][c]==='.'&&g[f.row][c]!=='L')setX(c,rr,'G');
+    }
+  }
+  for(let i=0;i<2;i++){const c=2+rnd(COLS-4);if(g[gw][c]==='.')setX(c,gw,'G');}
+  let top=null;for(let i=floors.length-1;i>=0;i--)if(floors[i].kept.length){top=floors[i];break;}
+  if(top){const s=top.kept.reduce((m,x)=>(x.b-x.a>m.b-m.a?x:m));
+    setX(Math.round((s.a+s.b)/2),top.row-1,'D');
+  }else setX(Math.floor(COLS/2),gw,'D');
+  const pc=rnd(2)?1:COLS-2;setX(pc,gw,'P');
+  const spots=[{s:{a:0,b:COLS-1},walk:gw}];
+  for(const f of floors)for(const s of f.kept)spots.push({s,walk:f.row-1});
+  const k=2+rnd(3);
+  for(let i=0;i<k;i++)for(let tr=0;tr<15;tr++){
+    const sp=spots[rnd(spots.length)],c=sp.s.a+rnd(sp.s.b-sp.s.a+1);
+    if(g[sp.walk][c]==='.'&&Math.abs(c-pc)>=5){setX(c,sp.walk,'E');break;}
+  }
+  return g.map(r=>r.join(''));
+}
+
+const toolbar=document.getElementById('toolbar');
+const PALETTE=[['B','Кирпич','#e0009f'],['S','Бетон','#00c8c8'],['L','Лестница','#ececec'],
+['R','Канат','#00c400'],['G','Клад','#ffd800'],['T','Клад+канат','#b8dc50'],
+['D','Дверь','#8f96ff'],['P','Игрок','#f2f2f2'],['E','Враг','#ff3838'],['.','Ластик','#222']];
+function buildPalette(){
+  const pal=document.getElementById('palette');pal.innerHTML='';
+  for(const[ch,name,col]of PALETTE){
+    const b=document.createElement('button');b.className='pl';b.dataset.ch=ch;
+    b.innerHTML='<i style="background:'+col+'"></i>'+name;
+    b.onclick=()=>{selTile=ch;refreshPalette();};pal.appendChild(b);}
+  refreshPalette();
+  const sl=document.getElementById('slots');sl.innerHTML='';
+  for(let i=0;i<LEVELS.length;i++){
+    const b=document.createElement('button');b.textContent=i+1;b.dataset.slot=i;
+    b.onclick=()=>{saveSlotMem();editSlot=i;loadSlot(i);};sl.appendChild(b);}
+  refreshSlots();
+}
+function refreshPalette(){document.querySelectorAll('.pl').forEach(b=>b.classList.toggle('active',b.dataset.ch==selTile));}
+function refreshSlots(){document.querySelectorAll('#slots button').forEach(b=>b.classList.toggle('active',+b.dataset.slot==editSlot));}
+function loadSlot(s){editSlot=s;const L=LEVELS[s];editGrid=L?L.map(r=>[...r]):blankGrid();doorOpen=false;refreshSlots();hLevel.textContent=s+1;}
+const joinRows=g=>g.map(r=>r.join(''));
+function saveSlotMem(){if(editGrid)LEVELS[editSlot]=joinRows(editGrid);}
+function persist(){try{localStorage.setItem('klad.lv',JSON.stringify(LEVELS));}catch(e){}}
+function applyPaint(c,r){
+  if(c<0||c>=COLS||r<0||r>=ROWS)return;
+  if(painting=='erase'){editGrid[r][c]='.';return;}
+  if(selTile=='P'||selTile=='D'){const old=selTile;
+    for(let rr=0;rr<ROWS;rr++)for(let cc=0;cc<COLS;cc++)if(editGrid[rr][cc]==old)editGrid[rr][cc]='.';}
+  editGrid[r][c]=selTile;
+}
+function enterEditor(){
+  mode='editor';fromEditor=false;isCustom=false;paused=false;doorOpen=false;
+  if(!editGrid)loadSlot(editSlot);
+  toolbar.style.display='flex';setHint('editor');refreshSlots();
+}
+function testLevel(){
+  saveSlotMem();persist();
+  let hasP=false;for(const row of editGrid)if(row.indexOf('P')>=0)hasP=true;
+  if(!hasP){flashMsg('ПОСТАВЬТЕ ИГРОКА (P)!');return;}
+  fromEditor=true;startPlay(editSlot);
+}
+function openModal(title,text,onOk){
+  document.getElementById('modal').style.display='flex';
+  document.getElementById('mTitle').textContent=title;
+  const ta=document.getElementById('mText');ta.value=text;document.getElementById('mMsg').textContent='';
+  document.getElementById('mOk').onclick=()=>{if(onOk(ta.value)!==false)closeModal();};
+}
+function closeModal(){document.getElementById('modal').style.display='none';}
+function importLevel(text){
+  const lines=text.split(/\r?\n/).map(l=>l.trim()).filter(l=>l.length>0);
+  if(lines.length!=ROWS)return 'Нужно ровно '+ROWS+' строк (сейчас '+lines.length+')';
+  const g=lines.map(l=>l.substring(0,COLS).padEnd(COLS,'.').split('').map(ch=>'BSLRGTPED.'.includes(ch)?ch:'.'));
+  let pc=0;for(const row of g)for(const ch of row)if(ch=='P')pc++;
+  if(pc>1)return 'Только одна позиция игрока (P)!';
+  editGrid=g;return true;
+}
+const HINTS={
+menu:'ENTER — играть · R — случайный уровень · E — редактор уровней',
+play:'←→↑↓ / WASD — движение · Z — копать слева · X — копать справа · собери весь клад и иди в открытую дверь · P — пауза · ESC — назад',
+editor:'ЛКМ — рисовать (можно вести мышью) · ПКМ — стереть · ENTER — тест · 🎲 — случайный уровень по канону · ESC — меню'};
+function setHint(m){document.getElementById('hint').textContent=HINTS[m]||'';}
+
+function mapKey(c){switch(c){
+case 'ArrowLeft':case 'KeyA':return 'left';
+case 'ArrowRight':case 'KeyD':return 'right';
+case 'ArrowUp':case 'KeyW':return 'up';
+case 'ArrowDown':case 'KeyS':return 'down';
+case 'KeyZ':return 'digL';case 'KeyX':return 'digR';}return null;}
+
+function setupTouchButtons(){
+  const map = {
+    btnLeft:'left', btnRight:'right', btnUp:'up', btnDown:'down',
+    btnDigL:'digL', btnDigR:'digR'
+  };
+  for(const [id, key] of Object.entries(map)){
+    const el = document.getElementById(id);
+    if(!el) continue;
+    const start = (e)=>{
+      e.preventDefault();
+      keys[key] = true;
+      jp[key] = true;
+    };
+    const end = (e)=>{
+      e.preventDefault();
+      keys[key] = false;
+      jp[key] = false;
+    };
+    el.addEventListener('touchstart', start, {passive:false});
+    el.addEventListener('touchend', end, {passive:false});
+    el.addEventListener('touchcancel', end, {passive:false});
+    el.addEventListener('mousedown', start);
+    el.addEventListener('mouseup', end);
+    el.addEventListener('mouseleave', end);
+  }
+  
+  document.getElementById('btnEnter').addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    if(mode=='menu'){fromEditor=false;startPlay(0);}
+    else if(mode=='play'){
+      if(phase=='clear'||phase=='over'){saveBest();mode='menu';setHint('menu');}
+    }else if(mode=='editor'){
+      testLevel();
+    }
+  });
+  
+  document.getElementById('btnR').addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    if(mode=='menu')startCustom(genLevel());
+  });
+  
+  document.getElementById('btnEsc').addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    if(mode=='play'){
+      if(fromEditor){fromEditor=false;mode='editor';paused=false;setHint('editor');}
+      else{saveBest();mode='menu';setHint('menu');}
+    }else if(mode=='editor'){
+      saveSlotMem();mode='menu';toolbar.style.display='none';setHint('menu');
+    }
+  });
+  
+  document.getElementById('btnP').addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    if(mode=='play'&&phase=='play')paused=!paused;
+  });
+}
+
+document.addEventListener('keydown',e=>{
+  const c=e.code;
+  if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Space'].includes(c))e.preventDefault();
+  if(e.target.tagName=='TEXTAREA'||e.target.tagName=='INPUT')return;
+  if(!AC)ac();
+  const k=mapKey(c);if(k){if(!keys[k])jp[k]=true;keys[k]=true;e.preventDefault();}
+  if(mode=='menu'){
+    if(c=='Enter'||c=='NumpadEnter'||c=='Digit1'){fromEditor=false;startPlay(0);}
+    else if(c=='KeyE')enterEditor();
+    else if(c=='KeyR')startCustom(genLevel());
+  }else if(mode=='play'){
+    if(phase=='clear'){
+      if(c=='Enter'||c=='NumpadEnter'){mode='menu';setHint('menu');}
+      else if(c=='KeyE')enterEditor();
+      return;
+    }
+    if(c=='KeyP'&&phase=='play')paused=!paused;
+    if(c=='Escape'){
+      if(fromEditor){fromEditor=false;mode='editor';paused=false;setHint('editor');}
+      else{saveBest();mode='menu';setHint('menu');}
+    }
+    if(phase=='over'&&c=='Enter'){saveBest();mode='menu';setHint('menu');}
+  }else if(mode=='editor'){
+    if(c=='Escape'){saveSlotMem();mode='menu';toolbar.style.display='none';setHint('menu');}
+    else if(c=='Enter')testLevel();
+  }
+});
+document.addEventListener('keyup',e=>{const k=mapKey(e.code);if(k)keys[k]=false;});
+window.addEventListener('blur',()=>{for(const k in keys)keys[k]=false;});
+
+function cellFromEvent(e){
+  const rect=cv.getBoundingClientRect();
+  const x=(e.clientX-rect.left)*(cv.width/rect.width);
+  const y=(e.clientY-rect.top)*(cv.height/rect.height);
+  return {c:Math.floor(x/TS),r:Math.floor(y/TS)};
+}
+cv.addEventListener('contextmenu',e=>e.preventDefault());
+cv.addEventListener('mousedown',e=>{
+  if(mode!='editor')return;
+  const {c,r}=cellFromEvent(e);
+  painting=(e.button==2)?'erase':'paint';applyPaint(c,r);e.preventDefault();
+});
+cv.addEventListener('mousemove',e=>{
+  const {c,r}=cellFromEvent(e);hoverC=c;hoverR=r;
+  if(mode=='editor'&&painting)applyPaint(c,r);
+});
+window.addEventListener('mouseup',()=>painting=null);
+cv.addEventListener('mouseleave',()=>{hoverC=-1;hoverR=-1;});
+
+document.getElementById('bTest').onclick=testLevel;
+document.getElementById('bRand').onclick=()=>{editGrid=genLevel().map(r=>[...r]);flashMsg('СЛУЧАЙНЫЙ УРОВЕНЬ СГЕНЕРИРОВАН');};
+document.getElementById('bClear').onclick=()=>{editGrid=blankGrid();};
+document.getElementById('bSample').onclick=()=>{editGrid=SAMPLE.map(r=>[...r]);};
+document.getElementById('bSave').onclick=()=>{saveSlotMem();persist();flashMsg('СОХРАНЕНО');};
+document.getElementById('bExport').onclick=()=>{saveSlotMem();openModal('ЭКСПОРТ УРОВНЯ '+(editSlot+1)+' (скопируйте текст)',joinRows(editGrid).join('\n'),()=>{});};
+document.getElementById('bImport').onclick=()=>openModal('ИМПОРТ УРОВНЯ (16 строк × 28 символов: B S L R G T D P E .)','',v=>{
+  const res=importLevel(v);if(res===true){flashMsg('ИМПОРТИРОВАНО');}else{document.getElementById('mMsg').textContent=res;return false;}});
+document.getElementById('mCancel').onclick=closeModal;
+document.getElementById('bMenu').onclick=()=>{saveSlotMem();persist();mode='menu';toolbar.style.display='none';setHint('menu');};
+
+let last=0;
+function frame(ts){
+  const dt=Math.min(0.05,(ts-last)/1000||0.016);last=ts;tGlob+=dt;
+  msgT-=dt;
+  if(mode=='play')updatePlay(dt);
+  render();
+  jp.left=jp.right=jp.up=jp.down=false;
+  requestAnimationFrame(frame);
+}
+buildPalette();setHint('menu');updateHUD();
+setupTouchButtons();
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
